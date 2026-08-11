@@ -26,3 +26,22 @@ graph TD
     MLServing --> Ranking[Search Ranking]
     end
 ```
+
+## Database Responsibility Model
+The architecture clearly separates data storage responsibilities to optimize for each database's strengths:
+
+```text
+                    Enterprise Platform
+                           |
+          +----------------+----------------+
+          |                |                |
+          v                v                v
+     PostgreSQL         MongoDB           Qdrant
+     Structured         Knowledge         Semantic
+       Data             Content           Vectors
+          |                |                |
+          +-------- document_id -----------+
+                           |
+                     Future Integration
+```
+*Note: Qdrant vector database integration is scheduled for a future milestone and is NOT implemented in Phase 1.x.*

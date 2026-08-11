@@ -8,6 +8,18 @@
 - [x] Documentation scaffolding in place
 - [x] Git repository initialized
 
+## Phase 1.2 — MongoDB Document Architecture
+**Status: VERIFIED**
+(Executed successfully against Dockerized MongoDB instance.)
+
+- [x] Document Schema Validator (`knowledge_documents_schema.js`)
+- [x] Optimization Indexes (`knowledge_documents_indexes.js`)
+- [x] Knowledge Seed Data (`knowledge_documents_seed.js`)
+- [x] Common & Aggregation Queries (`queries/`)
+- [x] Integration Tests (`mongodb_tests.js`)
+- [x] Physical Validation via Docker
+- [x] Cross-database Architecture Documentation
+
 ## Phase 1.1 — PostgreSQL Foundation
 **Status: VERIFIED**
 (Executed successfully against Dockerized PostgreSQL instance.)

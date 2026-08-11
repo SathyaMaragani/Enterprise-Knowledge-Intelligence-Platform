@@ -37,3 +37,17 @@ To run sample queries:
 ```bash
 docker exec -i eip-postgres psql -U postgres -d postgres < queries/common_queries.sql
 ```
+
+## Phase 1.2: MongoDB Document Architecture
+The MongoDB layer stores the actual unstructured and semi-structured knowledge content.
+
+### Collection Overview
+The primary collection is `knowledge_documents`. MongoDB avoids duplicating relational data like users and permissions; instead, it references PostgreSQL via `postgres_document_id`.
+
+MongoDB owns:
+- Document raw text
+- Chunked text for machine learning pipelines
+- Extracted flexible metadata (authors, departments)
+- Processing status
+
+Navigate to `database/mongodb/` and refer to the `README.md` for Docker instructions.
