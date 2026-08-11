@@ -41,3 +41,17 @@
 - [x] ER Diagram and Data Dictionary (`docs/`)
 - [x] Sample and Reporting Queries (`queries/`)
 - [x] Validation Tests planned (`tests/`)
+
+## Phase 1.4.1 — Spring Boot Backend Foundation
+**Status: VERIFIED**
+(Executed successfully against Dockerized PostgreSQL instance with MockMvc tests.)
+
+- [x] Maven Project Initialization
+- [x] JPA Entities mapped to PostgreSQL Schema
+- [x] Spring Data Repositories
+- [x] Service and Controller layers
+- [x] Application and Actuator Health Endpoints
+- [x] Exception Handling
+- [x] Integration Tests passing
+- [x] Backend Documentation
+
