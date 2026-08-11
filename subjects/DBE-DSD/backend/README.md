@@ -29,3 +29,14 @@ cd subjects/DBE-DSD/backend
 ```bash
 ./mvnw clean test
 ```
+
+## Phase 1.4.2: MongoDB Integration
+To connect the application to MongoDB, ensure the following environment variables are set:
+- \MONGO_HOST\ (default: localhost)
+- \MONGO_PORT\ (default: 27017)
+- \MONGO_DATABASE\ (default: eip_doc_db)
+- \MONGO_USERNAME\ (default: eip_mongo_user)
+- \MONGO_PASSWORD\ (default: mongo_pass_123)
+
+Read [MONGODB_INTEGRATION.md](docs/MONGODB_INTEGRATION.md) for details on cross-database logic.
+

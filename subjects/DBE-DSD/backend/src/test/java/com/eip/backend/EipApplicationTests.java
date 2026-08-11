@@ -34,6 +34,9 @@ class EipApplicationTests {
     private UserRepository userRepository;
 
     @Autowired
+    private com.eip.backend.repository.KnowledgeDocumentRepository knowledgeDocumentRepository;
+
+    @Autowired
     private DocumentRepository documentRepository;
 
     @Test
@@ -97,5 +100,36 @@ class EipApplicationTests {
     void testInvalidEndpoint() throws Exception {
         mockMvc.perform(get("/api/does-not-exist"))
                .andExpect(status().isNotFound());
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 1.4.2 MONGODB INTEGRATION TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    void testUnifiedDocumentFound() throws Exception {
+        // Document 1 exists in both PostgreSQL and MongoDB seed data
+        mockMvc.perform(get("/api/documents/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").exists()) // From Postgres
+                .andExpect(jsonPath("$.content.rawText").exists()) // From Mongo
+                .andExpect(jsonPath("$.chunks").isArray()); // From Mongo
+    }
+
+    @Test
+    void testUnifiedDocumentNotFoundInPostgres() throws Exception {
+        mockMvc.perform(get("/api/documents/999999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testCrossDatabaseIdValidation() {
+        // The postgres_document_id in Mongo must match the Postgres ID
+        java.util.Optional<com.eip.backend.entity.mongodb.KnowledgeDocument> mongoDoc = 
+            knowledgeDocumentRepository.findByPostgresDocumentId(1);
+        
+        assertTrue(mongoDoc.isPresent());
+        assertEquals(1, mongoDoc.get().getPostgresDocumentId());
     }
 }

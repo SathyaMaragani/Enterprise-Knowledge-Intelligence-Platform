@@ -35,13 +35,4 @@ The architecture clearly separates data storage responsibilities to optimize for
                            |
           +----------------+----------------+
           |                |                |
-          v                v                v
-     PostgreSQL         MongoDB           Qdrant
-     Structured         Knowledge         Semantic
-       Data             Content           Vectors
-          |                |                |
-          +-------- document_id -----------+
-                           |
-                     Future Integration
-```
 *Note: Qdrant vector database integration is scheduled for a future milestone and is NOT implemented in Phase 1.x.*

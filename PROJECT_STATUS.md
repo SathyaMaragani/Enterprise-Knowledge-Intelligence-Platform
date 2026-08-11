@@ -55,3 +55,15 @@
 - [x] Integration Tests passing
 - [x] Backend Documentation
 
+
+## Phase 1.4.2 — MongoDB Backend Integration
+**Status: VERIFIED**
+(Executed successfully against Dockerized PostgreSQL and MongoDB instances with MockMvc tests.)
+
+- [x] Spring Data MongoDB integration
+- [x] KnowledgeDocument entity modeling
+- [x] Unified document response merging Postgres + Mongo data
+- [x] Exception handling for cross-database data inconsistencies
+- [x] Integration Tests passing for all endpoints
+- [x] Docker-based environment validation
+
