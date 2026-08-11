@@ -1,0 +1,12 @@
+# Generic
+node_modules/
+dist/
+build/
+*.class
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
