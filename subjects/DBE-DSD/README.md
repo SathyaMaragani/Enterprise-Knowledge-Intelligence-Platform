@@ -51,3 +51,18 @@ MongoDB owns:
 - Processing status
 
 Navigate to `database/mongodb/` and refer to the `README.md` for Docker instructions.
+
+## Phase 1.3: Qdrant Vector Architecture
+The Qdrant layer enables semantic similarity search across the platform.
+
+### Collection Overview
+The collection is `knowledge_chunks`. It uses `384`-dimensional vectors and `Cosine` distance, optimized for standard sentence embedding models.
+
+Qdrant owns:
+- Vector embeddings of chunks
+- Flat filtering payloads (`postgres_document_id`, `chunk_id`, `department`, etc.)
+
+**Integration Note**: 
+Qdrant relies completely on `postgres_document_id` for authorization, and `chunk_id` for retrieving the raw text from MongoDB. Full document text is NOT stored in Qdrant.
+
+Navigate to `database/qdrant/` and refer to the `README.md` for Docker instructions.

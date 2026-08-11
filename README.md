@@ -10,6 +10,15 @@ This project is divided across four key subjects:
 - **OSSP (Operating Systems & System Programming)**: Contributes the ShellForge Linux administration shell for process management, IPC, memory management, and synchronization.
 - **Machine Learning (ML)**: Implements document classification, clustering, search ranking, feature engineering, and model serving.
 
+## 3. Database Layer (Hybrid Architecture)
+The project utilizes a hybrid database architecture optimizing for different data access patterns:
+
+- **PostgreSQL**: Stores highly structured relational metadata (Users, Roles, Permissions, Document Identity).
+- **MongoDB**: Stores unstructured/semi-structured document text, processed chunks, and flexible metadata.
+- **Qdrant**: Stores vector embeddings of document chunks for semantic search.
+
+*Note: Qdrant currently uses deterministic synthetic vectors for infrastructure validation. Real embeddings will be introduced during the ML/integration phase.*
+
 ## Architecture
 - **subjects/**: Contains isolated subject-specific implementations.
 - **integration/**: Handles cross-subject integration logic.

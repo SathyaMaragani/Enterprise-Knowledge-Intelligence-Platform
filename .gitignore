@@ -10,3 +10,8 @@ build/
 .idea/
 .vscode/
 *.swp
+
+# Python virtual environments
+.venv/
+venv/
+
