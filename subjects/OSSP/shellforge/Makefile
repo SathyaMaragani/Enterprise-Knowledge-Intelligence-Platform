@@ -1,13 +1,22 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude
-SRC_DIR = src
-BIN_DIR = bin
+CFLAGS = -Wall -Wextra -g -Iinclude
 
-all: shellforge
+SRCS = src/main.c src/input.c
+OBJS = $(SRCS:.c=.o)
+TARGET = bin/shellforge
 
-shellforge:
-	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $(BIN_DIR)/shellforge $(SRC_DIR)/main.c
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+run: all
+	./$(TARGET)
 
 clean:
-	rm -rf $(BIN_DIR)
+	rm -f $(OBJS)
+	rm -rf bin

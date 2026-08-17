@@ -67,3 +67,9 @@
 - [x] Integration Tests passing for all endpoints
 - [x] Docker-based environment validation
 
+
+## OSSP — Week 1
+**Status: UNVERIFIED** (Implementation complete but unable to compile/test due to missing gcc/make on this Windows host environment.)
+
+## OSSP — Week 2
+**Status: UNVERIFIED** (Implementation complete but unable to compile/test due to missing gcc/make on this Windows host environment.)
