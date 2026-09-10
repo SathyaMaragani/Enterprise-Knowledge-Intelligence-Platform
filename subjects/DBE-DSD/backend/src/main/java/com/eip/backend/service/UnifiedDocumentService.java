@@ -1,18 +1,30 @@
 package com.eip.backend.service;
 import com.eip.backend.dto.UnifiedDocumentResponse;
+import com.eip.backend.dto.SemanticSearchRequest;
+import com.eip.backend.dto.SemanticSearchResponse;
+import com.eip.backend.dto.qdrant.VectorSearchRequest;
+import com.eip.backend.dto.qdrant.VectorSearchResponse;
+import com.eip.backend.dto.qdrant.VectorSearchResultItem;
 import com.eip.backend.entity.Document;
 import com.eip.backend.entity.mongodb.KnowledgeDocument;
 import com.eip.backend.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class UnifiedDocumentService {
     private final DocumentRepository documentRepository;
     private final KnowledgeDocumentService knowledgeDocumentService;
+    private final QdrantService qdrantService;
 
-    public UnifiedDocumentService(DocumentRepository documentRepository, KnowledgeDocumentService knowledgeDocumentService) {
+    public UnifiedDocumentService(DocumentRepository documentRepository, 
+                                  KnowledgeDocumentService knowledgeDocumentService,
+                                  QdrantService qdrantService) {
         this.documentRepository = documentRepository;
         this.knowledgeDocumentService = knowledgeDocumentService;
+        this.qdrantService = qdrantService;
     }
 
     public UnifiedDocumentResponse getUnifiedDocument(Integer id) {
@@ -54,5 +66,32 @@ public class UnifiedDocumentService {
         response.setVersion(mongoDoc.getVersion());
 
         return response;
+    }
+
+    public List<SemanticSearchResponse> semanticSearch(SemanticSearchRequest request) {
+        VectorSearchRequest vectorReq = new VectorSearchRequest();
+        vectorReq.setVector(request.getVector());
+        vectorReq.setTopK(request.getLimit());
+        vectorReq.setCategory(request.getCategory());
+        vectorReq.setDepartment(request.getDepartment());
+
+        VectorSearchResponse qdrantRes = qdrantService.search(vectorReq);
+        List<SemanticSearchResponse> results = new ArrayList<>();
+
+        for (VectorSearchResultItem item : qdrantRes.getResults()) {
+            try {
+                UnifiedDocumentResponse docResponse = getUnifiedDocument(item.getPostgresDocumentId());
+                if (docResponse != null) {
+                    SemanticSearchResponse res = new SemanticSearchResponse();
+                    res.setScore(item.getScore());
+                    res.setChunkId(item.getChunkId());
+                    res.setDocument(docResponse);
+                    results.add(res);
+                }
+            } catch (Exception e) {
+                // If content is not found in Mongo but in Qdrant, skip
+            }
+        }
+        return results;
     }
 }

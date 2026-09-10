@@ -171,6 +171,32 @@ class EipApplicationTests {
         assertEquals(1, mongoDoc.get().getPostgresDocumentId());
     }
 
+    // ---------------------------------------------------------
+    // PHASE 1.4.3 QDRANT INTEGRATION TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    void testSemanticSearchEndpoint() throws Exception {
+        // Build a dummy vector of size 384
+        List<Float> dummyVector = new java.util.ArrayList<>(384);
+        for(int i=0; i<384; i++) {
+            dummyVector.add(0.5f);
+        }
+
+        String requestJson = """
+            {
+                "vector": %s,
+                "limit": 3
+            }
+        """.formatted(dummyVector.toString());
+
+        mockMvc.perform(post("/api/documents/search/semantic")
+                .contentType("application/json")
+                .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
     @Test
     void testPostgresToMongoIdMappings1To10() {
         // Verify PostgreSQL -> MongoDB ID mappings for all seed documents 1-10

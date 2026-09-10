@@ -33,6 +33,17 @@ The architecture clearly separates data storage responsibilities to optimize for
 ```text
                     Enterprise Platform
                            |
-          +----------------+----------------+
-          |                |                |
+                    Spring Boot
+                        │
+                UnifiedDocumentService
+                    /     |     \
+                   /      |      \
+                  ▼       ▼       ▼
+           PostgreSQL  MongoDB  Qdrant
+           metadata    content  vectors
+                  \       |       /
+                   \      |      /
+                    ▼     ▼     ▼
+                 Unified API Response
+```
 *Note: Qdrant vector database integration is scheduled for a future milestone and is NOT implemented in Phase 1.x.*

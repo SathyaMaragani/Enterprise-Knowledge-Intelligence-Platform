@@ -73,3 +73,15 @@
 
 ## OSSP — Week 2
 **Status: UNVERIFIED** (Implementation complete but unable to compile/test due to missing gcc/make on this Windows host environment.)
+
+## Phase 1.4.3 — Qdrant Vector Integration
+**Status: VERIFIED**
+(Executed successfully against Dockerized PostgreSQL, MongoDB, and Qdrant instances with mock semantic searches.)
+
+- [x] Qdrant Java Client integration
+- [x] VectorSearchRequest / SemanticSearchResponse DTOs
+- [x] QdrantService implemented for semantic filtering
+- [x] Unified document response joining Postgres, Mongo, and Qdrant results
+- [x] POST /api/documents/search/semantic endpoint
+- [x] Docker-based environment validation
+

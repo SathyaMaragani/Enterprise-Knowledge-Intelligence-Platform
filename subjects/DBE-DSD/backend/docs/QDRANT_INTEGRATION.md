@@ -90,6 +90,27 @@ Executes cosine similarity search using a query vector with optional payload fil
 
 Restricts the vector similarity search to chunks belonging specifically to `{documentId}`.
 
+### 4.3 Unified Semantic Search (Phase 1.4.3)
+`POST /api/documents/search/semantic`
+
+Performs an approximate nearest neighbor search via Qdrant, then performs an application-level join with PostgreSQL (metadata) and MongoDB (document content) to return fully hydrated documents alongside their vector similarity scores.
+
+**Response Body (`SemanticSearchResponse`)**:
+```json
+[
+  {
+    "score": 0.8954,
+    "chunkId": "doc2-chunk1",
+    "document": {
+      "id": 2,
+      "title": "Test Document 2",
+      "content": { ... },
+      "metadata": { ... }
+    }
+  }
+]
+```
+
 ### 4.3 Collection Metadata & Health
 - `GET /api/search/vector/collection-info`: Returns collection existence, vector dimensions, active status, point count, and vector count.
 - `GET /api/search/vector/health`: Reports cluster connectivity status (`UP` / `DOWN`).

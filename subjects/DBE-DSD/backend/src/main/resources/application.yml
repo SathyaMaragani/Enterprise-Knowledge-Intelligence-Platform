@@ -22,10 +22,7 @@ spring:
 qdrant:
   host: ${QDRANT_HOST:localhost}
   port: ${QDRANT_PORT:6334}
-  api-key: ${QDRANT_API_KEY:}
-  collection-name: ${QDRANT_COLLECTION:knowledge_chunks}
-  vector-dimension: ${QDRANT_VECTOR_DIMENSION:384}
-  use-tls: ${QDRANT_USE_TLS:false}
+  collection: ${QDRANT_COLLECTION:knowledge_chunks}
 
 server:
   port: 8080

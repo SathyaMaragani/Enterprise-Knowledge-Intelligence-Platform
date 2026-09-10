@@ -51,3 +51,11 @@ To connect the application to Qdrant vector database, the following environment 
 
 Read [QDRANT_INTEGRATION.md](docs/QDRANT_INTEGRATION.md) for details on vector similarity search, payload filtering, and error handling.
 
+
+## Phase 1.4.3: Qdrant Vector Integration
+To connect the application to Qdrant, ensure the following environment variables are set:
+- \QDRANT_HOST\ (default: localhost)
+- \QDRANT_PORT\ (default: 6334)
+
+Read [QDRANT_INTEGRATION.md](docs/QDRANT_INTEGRATION.md) for details on semantic search.
+

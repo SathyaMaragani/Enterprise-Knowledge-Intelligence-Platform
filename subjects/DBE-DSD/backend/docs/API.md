@@ -41,3 +41,7 @@
 ### GET /api/documents/{id}
 Returns the unified document consisting of PostgreSQL metadata and MongoDB content data. Returns 404 if either record is missing.
 
+
+### POST /api/documents/search/semantic
+Performs a unified semantic search. Expects a vector array and returns matching documents seamlessly merged from PostgreSQL, MongoDB, and Qdrant.
+
