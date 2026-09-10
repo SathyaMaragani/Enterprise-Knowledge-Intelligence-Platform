@@ -19,6 +19,14 @@ spring:
     mongodb:
       uri: mongodb://${MONGO_USERNAME:eip_mongo_user}:${MONGO_PASSWORD:mongo_pass_123}@${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DATABASE:eip_doc_db}?authSource=admin
 
+qdrant:
+  host: ${QDRANT_HOST:localhost}
+  port: ${QDRANT_PORT:6334}
+  api-key: ${QDRANT_API_KEY:}
+  collection-name: ${QDRANT_COLLECTION:knowledge_chunks}
+  vector-dimension: ${QDRANT_VECTOR_DIMENSION:384}
+  use-tls: ${QDRANT_USE_TLS:false}
+
 server:
   port: 8080
 

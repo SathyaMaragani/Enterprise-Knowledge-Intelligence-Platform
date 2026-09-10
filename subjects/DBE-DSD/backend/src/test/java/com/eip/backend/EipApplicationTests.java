@@ -17,12 +17,23 @@ import java.sql.Connection;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.eip.backend.service.QdrantService;
+import com.eip.backend.dto.qdrant.VectorSearchRequest;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class EipApplicationTests {
+
+    @Autowired
+    private QdrantService qdrantService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private MockMvc mockMvc;
@@ -174,5 +185,144 @@ class EipApplicationTests {
             assertEquals(pgDoc.get().getTitle(), mongoDoc.get().getTitle(), 
                 "Title must match across PostgreSQL and MongoDB for document " + i);
         }
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 1.4.3 QDRANT INTEGRATION TESTS
+    // ---------------------------------------------------------
+
+    private List<Float> generateTestVector(int size) {
+        List<Float> vector = new java.util.ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            vector.add((float) Math.sin(i));
+        }
+        return vector;
+    }
+
+    @Test
+    void testQdrantConnectivity() {
+        assertTrue(qdrantService.isConnected(), "Qdrant client should be connected to Qdrant cluster");
+    }
+
+    @Test
+    void testQdrantCollectionExistsAndSeeded() {
+        assertTrue(qdrantService.collectionExists(), "knowledge_chunks collection must exist in Qdrant");
+        io.qdrant.client.grpc.Collections.CollectionInfo info = qdrantService.getCollectionInfo();
+        assertNotNull(info);
+        assertTrue(info.getPointsCount() >= 30, "Qdrant collection should have at least 30 seeded vector points");
+    }
+
+    @Test
+    void testVectorSearchCollectionInfoEndpoint() throws Exception {
+        mockMvc.perform(get("/api/search/vector/collection-info"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exists").value(true))
+                .andExpect(jsonPath("$.collectionName").value("knowledge_chunks"))
+                .andExpect(jsonPath("$.vectorDimension").value(384))
+                .andExpect(jsonPath("$.pointsCount", greaterThanOrEqualTo(30)));
+    }
+
+    @Test
+    void testVectorSearchEndpointSuccess() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(5);
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(5)))
+                .andExpect(jsonPath("$.totalResults").value(5))
+                .andExpect(jsonPath("$.results[0].pointId").exists())
+                .andExpect(jsonPath("$.results[0].score").isNumber())
+                .andExpect(jsonPath("$.results[0].postgresDocumentId").isNumber())
+                .andExpect(jsonPath("$.results[0].title").isString());
+    }
+
+    @Test
+    void testVectorSearchTopKLimit() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(3);
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(3)))
+                .andExpect(jsonPath("$.totalResults").value(3));
+    }
+
+    @Test
+    void testVectorSearchCategoryFilter() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(10);
+        request.setCategory("Finance");
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.results[*].category", everyItem(is("Finance"))));
+    }
+
+    @Test
+    void testVectorSearchDepartmentFilter() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(10);
+        request.setDepartment("HR");
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.results[*].department", everyItem(is("HR"))));
+    }
+
+    @Test
+    void testVectorSearchByDocumentIdEndpoint() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(5);
+
+        mockMvc.perform(post("/api/search/vector/document/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.results[*].postgresDocumentId", everyItem(is(2))));
+    }
+
+    @Test
+    void testVectorSearchInvalidDimension() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(383)); // 383 dimensions instead of 384
+        request.setTopK(5);
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message", containsString("384")));
+    }
+
+    @Test
+    void testVectorSearchInvalidTopK() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(0); // Invalid topK
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message", containsString("topK must be greater than 0")));
     }
 }

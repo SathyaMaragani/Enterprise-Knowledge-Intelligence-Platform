@@ -119,6 +119,21 @@
 
 **Phase 1.4.2 complete: verified cross-database integration tests executed and passed against Dockerized instances.**
 
+### Spring Boot + Qdrant — VERIFIED
+
+* [x] Qdrant Java client dependency (`io.qdrant:client:1.13.0`)
+* [x] gRPC, Guava, and Protobuf compile dependencies
+* [x] Qdrant configuration (`QdrantConfig`, gRPC singleton client)
+* [x] Vector search DTOs (`VectorSearchRequest`, `VectorSearchResultItem`, `VectorSearchResponse`)
+* [x] `QdrantService` (connectivity, collection verification, similarity search, payload filters)
+* [x] `VectorSearchController` (`POST /api/search/vector`, `POST /api/search/vector/document/{id}`, `GET /api/search/vector/collection-info`, `GET /api/search/vector/health`)
+* [x] Global exception handling (400 Bad Request on invalid vector/topK, 503 Service Unavailable on Qdrant failure)
+* [x] Integration tests in `EipApplicationTests` (10 tests: connectivity, top-K, filters, document scoped, dimension validation)
+* [x] Live Docker Qdrant testing (25/25 integration tests passed across PostgreSQL, MongoDB, and Qdrant)
+* [x] Integration documentation (`QDRANT_INTEGRATION.md`, updated `README.md`)
+
+**Phase 1.4.3 complete: verified Spring Boot + Qdrant integration tests executed and passed against Dockerized instances.**
+
 ---
 
 # 🟡 DSA-3 — TextHack

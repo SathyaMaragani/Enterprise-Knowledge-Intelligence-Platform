@@ -40,3 +40,14 @@ To connect the application to MongoDB, ensure the following environment variable
 
 Read [MONGODB_INTEGRATION.md](docs/MONGODB_INTEGRATION.md) for details on cross-database logic.
 
+## Phase 1.4.3: Qdrant Integration
+To connect the application to Qdrant vector database, the following environment variables are supported:
+- `QDRANT_HOST` (default: localhost)
+- `QDRANT_PORT` (default: 6334, gRPC)
+- `QDRANT_API_KEY` (default: empty)
+- `QDRANT_COLLECTION` (default: knowledge_chunks)
+- `QDRANT_VECTOR_DIMENSION` (default: 384)
+- `QDRANT_USE_TLS` (default: false)
+
+Read [QDRANT_INTEGRATION.md](docs/QDRANT_INTEGRATION.md) for details on vector similarity search, payload filtering, and error handling.
+
