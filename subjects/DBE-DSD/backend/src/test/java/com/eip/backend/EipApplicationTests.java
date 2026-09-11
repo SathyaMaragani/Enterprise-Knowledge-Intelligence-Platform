@@ -25,8 +25,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.eip.backend.service.QdrantService;
 import com.eip.backend.dto.qdrant.VectorSearchRequest;
 
+import org.springframework.security.test.context.support.WithUserDetails;
+
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithUserDetails("admin_user")
 class EipApplicationTests {
 
     @Autowired
@@ -197,6 +200,54 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    // ---------------------------------------------------------
+    // PHASE 1.5 & 1.6 SECURITY & RBAC TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testUnauthorizedAccessWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/documents/1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testSuccessfulLoginReturnsToken() throws Exception {
+        String loginJson = """
+            {
+                "username": "admin_user",
+                "password": "password123"
+            }
+        """;
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.username").value("admin_user"));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testAccessDeniedForUnownedDocumentWithoutPermission() throws Exception {
+        // dave_tmp does not own document 4 and has no READ permission for it
+        mockMvc.perform(get("/api/documents/4"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("Forbidden"));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testAccessGrantedForDocumentWithReadPermission() throws Exception {
+        // alice_mgr has explicit READ permission for document 4
+        mockMvc.perform(get("/api/documents/4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("AI Research Paper"));
+    }
+
     @Test
     void testPostgresToMongoIdMappings1To10() {
         // Verify PostgreSQL -> MongoDB ID mappings for all seed documents 1-10
@@ -350,5 +401,190 @@ class EipApplicationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message", containsString("topK must be greater than 0")));
+    }
+
+    // ---------------------------------------------------------
+    // PHASE 1.7A UNIFIED SEARCH TESTS
+    // ---------------------------------------------------------
+
+    private String unifiedSearch(String query, List<Float> vector, Integer page, Integer size) throws Exception {
+        com.eip.backend.dto.search.SearchRequest request = new com.eip.backend.dto.search.SearchRequest();
+        request.setQuery(query);
+        request.setVector(vector);
+        if (page != null) request.setPage(page);
+        if (size != null) request.setSize(size);
+        return objectMapper.writeValueAsString(request);
+    }
+
+    @Test
+    void testUnifiedSearchKeywordOnly() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Financial", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("KEYWORD")))
+                .andExpect(jsonPath("$.hits", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.hits[0].documentId").value(2))
+                .andExpect(jsonPath("$.hits[0].title").value("Q1 Financial Report"))
+                .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")))
+                .andExpect(jsonPath("$.hits[0].score").isNumber());
+    }
+
+    @Test
+    void testUnifiedSearchHybridReportsBothSources() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Report", generateTestVector(384), null, 50)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", containsInAnyOrder("KEYWORD", "VECTOR")))
+                .andExpect(jsonPath("$.hits", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.hits[0].score").isNumber());
+    }
+
+    @Test
+    void testUnifiedSearchVectorOnly() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch(null, generateTestVector(384), null, 50)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("VECTOR")))
+                // The Qdrant seed holds 30 points: 3 chunks for each of the 10
+                // documents. They must collapse to 10 hits, one best chunk each.
+                .andExpect(jsonPath("$.totalHits").value(10))
+                .andExpect(jsonPath("$.hits", hasSize(10)))
+                .andExpect(jsonPath("$.hits[*].documentId", containsInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)))
+                .andExpect(jsonPath("$.hits[0].matchedBy", contains("VECTOR")))
+                .andExpect(jsonPath("$.hits[0].chunkId").exists());
+    }
+
+    @Test
+    void testUnifiedSearchRankingIsOrderedAndNormalised() throws Exception {
+        String body = mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Report", generateTestVector(384), 0, 50)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        com.fasterxml.jackson.databind.JsonNode hits = objectMapper.readTree(body).get("hits");
+        assertTrue(hits.size() > 1, "Need at least two hits to check ordering");
+
+        double previous = Double.MAX_VALUE;
+        for (com.fasterxml.jackson.databind.JsonNode hit : hits) {
+            double score = hit.get("score").asDouble();
+            assertTrue(score >= 0.0 && score <= 1.0,
+                    "Fused score must stay normalised to 0..1 but was " + score);
+            assertTrue(score <= previous,
+                    "Hits must be ordered best-first but " + score + " followed " + previous);
+            previous = score;
+        }
+    }
+
+    @Test
+    void testUnifiedSearchRejectsEmptyRequest() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch(null, null, null, null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"));
+    }
+
+    @Test
+    void testUnifiedSearchRejectsOversizedPage() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Report", null, 0, 500)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("size must be between 1 and 100")));
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testUnifiedSearchRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Report", null, null, null)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testUnifiedSearchPagination() throws Exception {
+        String firstPage = mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("e", null, 0, 2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.hits", hasSize(2)))
+                .andExpect(jsonPath("$.totalHits", greaterThan(2)))
+                .andReturn().getResponse().getContentAsString();
+
+        String secondPage = mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("e", null, 1, 2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.hits", hasSize(2)))
+                .andReturn().getResponse().getContentAsString();
+
+        assertNotEquals(firstPage, secondPage, "Consecutive pages must return different hits");
+    }
+
+    @Test
+    void testUnifiedSearchPageBeyondEndIsEmpty() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Financial", null, 50, 10)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits", hasSize(0)))
+                .andExpect(jsonPath("$.totalHits", greaterThan(0)));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testUnifiedSearchHidesDocumentsUserCannotRead() throws Exception {
+        // dave_tmp owns nothing and holds no READ grants: search must come back
+        // empty even though the keyword matches real documents for other users.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Report", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(0))
+                .andExpect(jsonPath("$.hits", hasSize(0)));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testUnifiedSearchIncludesDocumentsGrantedByPermission() throws Exception {
+        // Document 5 (Vendor Contract A) is owned by admin_user; alice holds an
+        // explicit READ grant on it.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Vendor", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(1))
+                .andExpect(jsonPath("$.hits[0].documentId").value(5));
+    }
+
+    @Test
+    @WithUserDetails("bob_eng")
+    void testUnifiedSearchExcludesSameDocumentWithoutGrant() throws Exception {
+        // Same query as above; bob has neither ownership nor a grant on document 5.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Vendor", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(0));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testUnifiedSearchIncludesOwnedDocuments() throws Exception {
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Budget", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(1))
+                .andExpect(jsonPath("$.hits[0].documentId").value(7))
+                .andExpect(jsonPath("$.hits[0].owner").value("alice_mgr"));
     }
 }
