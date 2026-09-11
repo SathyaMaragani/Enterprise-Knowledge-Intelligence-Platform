@@ -188,3 +188,44 @@ Qdrant's `knowledge_chunks` collection uses cosine distance, so similarities run
 **Deliberately out of scope** (per the 1.7 split):
 - 1.7B — real embeddings. `SearchRequest.vector` stays caller-supplied until then.
 - 1.7C — TextHack/DSA scorers replace the placeholder keyword ranking.
+
+## Phase 1.7B-1 — ML Dataset, Preprocessing and Evaluation Foundation
+**Status: VERIFIED**
+(Dataset downloaded and preprocessed; TF-IDF baseline executed against the
+648 judged FiQA test queries; 11/11 self-check tests passing.)
+
+### Corpus decision
+- [x] The 10 seeded documents remain DB integration fixtures and are UNCHANGED
+- [x] FiQA-2018 (BEIR) adopted as the separate ML evaluation corpus
+
+### Dataset — FiQA-2018
+- [x] Source: `BeIR/fiqa` + `BeIR/fiqa-qrels`, CC-BY-SA-4.0, English
+- [x] 57,638 documents, 648 judged test queries, 1,706 binary relevance judgments
+- [x] Counts match the BEIR paper's Table 1 exactly, confirming the loader reads the intended split
+- [x] Chosen for its human relevance judgments: ground truth we did not author
+- [x] Corpus gitignored — reproducible from the loader, avoids redistributing CC-BY-SA content
+
+### Models selected (not yet loaded)
+- [x] `all-MiniLM-L6-v2` (Apache-2.0) and `bge-small-en-v1.5` (MIT)
+- [x] Both natively 384-dimensional — no Qdrant migration, no dimension change
+- [x] Three-way comparison planned: TF-IDF vs MiniLM vs BGE
+
+### Foundation delivered
+- [x] `src/preprocessing/dataset.py` — streaming download, canonical JSONL
+- [x] `src/preprocessing/chunking.py` — NFKC normalization, overlapping windows
+- [x] `src/evaluation/metrics.py` — Recall@K, MRR, nDCG, chunk→document collapse
+- [x] `src/ranking/tfidf_baseline.py` — TF-IDF retriever and evaluation run
+- [x] `tests/test_pipeline.py` — 11 checks, no network required
+- [x] `docs/DATASET_AND_MODEL_SELECTION.md` — full decision record
+
+### Baseline result
+```
+57,638 documents -> 76,723 chunks -> 592,104 TF-IDF features
+R@1=0.0577  R@3=0.1161  R@5=0.1434  R@10=0.1884  MRR=0.1792  nDCG@10=0.1447
+```
+BEIR reports BM25 at nDCG@10 = 0.236 on the same dataset; that gap is the
+headroom 1.7B-2 must demonstrate.
+
+**Out of scope by design:** no embedding model loaded, no Qdrant vectors written
+or replaced, collection dimension unchanged, Spring search untouched, the 10
+fixtures untouched, no request-time embedding, no API integration.

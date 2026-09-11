@@ -1,0 +1,13 @@
+# Downloaded and derived corpora. Everything here is reproducible with
+#   python -m src.preprocessing.dataset
+# Keeping it out of git also avoids redistributing CC-BY-SA-4.0 corpus content
+# from this repository; see docs/DATASET_AND_MODEL_SELECTION.md.
+data/raw/
+data/processed/
+*.part
+
+# Downloaded model weights (phase 1.7B-2)
+models/
+
+# Notebook noise
+.ipynb_checkpoints/

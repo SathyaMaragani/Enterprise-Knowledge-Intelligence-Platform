@@ -495,10 +495,10 @@ A rough **development-status view** right now:
 | Spring Boot + Qdrant     | 🟢 Verified   |
 | Authentication / RBAC    | 🟢 Verified   |
 | Unified Search (1.7A)    | 🟢 Verified   |
-| ML Embeddings (1.7B)     | 🔴 Pending    |
+| ML 1.7B-1 Dataset/Eval   | 🟢 Verified   |
+| ML 1.7B-2 Embeddings     | 🔴 Pending    |
 | DSA-3 TextHack           | 🟡 Scaffolded |
 | OSSP ShellForge (Wk 1-3) | 🟢 Verified   |
-| ML                       | 🟡 Scaffolded |
 | Frontend                 | 🔴 Pending    |
 | Integration              | 🔴 Pending    |
 | Deployment               | 🔴 Pending    |
