@@ -100,6 +100,18 @@ curl -s http://localhost:6343/collections/knowledge_chunks
 cd subjects/DBE-DSD/backend && ./mvnw test -Duser.timezone=UTC
 ```
 
+On PowerShell, quote the `-D` argument:
+
+```powershell
+cd subjects\DBE-DSD\backend
+.\mvnw.cmd clean test "-Duser.timezone=UTC"
+```
+
+Unquoted, PowerShell splits `-Duser.timezone=UTC` on the dot and passes the
+fragments through separately, so Maven sees `.timezone=UTC` as a lifecycle
+phase and fails with `Unknown lifecycle phase`. The quotes keep it one
+argument. The same applies to any other `-D` property.
+
 ### Environment variables
 
 The suite needs no manual exports — `pom.xml` passes everything to surefire via
