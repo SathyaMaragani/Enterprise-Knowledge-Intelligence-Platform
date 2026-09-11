@@ -136,6 +136,41 @@
 
 ---
 
+### Authentication & RBAC — VERIFIED
+
+* [x] Spring Security + JWT (`SecurityConfig`, `JwtService`, `JwtAuthenticationFilter`)
+* [x] BCrypt password hashing
+* [x] `POST /api/auth/login`
+* [x] `CustomUserDetails` mapping database roles and permissions to authorities
+* [x] 401 Unauthorized and 403 Forbidden handlers
+* [x] Document-level RBAC (owner, explicit READ grant, or ROLE_ADMIN)
+* [x] `JWT_SECRET` required from the environment; no committed default
+
+**Phases 1.5 and 1.6 complete.**
+
+---
+
+### Unified Search — VERIFIED
+
+* [x] Search DTOs (`SearchRequest`, `SearchHit`, `SearchResponse`)
+* [x] `SearchService` orchestrator: keyword + vector fan-out, fusion on document id
+* [x] Keyword search over PostgreSQL (`DocumentRepository.searchByKeyword`)
+* [x] Vector search reusing `QdrantService`
+* [x] `DocumentAccessService` — one owner/grant/admin rule, resolved in bulk per search
+* [x] Permission filtering applied before ranking, so `totalHits` is per-caller
+* [x] Best chunk retained per document, with `matchedBy` provenance
+* [x] Pagination (`page` / `size`, capped at 100)
+* [x] Weighted ranking normalised over the backends that actually ran
+* [x] Cosine similarity (-1..1) mapped into the 0..1 fused score
+* [x] `POST /api/search`
+* [x] Graceful degradation to keyword-only when Qdrant is unavailable
+* [x] Reproducible test stack (`database/docker-compose.test.yml`) with pinned images
+* [x] 55/55 tests passing (43 integration + 12 unit) against live PostgreSQL, MongoDB and Qdrant
+
+**Phase 1.7A complete: 55 passed, 0 failed, 0 skipped.**
+
+---
+
 # 🟡 DSA-3 — TextHack
 
 The architecture/scaffolding is:
@@ -379,17 +414,17 @@ Eventually:
 
 ---
 
-# 🔴 Authentication & Security
+# 🟢 Authentication & Security
 
 * [ ] User registration
-* [ ] Login
-* [ ] Password hashing
-* [ ] JWT
-* [ ] Role-based access control
-* [ ] Permission enforcement
-* [ ] Document-level permissions
-* [ ] Protected APIs
-* [ ] Security testing
+* [x] Login
+* [x] Password hashing
+* [x] JWT
+* [x] Role-based access control
+* [x] Permission enforcement
+* [x] Document-level permissions
+* [x] Protected APIs
+* [x] Security testing
 
 ---
 
@@ -443,8 +478,10 @@ A rough **development-status view** right now:
 | Qdrant                   | 🟢 Verified   |
 | Spring Boot + PostgreSQL | 🟢 Verified   |
 | Spring Boot + MongoDB    | 🟢 Verified   |
-| Spring Boot + Qdrant     | 🔴 Pending    |
-| Authentication           | 🔴 Pending    |
+| Spring Boot + Qdrant     | 🟢 Verified   |
+| Authentication / RBAC    | 🟢 Verified   |
+| Unified Search (1.7A)    | 🟢 Verified   |
+| ML Embeddings (1.7B)     | 🔴 Pending    |
 | DSA-3 TextHack           | 🟡 Scaffolded |
 | OSSP ShellForge          | 🟡 Scaffolded |
 | ML                       | 🟡 Scaffolded |

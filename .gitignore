@@ -15,3 +15,10 @@ build/
 .venv/
 venv/
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Maven build output
+target/
+

@@ -1,0 +1,87 @@
+# Integration test stack for the DBE-DSD backend.
+#
+# Ports are deliberately offset from the development instances documented in
+# postgresql/README.md, mongodb/README.md and qdrant/docker/docker-compose.yml,
+# so this stack can run alongside them. Credentials match the defaults in
+# backend/src/main/resources/application.yml -- they are local test values and
+# are not used by any deployed environment.
+#
+#   docker compose -f subjects/DBE-DSD/database/docker-compose.test.yml up -d --wait
+#
+# PostgreSQL and MongoDB seed themselves from the scripts mounted below on the
+# first boot of an empty volume. Qdrant has no init hook; seed it with
+# qdrant/seed/seed_vectors.py. See backend/docs/TESTING.md.
+
+name: eip-test
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    container_name: eip-test-postgres
+    environment:
+      POSTGRES_DB: eip_db
+      POSTGRES_USER: eip_dev
+      POSTGRES_PASSWORD: dev_pass_123
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./postgresql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./postgresql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready alone goes green during the bootstrap phase, before the init
+      # scripts have run. Querying the seeded table means "healthy" implies
+      # "schema and seed applied".
+      test: ["CMD-SHELL", "psql -U eip_dev -d eip_db -c 'select 1 from documents limit 1' || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  mongodb:
+    image: mongo:7.0.14
+    container_name: eip-test-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: eip_mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: mongo_pass_123
+      MONGO_INITDB_DATABASE: eip_doc_db
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./mongodb/schemas/knowledge_documents_schema.js:/docker-entrypoint-initdb.d/01-schema.js:ro
+      - ./mongodb/indexes/knowledge_documents_indexes.js:/docker-entrypoint-initdb.d/02-indexes.js:ro
+      - ./mongodb/seed/knowledge_documents_seed.js:/docker-entrypoint-initdb.d/03-seed.js:ro
+      - mongodb_test_data:/data/db
+    healthcheck:
+      # Authenticated, and against the seeded collection: an unauthenticated
+      # ping goes green well before the init scripts finish.
+      test: ["CMD-SHELL", "mongosh --quiet -u eip_mongo_user -p mongo_pass_123 --authenticationDatabase admin eip_doc_db --eval 'db.knowledge_documents.countDocuments() > 0 ? 0 : quit(1)' || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: eip-test-qdrant
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    ports:
+      - "6343:6333"   # HTTP / REST -- used by seed_vectors.py
+      - "6344:6334"   # gRPC -- used by the Spring Boot QdrantClient
+    volumes:
+      - qdrant_test_data:/qdrant/storage
+    healthcheck:
+      # The image ships no curl/wget, so this uses the bash /dev/tcp builtin to
+      # confirm the REST port is accepting. Seeding immediately afterwards is
+      # what proves the API itself answers.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  postgres_test_data:
+  mongodb_test_data:
+  qdrant_test_data:

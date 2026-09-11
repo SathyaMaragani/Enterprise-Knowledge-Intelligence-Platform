@@ -1,10 +1,16 @@
+import os
 import random
 import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
-# Connect to Qdrant
-client = QdrantClient(host="localhost", port=6333)
+# Connect to Qdrant. Defaults target the development instance in
+# docker/docker-compose.yml; the integration stack overrides QDRANT_HTTP_PORT
+# (see ../../docker-compose.test.yml).
+client = QdrantClient(
+    host=os.environ.get("QDRANT_HOST", "localhost"),
+    port=int(os.environ.get("QDRANT_HTTP_PORT", "6333")),
+)
 
 COLLECTION_NAME = "knowledge_chunks"
 DIMENSION = 384
