@@ -6,4 +6,5 @@ import java.util.List;
 public interface DocumentPermissionRepository extends JpaRepository<DocumentPermission, Integer> {
     List<DocumentPermission> findByDocumentId(Integer documentId);
     List<DocumentPermission> findByUserId(Integer userId);
+    boolean existsByDocumentIdAndUserIdAndPermissionType(Integer documentId, Integer userId, String permissionType);
 }

@@ -2,12 +2,14 @@
 -- Fictional development data
 
 -- 1. Users
+-- DEV SEED ONLY. Every hash below is bcrypt('password123') so the integration
+-- tests have known logins. Never load this file into a deployed environment.
 INSERT INTO users (username, email, password_hash, full_name) VALUES
-('admin_user', 'admin@example.com', 'placeholder_hash_1', 'Admin Istrator'),
-('alice_mgr', 'alice@example.com', 'placeholder_hash_2', 'Alice Manager'),
-('bob_eng', 'bob@example.com', 'placeholder_hash_3', 'Bob Engineer'),
-('charlie_hr', 'charlie@example.com', 'placeholder_hash_4', 'Charlie HR'),
-('dave_tmp', 'dave@example.com', 'placeholder_hash_5', 'Dave Temp');
+('admin_user', 'admin@example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Admin Istrator'),
+('alice_mgr', 'alice@example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Alice Manager'),
+('bob_eng', 'bob@example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Bob Engineer'),
+('charlie_hr', 'charlie@example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Charlie HR'),
+('dave_tmp', 'dave@example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Dave Temp');
 
 -- 2. Roles
 INSERT INTO roles (name, description) VALUES

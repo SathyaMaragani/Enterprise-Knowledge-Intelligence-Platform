@@ -1,3 +1,5 @@
+# Datasource/Mongo defaults below are LOCAL DOCKER DEV ONLY (see docker/).
+# Any deployed environment must override them via environment variables.
 spring:
   application:
     name: enterprise-knowledge-intelligence-backend
@@ -22,7 +24,15 @@ spring:
 qdrant:
   host: ${QDRANT_HOST:localhost}
   port: ${QDRANT_PORT:6334}
-  collection: ${QDRANT_COLLECTION:knowledge_chunks}
+  collection-name: ${QDRANT_COLLECTION:knowledge_chunks}
+  vector-dimension: ${QDRANT_VECTOR_DIMENSION:384}
+
+# JWT_SECRET is required and has no default on purpose: it signs every access
+# token, so a committed fallback would let anyone forge one. Base64, >= 32 bytes.
+# See .env.example. Startup fails fast if it is unset.
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours
 
 server:
   port: 8080
