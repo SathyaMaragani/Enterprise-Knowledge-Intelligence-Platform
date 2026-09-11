@@ -227,35 +227,49 @@ The architecture/scaffolding is:
 
 ---
 
-# 🟡 OSSP — ShellForge
+# 🟢 OSSP — ShellForge (Weeks 1-3)
 
-We currently have the **scaffolding**, but Weeks 1–2 implementation is the next task.
+Weeks 1-3 are implemented and now actually compiled and executed. The host has
+no gcc/make, so the build runs in a `gcc:13` container.
 
-### Week 1
+### Week 1 — VERIFIED
 
-* [ ] ShellForge REPL implementation
-* [ ] `main.c`
-* [ ] `shell.h`
-* [ ] `Makefile`
-* [ ] Basic `exit`
-* [ ] Input echo
-* [ ] GCC build
-* [ ] Linux/WSL validation
-* [ ] Week 1 documentation
-* [ ] Git evidence
+* [x] ShellForge REPL implementation
+* [x] `main.c`
+* [x] `shell.h`
+* [x] `Makefile`
+* [x] Basic `exit`
+* [x] Input echo (superseded by tokenized output in Week 3)
+* [x] GCC build
+* [x] Linux validation (container)
+* [x] Week 1 documentation
+* [x] Git evidence
 
-### Week 2
+### Week 2 — VERIFIED
 
-* [ ] `input.h`
-* [ ] `input.c`
-* [ ] `malloc()`
-* [ ] `realloc()`
-* [ ] `free()`
-* [ ] Dynamic command input
-* [ ] >1024 character input test
-* [ ] Memory validation
-* [ ] Week 2 documentation
-* [ ] OSSP syllabus mapping
+* [x] `input.h`
+* [x] `input.c`
+* [x] `malloc()`
+* [x] `realloc()`
+* [x] `free()`
+* [x] Dynamic command input
+* [x] >1024 character input test (3000 chars, intact)
+* [x] Memory validation (ASan, detector control-tested)
+* [x] Week 2 documentation
+* [x] OSSP syllabus mapping
+
+### Week 3 — VERIFIED
+
+* [x] `parser.h`
+* [x] `parser.c`
+* [x] `strtok()` tokenization
+* [x] Dynamic `argv[]` construction with growth
+* [x] NULL-terminated vector in `execvp()` shape
+* [x] Modular parser separated from input and REPL
+* [x] Irregular spacing, empty and whitespace-only input handled
+* [x] 200-token growth test
+* [x] ASan + UBSan clean
+* [x] Week 3 documentation, updated README and TESTS
 
 ### Future OSSP
 
@@ -483,7 +497,7 @@ A rough **development-status view** right now:
 | Unified Search (1.7A)    | 🟢 Verified   |
 | ML Embeddings (1.7B)     | 🔴 Pending    |
 | DSA-3 TextHack           | 🟡 Scaffolded |
-| OSSP ShellForge          | 🟡 Scaffolded |
+| OSSP ShellForge (Wk 1-3) | 🟢 Verified   |
 | ML                       | 🟡 Scaffolded |
 | Frontend                 | 🔴 Pending    |
 | Integration              | 🔴 Pending    |

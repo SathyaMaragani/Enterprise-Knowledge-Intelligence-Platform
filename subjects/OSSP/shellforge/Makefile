@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -Iinclude
 
-SRCS = src/main.c src/input.c
+SRCS = src/main.c src/input.c src/parser.c
 OBJS = $(SRCS:.c=.o)
 TARGET = bin/shellforge
 

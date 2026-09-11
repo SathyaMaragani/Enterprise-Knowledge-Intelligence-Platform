@@ -68,11 +68,35 @@
 - [x] Docker-based environment validation
 
 
-## OSSP — Week 1
-**Status: UNVERIFIED** (Implementation complete but unable to compile/test due to missing gcc/make on this Windows host environment.)
+## OSSP — Weeks 1-3 (ShellForge)
+**Status: VERIFIED**
+(This Windows host has no gcc/make, which is why Weeks 1-2 previously stood
+unverified. Built and executed in a `gcc:13` container instead, which compiles
+all three weeks' sources together.)
 
-## OSSP — Week 2
-**Status: UNVERIFIED** (Implementation complete but unable to compile/test due to missing gcc/make on this Windows host environment.)
+### Week 1 — REPL, repository, Makefile
+- [x] Interactive REPL loop, banner, `exit`
+- [x] Makefile build, modular source/header layout
+- [x] Compiles clean under `-Wall -Wextra`; EOF exits 0
+
+### Week 2 — Dynamic command input
+- [x] `read_line()` with malloc/realloc/free buffer growth
+- [x] 3000-character input handled intact, no truncation
+- [x] No leaks under AddressSanitizer
+
+### Week 3 — Command parsing
+- [x] `include/parser.h`, `src/parser.c` — `parse_line()` / `free_tokens()`
+- [x] `strtok()` tokenization over the delimiter set space, tab, CR, LF and bell
+- [x] Dynamic `argv[]` growth (64 → 128 → 256), NULL-terminated
+- [x] Irregular spacing collapses; empty and whitespace-only lines produce no tokens
+- [x] Vector is in `execvp()` shape, ready for the Week 4 execution milestone
+- [x] ASan + UBSan clean; leak detector confirmed active against a control leak
+- [x] `docs/WEEK3.md`, updated `README.md` and `tests/TESTS.md`
+
+**Note:** the Week 3 handbook listing does not compile as printed — the
+`#include ""../include/...` lines carry a stray quote, and its Makefile target
+has no prerequisites so it never rebuilds. This repository keeps its existing
+`-Iinclude` include style and object-file Makefile instead.
 
 ## Phase 1.4.3 — Qdrant Vector Integration
 **Status: VERIFIED**

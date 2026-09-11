@@ -3,9 +3,12 @@
 #include <string.h>
 #include "shell.h"
 #include "input.h"
+#include "parser.h"
 
 int main(void) {
     char *line;
+    char **tokens;
+    int i;
 
     printf("=====================================\n");
     printf(" Welcome to %s Version %s\n", SHELL_NAME, VERSION);
@@ -28,7 +31,18 @@ int main(void) {
         }
 
         if (line[0] != '\0') {
-            printf("You entered : %s\n", line);
+            tokens = parse_line(line);
+
+            /* A line of nothing but whitespace parses to an empty vector. */
+            if (tokens[0] != NULL) {
+                printf("\nParsed Tokens\n");
+                for (i = 0; tokens[i] != NULL; i++) {
+                    printf("argv[%d] = %s\n", i, tokens[i]);
+                }
+                printf("argv[%d] = NULL\n", i);
+            }
+
+            free_tokens(tokens);
         }
 
         free(line);
