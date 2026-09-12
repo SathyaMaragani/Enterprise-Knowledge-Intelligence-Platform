@@ -1,0 +1,55 @@
+{
+  "dataset": "fiqa",
+  "scope": "subset",
+  "queries": 150,
+  "chunks": 7087,
+  "seed": 20260912,
+  "method": "paired bootstrap over queries, 10000 iterations",
+  "comparisons": [
+    {
+      "metric": "ndcg@10",
+      "baseline": "TF-IDF",
+      "candidate": "MiniLM-L6",
+      "baseline_mean": 0.3708711269662161,
+      "candidate_mean": 0.6239914386546656,
+      "difference": 0.2531203116884495,
+      "ci_low": 0.19830998402229139,
+      "ci_high": 0.30821918949557053,
+      "p_value": 0.0,
+      "wins": 94,
+      "losses": 14,
+      "ties": 42,
+      "significant_at_95": true
+    },
+    {
+      "metric": "ndcg@10",
+      "baseline": "MiniLM-L6",
+      "candidate": "BGE-small",
+      "baseline_mean": 0.6239914386546656,
+      "candidate_mean": 0.6532872616848266,
+      "difference": 0.029295823030161094,
+      "ci_low": -0.008183452091187994,
+      "ci_high": 0.06837316359773943,
+      "p_value": 0.1383,
+      "wins": 49,
+      "losses": 43,
+      "ties": 58,
+      "significant_at_95": false
+    },
+    {
+      "metric": "recall@10",
+      "baseline": "MiniLM-L6",
+      "candidate": "BGE-small",
+      "baseline_mean": 0.6738513338513338,
+      "candidate_mean": 0.708933177933178,
+      "difference": 0.03508184408184408,
+      "ci_low": -0.009122180134680134,
+      "ci_high": 0.08184926832426832,
+      "p_value": 0.131,
+      "wins": 29,
+      "losses": 23,
+      "ties": 98,
+      "significant_at_95": false
+    }
+  ]
+}

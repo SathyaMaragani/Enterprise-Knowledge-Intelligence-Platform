@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-09-12T06:51:50.463277+00:00",
+  "dataset": "fiqa",
+  "documents": 5200,
+  "chunks": 7087,
+  "judged_queries": 150,
+  "evaluation_scope": "subset",
+  "subset": {
+    "seed": 20260912,
+    "queries": 150,
+    "documents": 5200,
+    "relevant_documents": 437,
+    "distractor_documents": 4763,
+    "chunks": 7087
+  },
+  "chunk_words": 180,
+  "overlap_words": 40,
+  "platform": "Windows AMD64, python 3.10.9",
+  "systems": [
+    {
+      "name": "TF-IDF",
+      "kind": "lexical",
+      "license": "n/a",
+      "recall": {
+        "1": 0.1596373996373996,
+        "3": 0.28897345247345246,
+        "5": 0.3621855736855736,
+        "10": 0.46173879823879826
+      },
+      "mrr": 0.4181851851851853,
+      "ndcg": {
+        "1": 0.31333333333333335,
+        "3": 0.316501691221709,
+        "5": 0.3375853799146282,
+        "10": 0.3708711269662161
+      },
+      "index_seconds": 0.8231823444366455,
+      "query_seconds": 0.34752631187438965,
+      "queries_per_second": 431.62199486701365,
+      "index_mb": 3.523576,
+      "peak_rss_mb": 0.0,
+      "index_measured": true,
+      "notes": "63,759 features"
+    },
+    {
+      "name": "all-MiniLM-L6-v2",
+      "kind": "dense",
+      "license": "Apache-2.0",
+      "recall": {
+        "1": 0.30774851074851095,
+        "3": 0.522634421134421,
+        "5": 0.5823536648536649,
+        "10": 0.673851333851334
+      },
+      "mrr": 0.7119629629629629,
+      "ndcg": {
+        "1": 0.6266666666666667,
+        "3": 0.6053593550421188,
+        "5": 0.5968513573885159,
+        "10": 0.6239914386546654
+      },
+      "index_seconds": 97.26589298248291,
+      "query_seconds": 0.2925987243652344,
+      "queries_per_second": 512.6474844530201,
+      "index_mb": 10.885632,
+      "peak_rss_mb": 0.0,
+      "index_measured": true,
+      "notes": "weights 92 MB, no prefix"
+    },
+    {
+      "name": "bge-small-en-v1.5",
+      "kind": "dense",
+      "license": "MIT",
+      "recall": {
+        "1": 0.3410818440818443,
+        "3": 0.5291899766899766,
+        "5": 0.6015203315203315,
+        "10": 0.708933177933178
+      },
+      "mrr": 0.7321560846560847,
+      "ndcg": {
+        "1": 0.6666666666666666,
+        "3": 0.6205761267656202,
+        "5": 0.6246721973212745,
+        "10": 0.6532872616848266
+      },
+      "index_seconds": 241.83601307868958,
+      "query_seconds": 0.6742963790893555,
+      "queries_per_second": 222.45410868522922,
+      "index_mb": 10.885632,
+      "peak_rss_mb": 0.0,
+      "index_measured": true,
+      "notes": "weights 135 MB, query prefix applied"
+    }
+  ]
+}

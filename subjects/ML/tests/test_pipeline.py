@@ -132,6 +132,86 @@ def test_evaluate_rejects_empty_qrels():
     raise AssertionError("expected ValueError for empty qrels")
 
 
+def _toy_corpus():
+    from src.preprocessing.dataset import Corpus
+
+    documents = [
+        {"doc_id": str(i), "title": f"t{i}", "text": f"body {i}",
+         "language": "en", "source_dataset": "toy"}
+        for i in range(200)
+    ]
+    queries = [{"query_id": f"q{i}", "text": f"question {i}"} for i in range(40)]
+    # Each query is judged relevant to two documents far apart in the corpus.
+    qrels = []
+    for i in range(40):
+        qrels.append({"query_id": f"q{i}", "doc_id": str(i), "relevance": 1})
+        qrels.append({"query_id": f"q{i}", "doc_id": str(150 + i % 50), "relevance": 1})
+    return Corpus(documents=documents, queries=queries, qrels=qrels)
+
+
+def test_subset_is_deterministic():
+    from src.evaluation.subset import build_subset
+
+    corpus = _toy_corpus()
+    a, info_a = build_subset(corpus, num_queries=10, num_documents=60, seed=7)
+    b, info_b = build_subset(corpus, num_queries=10, num_documents=60, seed=7)
+    assert [d["doc_id"] for d in a.documents] == [d["doc_id"] for d in b.documents]
+    assert [q["query_id"] for q in a.queries] == [q["query_id"] for q in b.queries]
+    assert info_a.documents == info_b.documents
+
+    c, _ = build_subset(corpus, num_queries=10, num_documents=60, seed=8)
+    assert [q["query_id"] for q in c.queries] != [q["query_id"] for q in a.queries], (
+        "a different seed must select a different sample"
+    )
+
+
+def test_subset_keeps_every_relevant_document():
+    """The invariant that stops Recall@K being capped below 1.0 by sampling."""
+    from src.evaluation.subset import build_subset, verify_subset
+
+    corpus = _toy_corpus()
+    subset, info = build_subset(corpus, num_queries=15, num_documents=40, seed=3)
+    verify_subset(subset, corpus)
+
+    present = {d["doc_id"] for d in subset.documents}
+    original = corpus.relevant_by_query()
+    for query in subset.queries:
+        for doc_id in original[query["query_id"]]:
+            assert doc_id in present, f"relevant doc {doc_id} was dropped"
+    assert info.relevant_documents > 0
+    assert info.distractor_documents > 0, "a subset of only relevant docs is trivially easy"
+
+
+def test_verify_subset_catches_a_missing_relevant_document():
+    from src.evaluation.subset import build_subset, verify_subset
+
+    corpus = _toy_corpus()
+    subset, _ = build_subset(corpus, num_queries=10, num_documents=60, seed=5)
+    relevant_ids = {d for ids in subset.relevant_by_query().values() for d in ids}
+    broken = type(subset)(
+        documents=[d for d in subset.documents if d["doc_id"] not in relevant_ids],
+        queries=subset.queries,
+        qrels=subset.qrels,
+    )
+    try:
+        verify_subset(broken, corpus)
+    except AssertionError as exc:
+        assert "missing" in str(exc)
+        return
+    raise AssertionError("verify_subset failed to catch a dropped relevant document")
+
+
+def test_subset_does_not_mutate_the_original_corpus():
+    from src.evaluation.subset import build_subset
+
+    corpus = _toy_corpus()
+    before_docs = len(corpus.documents)
+    before_qrels = len(corpus.qrels)
+    build_subset(corpus, num_queries=10, num_documents=50, seed=1)
+    assert len(corpus.documents) == before_docs
+    assert len(corpus.qrels) == before_qrels
+
+
 def main() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

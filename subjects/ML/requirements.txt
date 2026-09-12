@@ -4,9 +4,11 @@ pandas>=2.0
 pyarrow>=15.0          # reading the BEIR parquet corpus
 scikit-learn>=1.4      # TF-IDF baseline
 
-# Phase 1.7B-2 - embedding models (not used yet)
-# sentence-transformers>=3.0
-# torch>=2.2
+# Phase 1.7B-2 - embedding models
+# Install CPU-only torch first to avoid pulling ~2.5 GB of CUDA wheels:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+torch>=2.2
+sentence-transformers>=3.0
 
 # Serving / notebooks (not used yet)
 # fastapi

@@ -27,11 +27,14 @@ for why, and for the full dataset/model decision record.
 | Phase | Scope | Status |
 |---|---|---|
 | 1.7B-1 | Dataset, preprocessing, chunking, evaluation framework, TF-IDF baseline | Done |
-| 1.7B-2 | Embedding models, batch embedding, Qdrant ingestion | Not started |
-| 1.7B-3 | Query embedding, Spring integration, keyword vs semantic vs fused comparison | Not started |
+| 1.7B-2 | Embedding models, dense retrieval, model comparison, significance testing | Done |
+| 1.7B-3 | Qdrant ingestion, Spring integration, hybrid search | Not started |
 
-No embedding model is loaded yet, and no Qdrant vector has been written or
-replaced. The collection stays 384-dimensional cosine.
+No Qdrant vector has been written or replaced, and no Spring code has changed.
+The collection stays 384-dimensional cosine. See
+[docs/PHASE_1_7B_2_EVALUATION.md](docs/PHASE_1_7B_2_EVALUATION.md) for the
+evaluation, and note that **model selection is provisional** — BGE-small and
+MiniLM-L6 were not statistically distinguishable on the bounded subset.
 
 ## Setup
 
@@ -73,23 +76,59 @@ MRR=0.1792   nDCG@10=0.1447
 This is the number every later model must beat. BEIR reports BM25 at
 nDCG@10 = 0.236 on the same dataset.
 
+## Compare the embedding models (1.7B-2)
+
+```bash
+python -m src.evaluation.compare --subset
+python -m src.evaluation.significance
+```
+
+The bounded subset (150 queries, 7,087 chunks, seed 20260912) runs in minutes on
+CPU. Full-corpus embedding is estimated at 18-27 min (MiniLM) and 44-67 min
+(BGE), and is not run by default.
+
+Subset results:
+
+| Metric | TF-IDF | MiniLM-L6 | BGE-small |
+|---|---|---|---|
+| nDCG@10 | 0.3709 | 0.6240 | 0.6533 |
+| MRR | 0.4182 | 0.7120 | 0.7322 |
+| Recall@10 | 0.4617 | 0.6739 | 0.7089 |
+
+Dense beats TF-IDF significantly (p < 0.0001). BGE vs MiniLM is **not**
+significant (p = 0.1383), so MiniLM-L6 is the provisional choice on cost —
+it embeds 2.5x faster.
+
+Subset scores are inflated relative to the full corpus and are not comparable to
+published BEIR numbers; see the limitations section of the phase document.
+
 ## Run the tests
 
 ```bash
-python tests/test_pipeline.py
+python tests/test_pipeline.py                  # 15 checks, no network
+python tests/test_embeddings.py                # 4 structural checks, no weights
+python tests/test_embeddings.py --with-models  # + 2 behavioural checks
 ```
 
-11 checks over normalization, chunking, the metrics and the chunk-to-document
-collapse. No network, no dataset needed.
+The structural embedding tests stub the model, so the BGE prefix rule is checked
+without downloading weights. The behavioural pair loads the real models and
+proves the prefix actually changes retrieval and that both models emit
+384-dimensional L2-normalized vectors.
 
 ## Layout
 
 ```
-src/preprocessing/dataset.py   download FiQA, convert to canonical JSONL
-src/preprocessing/chunking.py  normalization and overlapping-window chunking
-src/evaluation/metrics.py      Recall@K, MRR, nDCG, chunk->document collapse
-src/ranking/tfidf_baseline.py  TF-IDF retriever and baseline evaluation run
-tests/test_pipeline.py         self-check
+src/preprocessing/dataset.py     download FiQA, convert to canonical JSONL
+src/preprocessing/chunking.py    normalization and overlapping-window chunking
+src/embeddings/encoder.py        model loading, prefix rules, dimension guard
+src/ranking/tfidf_baseline.py    TF-IDF retriever
+src/ranking/dense_retriever.py   exact cosine search over embeddings
+src/evaluation/metrics.py        Recall@K, MRR, nDCG, chunk->document collapse
+src/evaluation/subset.py         deterministic bounded evaluation subset
+src/evaluation/compare.py        three-way comparison harness
+src/evaluation/significance.py   paired bootstrap significance tests
+tests/test_pipeline.py           15 checks (no network)
+tests/test_embeddings.py         4 structural + 2 behavioural checks
 ```
 
 ## Planned capabilities
