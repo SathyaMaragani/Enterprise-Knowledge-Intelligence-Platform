@@ -14,6 +14,18 @@ INSERT INTO categories (name, description) VALUES ('Research', 'Research documen
 INSERT INTO categories (name, description) VALUES ('Legal', 'Legal documents') ON CONFLICT DO NOTHING;
 INSERT INTO categories (name, description) VALUES ('Administration', 'Administration documents') ON CONFLICT DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS permissions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT
+);
+
+INSERT INTO roles (id, name, description) VALUES 
+(1, 'ADMIN', 'Administrator'), 
+(2, 'MANAGER', 'Manager'), 
+(3, 'EMPLOYEE', 'Employee')
+ON CONFLICT (name) DO NOTHING;
+
 -- Users
 INSERT INTO users (username, email, password_hash, full_name) VALUES ('dana_hr', 'dana_hr@demo.example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Dana Whitfield');
 INSERT INTO users (username, email, password_hash, full_name) VALUES ('omar_hr', 'omar_hr@demo.example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Omar Siddiqui');

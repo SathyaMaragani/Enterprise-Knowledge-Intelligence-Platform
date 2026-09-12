@@ -44,13 +44,16 @@ public class SearchService {
     private final DocumentRepository documentRepository;
     private final QdrantService qdrantService;
     private final DocumentAccessService documentAccessService;
+    private final EmbeddingService embeddingService;
 
     public SearchService(DocumentRepository documentRepository,
                          QdrantService qdrantService,
-                         DocumentAccessService documentAccessService) {
+                         DocumentAccessService documentAccessService,
+                         EmbeddingService embeddingService) {
         this.documentRepository = documentRepository;
         this.qdrantService = qdrantService;
         this.documentAccessService = documentAccessService;
+        this.embeddingService = embeddingService;
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +68,14 @@ public class SearchService {
             collectKeywordHits(request, hits);
             keywordRan = true;
             sources.add("KEYWORD");
+
+            // Server-side query embedding
+            if (!request.hasVector()) {
+                List<Float> generatedVector = embeddingService.embedQuery(request.getQuery());
+                if (generatedVector != null) {
+                    request.setVector(generatedVector);
+                }
+            }
         }
 
         boolean vectorRan = false;

@@ -66,7 +66,14 @@ class SearchServiceTest {
             }
         };
 
-        searchService = new SearchService(repository, qdrant, access);
+        EmbeddingService embeddingService = new EmbeddingService(null) {
+            @Override
+            public List<Float> embedQuery(String query) {
+                return null;
+            }
+        };
+
+        searchService = new SearchService(repository, qdrant, access, embeddingService);
     }
 
     /**
