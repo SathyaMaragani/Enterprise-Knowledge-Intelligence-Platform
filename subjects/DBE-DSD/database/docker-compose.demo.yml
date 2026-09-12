@@ -1,0 +1,78 @@
+# Demo environment stack for the DBE-DSD backend.
+#
+# Ports are offset from BOTH the development instances and integration test instances,
+# ensuring the demo can run side-by-side with them in complete isolation.
+#
+# PostgreSQL: 5436
+# MongoDB: 27019
+# Qdrant REST: 6345
+# Qdrant gRPC: 6346
+#
+# PostgreSQL and MongoDB seed themselves from subjects/DBE-DSD/database/demo/
+# which contains deterministic demo documents distinct from the test fixtures.
+
+name: eip-demo
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    container_name: eip-demo-postgres
+    environment:
+      POSTGRES_DB: eip_db
+      POSTGRES_USER: eip_demo
+      POSTGRES_PASSWORD: demo_pass_123
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./postgresql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./demo/01-demo-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - postgres_demo_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U eip_demo -d eip_db -c 'select 1 from documents limit 1' || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  mongodb:
+    image: mongo:7.0.14
+    container_name: eip-demo-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: eip_mongo_demo
+      MONGO_INITDB_ROOT_PASSWORD: mongo_demo_pass_123
+      MONGO_INITDB_DATABASE: eip_doc_db
+    ports:
+      - "27019:27017"
+    volumes:
+      - ./mongodb/schemas/knowledge_documents_schema.js:/docker-entrypoint-initdb.d/01-schema.js:ro
+      - ./mongodb/indexes/knowledge_documents_indexes.js:/docker-entrypoint-initdb.d/02-indexes.js:ro
+      - ./demo/01-demo-seed.js:/docker-entrypoint-initdb.d/03-seed.js:ro
+      - mongodb_demo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u eip_mongo_demo -p mongo_demo_pass_123 --authenticationDatabase admin eip_doc_db --eval 'db.knowledge_documents.countDocuments() > 0 ? 0 : quit(1)' || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: eip-demo-qdrant
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    ports:
+      - "6345:6333"   # HTTP / REST
+      - "6346:6334"   # gRPC
+    volumes:
+      - qdrant_demo_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  postgres_demo_data:
+  mongodb_demo_data:
+  qdrant_demo_data:

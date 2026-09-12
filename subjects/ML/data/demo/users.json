@@ -1,0 +1,100 @@
+[
+  {
+    "username": "dana_hr",
+    "full_name": "Dana Whitfield",
+    "department": "HR",
+    "role": "MANAGER",
+    "email": "dana_hr@demo.example.com"
+  },
+  {
+    "username": "omar_hr",
+    "full_name": "Omar Siddiqui",
+    "department": "HR",
+    "role": "EMPLOYEE",
+    "email": "omar_hr@demo.example.com"
+  },
+  {
+    "username": "priya_fin",
+    "full_name": "Priya Raman",
+    "department": "Finance",
+    "role": "MANAGER",
+    "email": "priya_fin@demo.example.com"
+  },
+  {
+    "username": "tom_fin",
+    "full_name": "Tom Bergstrom",
+    "department": "Finance",
+    "role": "EMPLOYEE",
+    "email": "tom_fin@demo.example.com"
+  },
+  {
+    "username": "mei_eng",
+    "full_name": "Mei Lin Zhao",
+    "department": "Engineering",
+    "role": "MANAGER",
+    "email": "mei_eng@demo.example.com"
+  },
+  {
+    "username": "jonas_eng",
+    "full_name": "Jonas Aaltonen",
+    "department": "Engineering",
+    "role": "EMPLOYEE",
+    "email": "jonas_eng@demo.example.com"
+  },
+  {
+    "username": "sara_eng",
+    "full_name": "Sara Okonkwo",
+    "department": "Engineering",
+    "role": "EMPLOYEE",
+    "email": "sara_eng@demo.example.com"
+  },
+  {
+    "username": "ravi_res",
+    "full_name": "Ravi Deshpande",
+    "department": "Research",
+    "role": "MANAGER",
+    "email": "ravi_res@demo.example.com"
+  },
+  {
+    "username": "elena_res",
+    "full_name": "Elena Kovalenko",
+    "department": "Research",
+    "role": "EMPLOYEE",
+    "email": "elena_res@demo.example.com"
+  },
+  {
+    "username": "marcus_legal",
+    "full_name": "Marcus Delacroix",
+    "department": "Legal",
+    "role": "MANAGER",
+    "email": "marcus_legal@demo.example.com"
+  },
+  {
+    "username": "aisha_legal",
+    "full_name": "Aisha Rahman",
+    "department": "Legal",
+    "role": "EMPLOYEE",
+    "email": "aisha_legal@demo.example.com"
+  },
+  {
+    "username": "nils_admin",
+    "full_name": "Nils Andersen",
+    "department": "Administration",
+    "role": "EMPLOYEE",
+    "email": "nils_admin@demo.example.com"
+  },
+  {
+    "username": "grace_it",
+    "full_name": "Grace Mwangi",
+    "department": "IT",
+    "role": "EMPLOYEE",
+    "email": "grace_it@demo.example.com"
+  },
+  {
+    "username": "demo_admin",
+    "full_name": "Demo Administrator",
+    "department": "Administration",
+    "role": "ADMIN",
+    "email": "demo_admin@demo.example.com"
+  }
+]

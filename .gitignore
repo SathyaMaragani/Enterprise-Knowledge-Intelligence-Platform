@@ -22,3 +22,7 @@ __pycache__/
 # Maven build output
 target/
 
+
+# Downloaded Models
+models/
+

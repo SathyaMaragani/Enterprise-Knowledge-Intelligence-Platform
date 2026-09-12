@@ -1,0 +1,302 @@
+[
+  {
+    "document_id": 143,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 186,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 207,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 46,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 52,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 139,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 300,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 284,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 182,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 137,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 91,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 86,
+    "username": "dana_hr",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 134,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 274,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 183,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 284,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 185,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 299,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 192,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 251,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 66,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 306,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 246,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 264,
+    "username": "priya_fin",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 247,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 270,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 40,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 19,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 279,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 183,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 78,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 203,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 140,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 273,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 202,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 39,
+    "username": "mei_eng",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 301,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 281,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 180,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 282,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 10,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 314,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 221,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 58,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 32,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 42,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 132,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 112,
+    "username": "ravi_res",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 10,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 98,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 140,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 301,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 74,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 151,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 306,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 182,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 200,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 177,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 295,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  },
+  {
+    "document_id": 243,
+    "username": "marcus_legal",
+    "permission_type": "READ"
+  }
+]

@@ -229,3 +229,25 @@ headroom 1.7B-2 must demonstrate.
 **Out of scope by design:** no embedding model loaded, no Qdrant vectors written
 or replaced, collection dimension unchanged, Spring search untouched, the 10
 fixtures untouched, no request-time embedding, no API integration.
+
+## Phase 1.7B-3A — Real Embedding / Demo Corpus Foundation
+**Status: VERIFIED**
+(Executed against a standalone Demo stack in Docker with Java ONNX dependencies prepared.)
+
+- [x] Separate Demo environment created (`docker-compose.demo.yml`) with isolated ports (5436, 27019, 6345, 6346).
+- [x] Python `embed_and_ingest.py` added to convert synthetic chunk text into vectors using `all-MiniLM-L6-v2`.
+- [x] Seeded Demo Qdrant successfully with 705 dimension-384 vectors.
+- [x] Demo MongoDB seeded securely bypassing JSON Schema errors.
+- [x] Java ONNX `onnxruntime` and `tokenizers` dependencies added to Spring Boot `pom.xml`.
+- [x] ML and DBE-DSD Backend regression tests remain fully valid.
+
+## Phase 1.7B-3C - Java ONNX MiniLM Query Embedding
+**Status: VERIFIED**
+(Implemented in-process Java ONNX embedding with Python retrieval equivalence verified.)
+
+- [x] Java ONNX inference model integration (MiniLmOnnxEncoder.java)
+- [x] Attention-mask-aware mean pooling and L2 normalization
+- [x] CLI testing utility (EncodeCli.java)
+- [x] Numerical compatibility tests (Python reference vs Java output)
+- [x] Retrieval equivalence tests (100% identical top-5 retrieval results on demo corpus)
+
