@@ -43,9 +43,14 @@ public class DocumentAccessService {
     }
 
     public boolean isAdmin() {
+        return hasAuthority("ROLE_ADMIN");
+    }
+
+    /** Whether the current principal holds a role ({@code ROLE_*}) or permission authority. */
+    public boolean hasAuthority(String authority) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+                .anyMatch(a -> authority.equals(a.getAuthority()));
     }
 
     public boolean canRead(Document document) {

@@ -476,6 +476,50 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## User Administration and Document Access
+**Status: VERIFIED**
+(Backend suite against the live stacks; frontend tests and build; account
+creation, disabling with an existing token, and grant/revoke checked with curl
+against a running server.)
+
+```
+Backend   Tests run: 146, Failures: 0, Errors: 0, Skipped: 0   (10 new)
+Frontend  Tests  127 passed (127)                                (8 new)
+```
+
+**Backend**
+- [x] `/api/admin/users` (list, create, update, reset password) and
+      `/api/admin/roles`, all requiring `USER_MANAGE`
+- [x] Validation reports every failing field; duplicate usernames and emails are
+      409; passwords are 8–72 characters (BCrypt's 72-byte limit)
+- [x] Lockout protection: an administrator cannot disable or re-role themselves
+- [x] `/api/documents/{id}/permissions`: owner or `USER_MANAGE` lists, grants READ
+      and revokes; only READ can be created because it is the only type the
+      access rule honours
+
+**Frontend**
+- [x] `/admin`: account table with inline role, status and password reset, plus
+      an add-user form; own-account controls disabled
+- [x] Access panel on the document viewer for the owner and administrators
+- [x] The Administration link now follows the `USER_MANAGE` permission, not the
+      ADMIN role name
+
+**Two security fixes in `JwtAuthenticationFilter`:**
+
+| Problem | Effect | Fix |
+|---|---|---|
+| The filter checked only a token's signature, subject and expiry | A disabled user's tokens kept working for up to 24 hours | Tokens are accepted only while the account is enabled |
+| Authentication was set by mutating the current `SecurityContext` object | A context shared across requests (another thread, or MockMvc's test context) inherited a previous request's identity | Each authenticated request gets a new context, as Spring Security recommends |
+
+The second was found by the new tests: three token-based tests silently ran as
+the user from an earlier request in the same test. Deliberately removing the
+enabled check failed the disabled-token test; removing the owner check failed the
+grant-rules test.
+
+**Live:** an administrator created `live_tmp`, whose token worked (200). After the
+account was disabled the same token got 401. Alice granted Bob READ on document 7
+(Bob 200), revoked it (Bob 403). The test data was then removed.
+
 ## Document Upload and Delete
 **Status: VERIFIED**
 (Backend suite against the live test and demo stacks; frontend tests and build;

@@ -153,6 +153,72 @@ describe('document viewer', () => {
     expect(screen.getByRole('button', { name: 'Delete permanently' }).disabled).toBe(false);
   });
 
+  it('shows the access panel to the owner, who grants and revokes read access', async () => {
+    let grants = [];
+    const calls = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url, init = {}) => {
+        const method = init.method ?? 'GET';
+        calls.push([method, url, init.body && JSON.parse(init.body)]);
+        if (url === '/api/documents/3') return jsonResponse(200, DOCUMENT);
+        if (url === '/api/auth/me') return jsonResponse(200, { username: 'bob_eng', roles: ['EMPLOYEE'], permissions: ['DOCUMENT_READ'] });
+        if (url === '/api/documents/3/permissions' && method === 'GET') return jsonResponse(200, grants);
+        if (url === '/api/documents/3/permissions' && method === 'POST') {
+          const username = JSON.parse(init.body).username;
+          if (username === 'ghost') return jsonResponse(400, { message: 'Unknown user: ghost' });
+          grants = [{ id: 40, username, fullName: 'Dave Temp', permissionType: 'READ', grantedAt: '2026-09-17T10:00:00Z' }];
+          return jsonResponse(201, grants[0]);
+        }
+        if (url === '/api/documents/3/permissions/40' && method === 'DELETE') {
+          grants = [];
+          return jsonResponse(204);
+        }
+        return jsonResponse(404, { message: `No mock for ${method} ${url}` });
+      }),
+    );
+    render(
+      <MemoryRouter initialEntries={['/documents/3']}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const panel = (await screen.findByRole('heading', { name: 'Access' })).closest('section');
+    expect(await within(panel).findByText('No one else has been given access.')).toBeTruthy();
+    expect(within(panel).getByText(/bob_eng owns this document/)).toBeTruthy();
+
+    const input = within(panel).getByLabelText('Username to give read access');
+    fireEvent.change(input, { target: { value: 'ghost' } });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Give read access' }));
+    expect((await within(panel).findByRole('alert')).textContent).toBe('Unknown user: ghost');
+    expect(input.value).toBe('ghost');
+
+    fireEvent.change(input, { target: { value: ' dave_tmp ' } });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Give read access' }));
+    expect(await within(panel).findByText('Dave Temp')).toBeTruthy();
+    expect(input.value).toBe('');
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Revoke READ access for dave_tmp' }));
+    expect(await within(panel).findByText('No one else has been given access.')).toBeTruthy();
+    expect(calls.filter(([method]) => method !== 'GET')).toEqual([
+      ['POST', '/api/documents/3/permissions', { username: 'ghost' }],
+      ['POST', '/api/documents/3/permissions', { username: 'dave_tmp' }],
+      ['DELETE', '/api/documents/3/permissions/40', undefined],
+    ]);
+  });
+
+  it('hides the access panel from readers who neither own the document nor administer users', async () => {
+    renderDocument('/documents/3', {
+      'GET /api/documents/3': jsonResponse(200, DOCUMENT),
+      'GET /api/auth/me': jsonResponse(200, { username: 'alice_mgr', fullName: 'Alice Manager', roles: ['MANAGER'], permissions: ['DOCUMENT_READ'] }),
+    });
+
+    await screen.findByRole('button', { name: /Account menu for Alice Manager/ });
+    expect(screen.queryByRole('heading', { name: 'Access' })).toBeNull();
+  });
+
   it('explains a forbidden document', async () => {
     renderDocument('/documents/4', {
       'GET /api/documents/4': jsonResponse(403, { error: 'Forbidden', message: 'User does not have access to this document' }),

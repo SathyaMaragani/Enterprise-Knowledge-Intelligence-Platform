@@ -4,6 +4,7 @@ import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
+import AccessPanel from '../components/AccessPanel.jsx';
 import { CategoryTag, FileBadge, formatDateTime, StatusPill } from '../components/DocumentBits.jsx';
 import { AlertIcon } from '../components/icons.jsx';
 import { relativeTime } from './dashboardData.js';
@@ -151,6 +152,9 @@ export default function DocumentPage() {
         </div>
 
         <aside className="doc-layout__aside">
+          {(can(profile, 'USER_MANAGE') || (profile && profile.username === doc.owner)) && (
+            <AccessPanel documentId={doc.id} owner={doc.owner} />
+          )}
           <DetailPanel
             title="Source"
             rows={[

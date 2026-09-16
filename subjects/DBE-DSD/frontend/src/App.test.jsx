@@ -222,7 +222,11 @@ describe('signed-in profile', () => {
 
     mockApi({
       ...DASHBOARD_ROUTES,
-      'GET /api/auth/me': jsonResponse(200, profile({ username: 'admin_user', fullName: 'Admin Istrator', roles: ['ADMIN'] })),
+      'GET /api/auth/me': jsonResponse(
+        200,
+        // Administration follows USER_MANAGE, which the ADMIN role holds.
+        profile({ username: 'admin_user', fullName: 'Admin Istrator', roles: ['ADMIN'], permissions: ['DOCUMENT_READ', 'USER_MANAGE'] }),
+      ),
     });
     sessionStorage.setItem('eip.token', tokenFor('admin_user'));
     renderApp('/');

@@ -92,9 +92,14 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.PAYLOAD_TOO_LARGE, "Payload Too Large", "Files can be at most 1 MB");
     }
 
-    @ExceptionHandler(DocumentNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleDocumentNotFound(DocumentNotFoundException ex) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFound(ResourceNotFoundException ex) {
         return body(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, String>> handleConflict(ConflictException ex) {
+        return body(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

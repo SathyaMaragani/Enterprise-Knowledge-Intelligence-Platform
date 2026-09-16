@@ -531,7 +531,7 @@ Current state:
 
 # 🟢 Authentication & Security
 
-* [ ] User registration
+* [x] User registration (administrator-created accounts; there is no self-service sign-up)
 * [x] Login
 * [x] Password hashing
 * [x] JWT
@@ -583,8 +583,8 @@ Current state:
 * [x] Fuzzy search (fuzzy matches flagged in results)
 * [x] Search filters (category and status; department omitted, as it filters vector search only)
 * [x] Search results
-* [ ] Admin/user management
-* [ ] Document permissions
+* [x] Admin/user management (create, role, enable/disable, password reset)
+* [x] Document permissions (owner or administrator grants and revokes READ access)
 * [ ] ML insights
 * [ ] TextHack demonstrations
 
@@ -599,7 +599,9 @@ Current state:
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (137 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (146 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] `/api/admin/users` and `/api/admin/roles`; disabling an account rejects its existing tokens
+* [x] `/api/documents/{id}/permissions`: list, grant READ, revoke
 * [x] `POST /api/documents`: upload to PostgreSQL, MongoDB (chunked) and Qdrant (embedded), with rollback
 * [x] `DELETE /api/documents/{id}`: removes vectors, content and metadata
 * [x] Consistent API errors: client mistakes return 4xx, 500s never expose exception text
@@ -645,7 +647,7 @@ A comprehensive **development-status view** right now:
 | Product UI: sign-in + dashboard | 🟢 Verified |
 | Repository/Search/Admin pages | 🔴 Pending    |
 | Document upload and delete    | 🟢 Verified   |
-| Admin write APIs (users)      | 🔴 Pending    |
+| Administration and access     | 🟢 Verified   |
 | Deployment (Containers)       | 🟡 Partial    |
 
 ## The important thing
@@ -671,7 +673,6 @@ DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 
 REMAINING:
 Frontend: Document repository, full search page, admin/ML/TextHack views
-DBE: Admin APIs (user management, document permission management)
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads
 Deployment: Dockerize Spring Boot and frontend, load and performance testing

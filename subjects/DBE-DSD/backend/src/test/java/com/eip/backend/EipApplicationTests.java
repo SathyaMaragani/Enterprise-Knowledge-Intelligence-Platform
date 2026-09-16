@@ -747,6 +747,297 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // USER ADMINISTRATION AND DOCUMENT GRANT TESTS
+    // ---------------------------------------------------------
+    // Tests that create users or grants remove them again. Requests that must run
+    // through the real JWT filter use @WithAnonymousUser plus a bearer token.
+
+    @Autowired
+    private com.eip.backend.security.JwtService jwtService;
+
+    @Autowired
+    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+
+    @Autowired
+    private com.eip.backend.repository.DocumentPermissionRepository documentPermissionRepository;
+
+    private String bearer(String username) {
+        return "Bearer " + jwtService.generateToken(userDetailsService.loadUserByUsername(username));
+    }
+
+    private static String createUserJson(String username, String role) {
+        return """
+            {"username":"%s","email":"%s@example.com","fullName":"Temp %s","password":"temp-pass-123","role":"%s"}
+            """.formatted(username, username, username, role);
+    }
+
+    private Integer createTempUser(String username, String role) throws Exception {
+        String body = mockMvc.perform(post("/api/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserJson(username, role)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asInt();
+    }
+
+    private void removeUser(String username) {
+        userRepository.findByUsername(username).ifPresent(userRepository::delete);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions login(String username, String password) throws Exception {
+        return mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(username, password)));
+    }
+
+    @Test
+    void testAdminListsUsersAndRoles() throws Exception {
+        mockMvc.perform(get("/api/admin/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].username", contains("admin_user", "alice_mgr", "bob_eng", "charlie_hr", "dave_tmp")))
+                .andExpect(jsonPath("$[1].fullName").value("Alice Manager"))
+                .andExpect(jsonPath("$[1].roles", contains("MANAGER")))
+                .andExpect(jsonPath("$[1].active").value(true))
+                .andExpect(jsonPath("$[0].passwordHash").doesNotExist());
+        mockMvc.perform(get("/api/admin/roles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].name", contains("ADMIN", "EMPLOYEE", "MANAGER")))
+                .andExpect(jsonPath("$[1].permissions", contains("DOCUMENT_READ")));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testNonAdminCannotAdministerUsers() throws Exception {
+        mockMvc.perform(get("/api/admin/users")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserJson("sneaky_tmp", "ADMIN")))
+                .andExpect(status().isForbidden());
+        assertTrue(userRepository.findByUsername("sneaky_tmp").isEmpty());
+    }
+
+    @Test
+    void testAdminCreatesUserWhoCanSignIn() throws Exception {
+        try {
+            mockMvc.perform(post("/api/admin/users")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(createUserJson("new_tmp_user", "manager")))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.username").value("new_tmp_user"))
+                    .andExpect(jsonPath("$.email").value("new_tmp_user@example.com"))
+                    .andExpect(jsonPath("$.roles", contains("MANAGER")))
+                    .andExpect(jsonPath("$.active").value(true));
+
+            login("new_tmp_user", "temp-pass-123").andExpect(status().isOk());
+            login("new_tmp_user", "wrong-pass").andExpect(status().isUnauthorized());
+        } finally {
+            removeUser("new_tmp_user");
+        }
+    }
+
+    @Test
+    void testCreateUserRejectsDuplicatesAndInvalidInput() throws Exception {
+        mockMvc.perform(post("/api/admin/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserJson("alice_mgr", "EMPLOYEE")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Username alice_mgr is already taken"));
+        mockMvc.perform(post("/api/admin/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"dup_mail_tmp\",\"email\":\"ALICE@example.com\",\"fullName\":\"x\",\"password\":\"temp-pass-123\",\"role\":\"EMPLOYEE\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Email alice@example.com is already in use"));
+        mockMvc.perform(post("/api/admin/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"a b\",\"email\":\"not-an-email\",\"fullName\":\"\",\"password\":\"short\",\"role\":\"EMPLOYEE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", allOf(
+                        containsString("Username may contain only"),
+                        containsString("Email must be a valid address"),
+                        containsString("Full name is required"),
+                        containsString("Password must be 8 to 72 characters"))));
+        mockMvc.perform(post("/api/admin/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserJson("role_tmp", "SUPERUSER")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Unknown role: SUPERUSER"));
+        assertTrue(userRepository.findByUsername("dup_mail_tmp").isEmpty());
+        assertTrue(userRepository.findByUsername("role_tmp").isEmpty());
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testDisablingUserRevokesTheirExistingToken() throws Exception {
+        String admin = bearer("admin_user");
+        try {
+            Integer id = null;
+            String body = mockMvc.perform(post("/api/admin/users")
+                            .header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(createUserJson("disable_tmp", "EMPLOYEE")))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            id = objectMapper.readTree(body).get("id").asInt();
+            String token = bearer("disable_tmp");
+            mockMvc.perform(get("/api/auth/me").header("Authorization", token)).andExpect(status().isOk());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/" + id)
+                            .header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"active\":false}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.active").value(false));
+
+            // The token was issued before the account was disabled and has not expired.
+            mockMvc.perform(get("/api/auth/me").header("Authorization", token)).andExpect(status().isUnauthorized());
+            login("disable_tmp", "temp-pass-123").andExpect(status().isUnauthorized());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/" + id)
+                            .header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"active\":true,\"role\":\"MANAGER\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.roles", contains("MANAGER")));
+            mockMvc.perform(get("/api/auth/me").header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.permissions", hasItem("DOCUMENT_CREATE")));
+        } finally {
+            removeUser("disable_tmp");
+        }
+    }
+
+    @Test
+    void testAdminCannotDisableOrDemoteThemselves() throws Exception {
+        Integer adminId = userRepository.findByUsername("admin_user").orElseThrow().getId();
+        var patch = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/" + adminId)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(patch.content("{\"active\":false}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("You cannot disable your own account"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/" + adminId)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"EMPLOYEE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("You cannot change your own role"));
+        // Setting the role an account already has is not a change.
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/" + adminId)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"ADMIN\",\"active\":true}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/admin/users/999999")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isNotFound());
+
+        assertTrue(userRepository.findByUsername("admin_user").orElseThrow().getIsActive());
+    }
+
+    @Test
+    void testAdminResetsPassword() throws Exception {
+        try {
+            Integer id = createTempUser("reset_tmp", "EMPLOYEE");
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/admin/users/" + id + "/password")
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"brand-new-pass\"}"))
+                    .andExpect(status().isNoContent());
+
+            login("reset_tmp", "temp-pass-123").andExpect(status().isUnauthorized());
+            login("reset_tmp", "brand-new-pass").andExpect(status().isOk());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/admin/users/" + id + "/password")
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"short\"}"))
+                    .andExpect(status().isBadRequest());
+        } finally {
+            removeUser("reset_tmp");
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testOwnerGrantsAndRevokesReadAccess() throws Exception {
+        // Document 7 (Q2 Budget Draft) belongs to alice_mgr; bob_eng cannot read it.
+        String alice = bearer("alice_mgr");
+        String bob = bearer("bob_eng");
+        Integer grantId = null;
+        try {
+            mockMvc.perform(get("/api/documents/7").header("Authorization", bob)).andExpect(status().isForbidden());
+            mockMvc.perform(get("/api/documents/7/permissions").header("Authorization", alice))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+
+            String body = mockMvc.perform(post("/api/documents/7/permissions")
+                            .header("Authorization", alice)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"bob_eng\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.username").value("bob_eng"))
+                    .andExpect(jsonPath("$.fullName").value("Bob Engineer"))
+                    .andExpect(jsonPath("$.permissionType").value("READ"))
+                    .andReturn().getResponse().getContentAsString();
+            grantId = objectMapper.readTree(body).get("id").asInt();
+
+            mockMvc.perform(get("/api/documents/7").header("Authorization", bob)).andExpect(status().isOk());
+            mockMvc.perform(get("/api/documents/page").header("Authorization", bob))
+                    .andExpect(jsonPath("$.items[*].id", hasItem(7)));
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .delete("/api/documents/7/permissions/" + grantId).header("Authorization", alice))
+                    .andExpect(status().isNoContent());
+            grantId = null;
+
+            mockMvc.perform(get("/api/documents/7").header("Authorization", bob)).andExpect(status().isForbidden());
+        } finally {
+            if (grantId != null) {
+                documentPermissionRepository.deleteById(grantId);
+            }
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testGrantRulesAndValidation() throws Exception {
+        String alice = bearer("alice_mgr");
+        String bob = bearer("bob_eng");
+        String admin = bearer("admin_user");
+        long before = documentPermissionRepository.count();
+        var grant = (java.util.function.BiFunction<String, String, org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder>)
+                (token, json) -> post("/api/documents/7/permissions").header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(json);
+
+        // Only the owner or an administrator manages access.
+        mockMvc.perform(get("/api/documents/7/permissions").header("Authorization", bob)).andExpect(status().isForbidden());
+        mockMvc.perform(grant.apply(bob, "{\"username\":\"dave_tmp\"}")).andExpect(status().isForbidden());
+
+        mockMvc.perform(grant.apply(alice, "{\"username\":\"nobody_here\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Unknown user: nobody_here"));
+        mockMvc.perform(grant.apply(alice, "{\"username\":\"alice_mgr\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("alice_mgr owns this document and can already read it"));
+        mockMvc.perform(grant.apply(alice, "{\"username\":\"bob_eng\",\"permissionType\":\"WRITE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only READ access can be granted"));
+        mockMvc.perform(grant.apply(alice, "{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Username is required"));
+
+        // Administrators can list any document's grants, including legacy WRITE grants.
+        mockMvc.perform(get("/api/documents/4/permissions").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].username", contains("admin_user", "alice_mgr")))
+                .andExpect(jsonPath("$[*].permissionType", contains("WRITE", "READ")));
+        // Alice already holds READ on document 4.
+        mockMvc.perform(post("/api/documents/4/permissions").header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"alice_mgr\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("alice_mgr already has READ access"));
+
+        // A grant id from another document is not revocable through this one.
+        Integer aliceOnDoc5 = documentPermissionRepository.findByDocumentId(5).get(0).getId();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/documents/4/permissions/" + aliceOnDoc5).header("Authorization", admin))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/documents/999999/permissions").header("Authorization", admin))
+                .andExpect(status().isNotFound());
+
+        assertEquals(before, documentPermissionRepository.count());
+    }
+
+    // ---------------------------------------------------------
     // DOCUMENT UPLOAD AND DELETE TESTS
     // ---------------------------------------------------------
     // Embedding is disabled on the test stack, so uploads store content and chunks

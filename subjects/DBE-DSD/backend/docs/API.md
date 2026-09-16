@@ -18,7 +18,8 @@ server and return a generic message, never exception text.
 | 400 | Bad Request | Invalid body fields (every failing field's message, joined by `; `), malformed or missing JSON, a path or query parameter of the wrong type or missing, or an invalid search/vector request. |
 | 401 | Unauthorized | No or invalid bearer token, or a failed login. A wrong password, an unknown user and a disabled account all return `Invalid username or password`, so login responses never reveal which accounts exist. |
 | 403 | Forbidden | Authenticated, but not allowed to read the document. |
-| 404 | Not Found | No endpoint matches the path, or the document does not exist. |
+| 404 | Not Found | No endpoint matches the path, or the document, user or grant does not exist. |
+| 409 | Conflict | A username or email already in use, or a grant that already exists. |
 | 405 | Method Not Allowed | The path exists but not for this HTTP method. |
 | 413 | Payload Too Large | An upload over 1 MB. |
 | 415 | Unsupported Media Type | A body the endpoint does not accept, such as plain text sent to a JSON endpoint. |
@@ -64,6 +65,10 @@ server and return a generic message, never exception text.
 ```
 
 `roles` and `permissions` are sorted. Returns 401 without a valid token.
+
+### Disabled accounts
+A disabled account cannot sign in, and every token it already holds is rejected
+on its next request (401), without waiting for the token to expire.
 
 ## 1. Application Health
 - **URL**: `/api/health`
@@ -197,6 +202,53 @@ Returns 204, or 403 without the permission, 404 if the document does not exist,
 and 503 if Qdrant is unreachable. Qdrant is removed first, so a 503 means nothing
 was deleted and the request can simply be retried.
 
+
+### Document access grants
+Managed by the document's owner or anyone with `USER_MANAGE`; otherwise 403.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/documents/{id}/permissions` | Grants on the document, by username: `[{ "id", "username", "fullName", "permissionType", "grantedAt" }]`. |
+| `POST /api/documents/{id}/permissions` | Body `{ "username": "bob_eng" }`. Gives READ access; 201 with the grant. |
+| `DELETE /api/documents/{id}/permissions/{grantId}` | Revokes a grant; 204. |
+
+Only READ grants can be created, because READ is the only grant type the access
+rule honours; a WRITE grant would look like access it does not give. Existing
+grants of any type are listed and can be revoked. Granting fails with 400 for an
+unknown user, for the document's own owner, or for another type, and with 409 if
+the user already has READ access. A grant id belonging to another document is
+404.
+
+## 5. Administration
+Every endpoint requires the `USER_MANAGE` permission (administrators in the seed
+roles).
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/admin/users` | Every account by username: `id`, `username`, `fullName`, `email`, `active`, `roles`, `createdAt`. No password hashes. |
+| `GET /api/admin/roles` | Roles with their sorted permissions. |
+| `POST /api/admin/users` | Creates an account; 201. |
+| `PATCH /api/admin/users/{id}` | Changes any of `fullName`, `active`, `role`. |
+| `PUT /api/admin/users/{id}/password` | Sets a new password; 204. |
+
+**Create** body:
+```json
+{ "username": "carol_ops", "email": "carol@example.com", "fullName": "Carol Ops", "password": "at-least-8-chars", "role": "MANAGER" }
+```
+
+| Field | Rules |
+|---|---|
+| `username` | 3–50 characters: letters, digits, `.`, `_`, `-`. Unique (409). |
+| `email` | A valid address, stored lowercase. Unique (409). |
+| `fullName` | Required, at most 255 characters. |
+| `password` | 8–72 characters. BCrypt reads only the first 72 bytes, so longer passwords are refused rather than silently truncated. |
+| `role` | `ADMIN`, `MANAGER` or `EMPLOYEE`, case-insensitive. Each account has one role. |
+
+Every failing field is reported in one 400 message.
+
+**Lockout protection:** an administrator cannot disable their own account or
+change their own role (400). Setting a value an account already has is not a
+change and succeeds.
 
 ### POST /api/documents/search/semantic
 Performs a unified semantic search. Expects a vector array and returns matching documents seamlessly merged from PostgreSQL, MongoDB, and Qdrant.

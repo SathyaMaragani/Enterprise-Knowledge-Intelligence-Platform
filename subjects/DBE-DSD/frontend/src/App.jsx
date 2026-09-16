@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
+import AdminPage from './pages/AdminPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="repository" element={<RepositoryPage />} />
         <Route path="documents/:id" element={<DocumentPage />} />
         <Route path="upload" element={<UploadPage />} />
+        <Route path="admin" element={<AdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

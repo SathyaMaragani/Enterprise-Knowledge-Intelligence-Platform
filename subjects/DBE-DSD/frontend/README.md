@@ -2,10 +2,10 @@
 
 React single-page app for the Enterprise Knowledge Intelligence Platform.
 
-**Current state:** sign-in, dashboard, search, document repository and document
-viewer, built to the product UI design on top of Frontend 1's routing, JWT
-session handling, protected routes and sign-out. Categories, analytics and
-administration are not built yet; the navigation shows them as "Soon".
+**Current state:** sign-in, dashboard, search, document repository, document
+viewer, upload and user administration, built to the product UI design on top of
+Frontend 1's routing, JWT session handling, protected routes and sign-out.
+Categories and analytics are not built yet; the navigation shows them as "Soon".
 
 Stack: React 19, React Router 7, Vite 8, Vitest 4 with Testing Library and
 jsdom, and [ThreeUI Community](https://github.com/MengTo/threeui)
@@ -161,6 +161,30 @@ Backend rejections are shown on the form, which stays filled in.
 A role without `DOCUMENT_CREATE` sees an explanation instead of the form, and a
 profile that cannot be loaded is reported rather than left loading.
 
+### Document access
+
+The document viewer shows an **Access** panel to the document's owner and to
+anyone with `USER_MANAGE`. It lists current grants with Revoke buttons and gives
+READ access by username. Unknown users, the owner and duplicates are reported
+from the backend's message.
+
+### Administration (`/admin`)
+
+For roles with `USER_MANAGE`; everyone else sees an explanation, and the sidebar
+link is hidden.
+
+| Area | Behaviour |
+|---|---|
+| Accounts | Every user with full name, username, email, role, status and creation date. |
+| Role | A select per user; a change is saved immediately. |
+| Status | Disable or Enable. Disabling ends the account's sessions at once. |
+| Password | Reset… opens an inline field for a new password (8–72 characters). |
+| Add a user | Username, full name, email, role and initial password. |
+
+The signed-in administrator's own role and status controls are disabled, matching
+the backend's lockout protection. After every change the list reloads and a
+notice confirms it; failures are shown next to the action.
+
 ## threeui scenes
 
 `src/components/ThreeBackdrop.jsx` renders a scene only when it is appropriate:
@@ -198,11 +222,12 @@ reads the token to display the username and time the sign-out.
 ## Known limits
 
 - **Sign-out is client-side only.** The backend has no token revocation, so a
-  copied token stays valid until it expires (24 hours by default).
+  copied token stays valid until it expires (24 hours by default), unless an
+  administrator disables the account, which rejects its tokens at once.
 - **Roles decide what is shown, not what is allowed.** After sign-in the app
   loads `GET /api/auth/me` for the full name, roles and permissions. The account
   menu shows the name and most senior role, and Administration appears only for
-  administrators. If the profile cannot load, the menu falls back to the username
+  users with `USER_MANAGE`. If the profile cannot load, the menu falls back to the username
   and role-gated items stay hidden. The backend enforces every rule regardless.
 - **Dark theme only.** The design has no light variant, so there is no theme toggle.
 - **Production serving is not set up.** `npm run build` produces `dist/`, but

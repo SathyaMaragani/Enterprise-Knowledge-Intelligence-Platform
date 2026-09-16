@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { request } from './client.js';
 
 /**
- * Loads a GET endpoint whenever `path` changes:
- * { status: 'loading' | 'ready' | 'error', data, error }.
+ * Loads a GET endpoint whenever `path` changes, or when `reload()` is called:
+ * { status: 'loading' | 'ready' | 'error', data, error, reload }.
  *
  * While a new path loads, the previous `data` is kept, so a paged table does not
  * blank between pages. A null path loads nothing.
  */
 export function useApi(path) {
   const [state, setState] = useState({ status: path ? 'loading' : 'idle', data: null, error: null });
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (!path) {
@@ -24,7 +25,8 @@ export function useApi(path) {
     return () => {
       active = false;
     };
-  }, [path]);
+  }, [path, version]);
 
-  return state;
+  const reload = useCallback(() => setVersion((current) => current + 1), []);
+  return { ...state, reload };
 }

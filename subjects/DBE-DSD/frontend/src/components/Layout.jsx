@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { hasRole, roleLabel } from '../auth/roles.js';
+import { can, roleLabel } from '../auth/roles.js';
 import { initials } from '../pages/dashboardData.js';
 import BrandMark from './BrandMark.jsx';
 import Mountains from './Mountains.jsx';
@@ -25,13 +25,13 @@ const NAV_ITEMS = [
   { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
   { label: 'Categories', Icon: TagIcon },
   { label: 'Analytics', Icon: BarChartIcon },
-  { label: 'Administration', Icon: ShieldIcon, requiresRole: 'ADMIN' },
+  { label: 'Administration', to: '/admin', Icon: ShieldIcon, requiresPermission: 'USER_MANAGE' },
 ];
 
 export default function Layout() {
   const { session, profile, logout } = useAuth();
   const { pathname } = useLocation();
-  const navItems = NAV_ITEMS.filter(({ requiresRole }) => !requiresRole || hasRole(profile, requiresRole));
+  const navItems = NAV_ITEMS.filter(({ requiresPermission }) => !requiresPermission || can(profile, requiresPermission));
 
   return (
     <div className="shell">
