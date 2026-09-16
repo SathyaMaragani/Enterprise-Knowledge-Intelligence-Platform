@@ -18,6 +18,25 @@ function restoreSession() {
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(restoreSession);
+  const [profile, setProfile] = useState(null);
+  const token = session?.token ?? null;
+
+  // Who the user is and what they may do, loaded once per token. Until it
+  // arrives, or if it fails, the UI shows only what needs no role.
+  useEffect(() => {
+    setProfile(null);
+    if (!token) {
+      return undefined;
+    }
+    let active = true;
+    request('/api/auth/me').then(
+      (data) => active && setProfile(data),
+      () => active && setProfile(null),
+    );
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   const logout = useCallback(() => {
     clearToken();
@@ -54,7 +73,10 @@ export function AuthProvider({ children }) {
     return () => clearTimeout(timer);
   }, [session]);
 
-  const value = useMemo(() => ({ session, login, logout }), [session, login, logout]);
+  const value = useMemo(
+    () => ({ session, profile, login, logout }),
+    [session, profile, login, logout],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

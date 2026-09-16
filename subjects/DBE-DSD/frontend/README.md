@@ -113,7 +113,7 @@ self-contained documents with no network requests.
 | API calls | `src/api/client.js` adds `Authorization: Bearer <token>` to every request except sign-in. |
 | Expiry | The session ends when `exp` passes, even with no request in flight. An expired token is never sent. |
 | Rejected token | Any 401 on a request that carried a token signs the user out, whether the token expired, `JWT_SECRET` changed or the user was removed. A 401 from sign-in is a wrong password, not a sign-out. |
-| Errors | 4xx responses show the backend's `message`. 5xx responses show a generic message, because this backend's 500 bodies can contain raw exception text. |
+| Errors | 4xx responses show the backend's `message`. 5xx responses show a generic message. The backend no longer puts exception text in 500 bodies, but the client does not rely on that. |
 | CORS | None needed. In development the browser only talks to Vite, which proxies `/api`. |
 
 The client decodes the token but does not verify its signature. It doesn't need
@@ -124,11 +124,11 @@ reads the token to display the username and time the sign-out.
 
 - **Sign-out is client-side only.** The backend has no token revocation, so a
   copied token stays valid until it expires (24 hours by default).
-- **No roles in the session.** The JWT carries only `sub`, `iat` and `exp`, and
-  the login response has no roles or full name. The account menu therefore shows
-  the username and "Signed in" rather than a name and role, and Administration
-  cannot yet be limited to admins. That needs the backend to expose roles, for
-  example as a claim or a `GET /api/auth/me` endpoint.
+- **Roles decide what is shown, not what is allowed.** After sign-in the app
+  loads `GET /api/auth/me` for the full name, roles and permissions. The account
+  menu shows the name and most senior role, and Administration appears only for
+  administrators. If the profile cannot load, the menu falls back to the username
+  and role-gated items stay hidden. The backend enforces every rule regardless.
 - **Dark theme only.** The design has no light variant, so there is no theme toggle.
 - **Production serving is not set up.** `npm run build` produces `dist/`, but
   serving it from the same origin as `/api` is part of the Dockerization

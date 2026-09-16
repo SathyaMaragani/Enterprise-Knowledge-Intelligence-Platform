@@ -1,6 +1,6 @@
 # API Endpoints
 
-> **Authentication Note:** All endpoints except `/api/auth/**`, `/api/health`, and `/actuator/health` require a valid JWT token passed in the `Authorization` header as `Bearer <token>`.
+> **Authentication Note:** All endpoints except `POST /api/auth/login`, `/api/health`, and `/actuator/health` require a valid JWT token passed in the `Authorization` header as `Bearer <token>`.
 
 ## Errors
 
@@ -45,6 +45,24 @@ server and return a generic message, never exception text.
   "username": "admin_user"
 }
 ```
+
+### GET /api/auth/me
+- **Auth**: required (Bearer token)
+- **Purpose**: The signed-in user's profile, roles and permissions, for deciding
+  what the UI offers. Endpoints still enforce their own rules.
+
+**Example Response** (`alice_mgr`):
+```json
+{
+  "username": "alice_mgr",
+  "fullName": "Alice Manager",
+  "email": "alice@example.com",
+  "roles": ["MANAGER"],
+  "permissions": ["DOCUMENT_CREATE", "DOCUMENT_READ", "DOCUMENT_UPDATE"]
+}
+```
+
+`roles` and `permissions` are sorted. Returns 401 without a valid token.
 
 ## 1. Application Health
 - **URL**: `/api/health`

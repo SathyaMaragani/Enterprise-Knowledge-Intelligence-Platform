@@ -97,7 +97,8 @@ describe('dashboard', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard']);
-    expect(within(nav).getAllByText('Soon')).toHaveLength(5);
+    // Four for everyone; Administration is added only for administrators.
+    expect(within(nav).getAllByText('Soon')).toHaveLength(4);
 
     expect(screen.getByRole('button', { name: /Upload Document/ }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: /Advanced Search/ }).disabled).toBe(false);

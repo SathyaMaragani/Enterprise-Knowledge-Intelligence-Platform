@@ -23,7 +23,7 @@ function signIn(username, password) {
 }
 
 function signOut() {
-  fireEvent.click(screen.getByRole('button', { expanded: false, name: /Signed in/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Account menu for / }));
   fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 }
 
@@ -168,6 +168,81 @@ describe('authentication flow', () => {
     await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(signInHeading()).toBeTruthy();
     expect(sessionStorage.getItem('eip.token')).toBeNull();
+  });
+});
+
+describe('signed-in profile', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const profile = (overrides) => ({
+    username: 'alice_mgr',
+    fullName: 'Alice Manager',
+    email: 'alice@example.com',
+    roles: ['MANAGER'],
+    permissions: ['DOCUMENT_CREATE', 'DOCUMENT_READ', 'DOCUMENT_UPDATE'],
+    ...overrides,
+  });
+
+  it('shows the full name and role from /api/auth/me', async () => {
+    const fetchMock = mockApi({ ...DASHBOARD_ROUTES, 'GET /api/auth/me': jsonResponse(200, profile()) });
+    sessionStorage.setItem('eip.token', tokenFor('alice_mgr'));
+    renderApp('/');
+
+    const account = await screen.findByRole('button', { name: 'Account menu for Alice Manager' });
+
+    expect(within(account).getByText('Manager')).toBeTruthy();
+    expect(within(account).getByText('AM')).toBeTruthy();
+    const meCall = fetchMock.mock.calls.find(([path]) => path === '/api/auth/me');
+    expect(meCall[1].headers.Authorization).toMatch(/^Bearer /);
+  });
+
+  it('shows Administration only to administrators', async () => {
+    mockApi({ ...DASHBOARD_ROUTES, 'GET /api/auth/me': jsonResponse(200, profile()) });
+    sessionStorage.setItem('eip.token', tokenFor('alice_mgr'));
+    const { unmount } = renderApp('/');
+    await screen.findByRole('button', { name: 'Account menu for Alice Manager' });
+    expect(screen.queryByText('Administration')).toBeNull();
+    unmount();
+
+    mockApi({
+      ...DASHBOARD_ROUTES,
+      'GET /api/auth/me': jsonResponse(200, profile({ username: 'admin_user', fullName: 'Admin Istrator', roles: ['ADMIN'] })),
+    });
+    sessionStorage.setItem('eip.token', tokenFor('admin_user'));
+    renderApp('/');
+    await screen.findByRole('button', { name: 'Account menu for Admin Istrator' });
+    expect(screen.getByText('Administration')).toBeTruthy();
+    expect(screen.getByText('Administrator')).toBeTruthy();
+  });
+
+  it('falls back to the username when the profile cannot load', async () => {
+    mockApi({ ...DASHBOARD_ROUTES, 'GET /api/auth/me': jsonResponse(500, { message: 'boom' }) });
+    sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
+    renderApp('/');
+
+    const account = await screen.findByRole('button', { name: 'Account menu for bob_eng' });
+
+    expect(within(account).getByText('Signed in')).toBeTruthy();
+    expect(screen.queryByText('Administration')).toBeNull();
+  });
+
+  it('loads a fresh profile for each sign-in', async () => {
+    const fetchMock = mockApi({
+      ...DASHBOARD_ROUTES,
+      'GET /api/auth/me': jsonResponse(200, profile()),
+      'POST /api/auth/login': jsonResponse(200, { token: tokenFor('alice_mgr'), type: 'Bearer', username: 'alice_mgr' }),
+    });
+    renderApp('/login');
+
+    signIn('alice_mgr', 'stub-password');
+    await screen.findByRole('button', { name: 'Account menu for Alice Manager' });
+    signOut();
+    signIn('alice_mgr', 'stub-password');
+    await screen.findByRole('button', { name: 'Account menu for Alice Manager' });
+
+    expect(fetchMock.mock.calls.filter(([path]) => path === '/api/auth/me')).toHaveLength(2);
   });
 });
 

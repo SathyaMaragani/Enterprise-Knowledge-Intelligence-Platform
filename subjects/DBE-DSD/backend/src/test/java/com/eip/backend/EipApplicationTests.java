@@ -747,6 +747,53 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // CURRENT USER PROFILE TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    void testCurrentUserProfileForAdmin() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("admin_user"))
+                .andExpect(jsonPath("$.fullName").value("Admin Istrator"))
+                .andExpect(jsonPath("$.email").value("admin@example.com"))
+                .andExpect(jsonPath("$.roles", contains("ADMIN")))
+                .andExpect(jsonPath("$.permissions", contains(
+                        "DOCUMENT_CREATE", "DOCUMENT_DELETE", "DOCUMENT_READ",
+                        "DOCUMENT_UPDATE", "ROLE_MANAGE", "USER_MANAGE")))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testCurrentUserProfileForManager() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("alice_mgr"))
+                .andExpect(jsonPath("$.fullName").value("Alice Manager"))
+                .andExpect(jsonPath("$.roles", contains("MANAGER")))
+                .andExpect(jsonPath("$.permissions", contains("DOCUMENT_CREATE", "DOCUMENT_READ", "DOCUMENT_UPDATE")));
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testCurrentUserProfileRequiresAuthentication() throws Exception {
+        // /api/auth/** used to be public as a whole; only login may be.
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testLoginRemainsPublic() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin_user\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists());
+    }
+
+    // ---------------------------------------------------------
     // REQUEST ERROR HANDLING TESTS
     // ---------------------------------------------------------
     // Client mistakes must come back as 4xx with a readable message, never as a

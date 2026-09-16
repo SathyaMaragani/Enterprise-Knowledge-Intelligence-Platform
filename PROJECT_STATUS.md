@@ -477,6 +477,31 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Current User Profile and Role-Aware UI
+**Status: VERIFIED**
+(Backend suite against the live stacks; frontend tests and build; endpoint
+checked with curl against a running server for three roles.)
+
+```
+Backend   Tests run: 105, Failures: 0, Errors: 0, Skipped: 0   (4 new)
+Frontend  Tests  84 passed (84)                                  (7 new)
+```
+
+- [x] `GET /api/auth/me` returns username, full name, email, sorted roles and
+      sorted permissions; no password hash
+- [x] Security rule narrowed from all of `/api/auth/**` to `POST /api/auth/login`.
+      Before this, any new endpoint under `/api/auth` would have been public; the
+      anonymous-access test returned 404 rather than 401 on the old rule.
+- [x] Account menu shows full name, initials and the most senior role
+- [x] Administration navigation appears only for administrators
+- [x] Profile failure falls back to the username with role-gated items hidden
+
+| Account | `roles` | `permissions` |
+|---|---|---|
+| `admin_user` | ADMIN | all 6 |
+| `alice_mgr` | MANAGER | DOCUMENT_CREATE, DOCUMENT_READ, DOCUMENT_UPDATE |
+| `bob_eng` | EMPLOYEE | DOCUMENT_READ |
+
 ## Product UI — Sign-in and Dashboard
 **Status: VERIFIED**
 (Frontend tests and production build on Node 20.20; pages checked in the browser
@@ -515,7 +540,7 @@ became:**
 | Keyword / Semantic / Hybrid selector | Indicators lit from the response's `sources` | The search API has no mode parameter |
 | 705 documents, 24 users, 99.9% uptime | Documents, categories, indexed, vector chunks | No user-count or uptime endpoint; every tile is live data |
 | Recent activity feed | Additions and edits from document timestamps | No audit trail is recorded |
-| "John Doe, Administrator" | Username and "Signed in" | The token and login response carry no name or role |
+| "John Doe, Administrator" | Full name and role from `GET /api/auth/me` (added after this milestone) | The token carries no name or role |
 | Search / Repository / Categories / Analytics / Administration | Navigation marked "Soon"; Upload, Analytics and Categories actions disabled | Those pages are not built |
 | Theme toggle, Privacy/Terms/Help/About links | Left out | No light theme or pages behind them |
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { hasRole, roleLabel } from '../auth/roles.js';
 import { initials } from '../pages/dashboardData.js';
 import BrandMark from './BrandMark.jsx';
 import Mountains from './Mountains.jsx';
@@ -23,11 +24,12 @@ const NAV_ITEMS = [
   { label: 'Repository', Icon: FileTextIcon },
   { label: 'Categories', Icon: TagIcon },
   { label: 'Analytics', Icon: BarChartIcon },
-  { label: 'Administration', Icon: ShieldIcon },
+  { label: 'Administration', Icon: ShieldIcon, requiresRole: 'ADMIN' },
 ];
 
 export default function Layout() {
-  const { session, logout } = useAuth();
+  const { session, profile, logout } = useAuth();
+  const navItems = NAV_ITEMS.filter(({ requiresRole }) => !requiresRole || hasRole(profile, requiresRole));
 
   return (
     <div className="shell">
@@ -35,7 +37,7 @@ export default function Layout() {
         <BrandMark subtitle="Knowledge. Connected." className="sidebar__brand" />
 
         <nav className="sidebar__nav" aria-label="Main">
-          {NAV_ITEMS.map(({ label, to, Icon }) =>
+          {navItems.map(({ label, to, Icon }) =>
             to ? (
               <NavLink key={label} to={to} end className="nav-item">
                 <Icon />
@@ -60,7 +62,11 @@ export default function Layout() {
 
       <div className="shell__main">
         <header className="topbar">
-          <AccountMenu username={session.username} onSignOut={logout} />
+          <AccountMenu
+            name={profile?.fullName || session.username}
+            role={roleLabel(profile) ?? 'Signed in'}
+            onSignOut={logout}
+          />
         </header>
         <Outlet />
       </div>
@@ -68,7 +74,7 @@ export default function Layout() {
   );
 }
 
-function AccountMenu({ username, onSignOut }) {
+function AccountMenu({ name, role, onSignOut }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -100,15 +106,16 @@ function AccountMenu({ username, onSignOut }) {
         type="button"
         className="account__button"
         aria-haspopup="menu"
+        aria-label={`Account menu for ${name}`}
         aria-expanded={open}
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
         <span className="avatar" aria-hidden="true">
-          {initials(username)}
+          {initials(name)}
         </span>
         <span className="account__text">
-          <span className="account__name">{username}</span>
-          <span className="account__role">Signed in</span>
+          <span className="account__name">{name}</span>
+          <span className="account__role">{role}</span>
         </span>
         <ChevronDownIcon className="account__chevron" />
       </button>
