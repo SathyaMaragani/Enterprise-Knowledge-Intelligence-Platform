@@ -2,28 +2,62 @@ package com.eip.backend.controller;
 
 import com.eip.backend.dto.qdrant.VectorSearchRequest;
 import com.eip.backend.dto.qdrant.VectorSearchResponse;
+import com.eip.backend.dto.qdrant.VectorSearchResultItem;
+import com.eip.backend.service.DocumentAccessService;
 import com.eip.backend.service.QdrantService;
 import io.qdrant.client.grpc.Collections;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/search/vector")
 public class VectorSearchController {
 
     private final QdrantService qdrantService;
+    private final DocumentAccessService documentAccessService;
 
-    public VectorSearchController(QdrantService qdrantService) {
+    public VectorSearchController(QdrantService qdrantService,
+                                  DocumentAccessService documentAccessService) {
         this.qdrantService = qdrantService;
+        this.documentAccessService = documentAccessService;
     }
 
     @PostMapping
     public ResponseEntity<VectorSearchResponse> search(@RequestBody VectorSearchRequest request) {
         VectorSearchResponse response = qdrantService.search(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(readableOnly(response));
+    }
+
+    /**
+     * Drops hits on documents the caller may not read. Hit payloads carry the
+     * document id, title and category, so returning them unfiltered would reveal
+     * documents that GET /api/documents/{id} refuses.
+     *
+     * <p>Hits without a document id cannot be authorised, so they are dropped too.
+     */
+    // ponytail: filters after Qdrant has applied topK, so a user who cannot read
+    // every hit gets fewer than topK results. If that matters, pass the readable
+    // ids to Qdrant as a payload filter instead.
+    private VectorSearchResponse readableOnly(VectorSearchResponse response) {
+        Set<Integer> candidateIds = new LinkedHashSet<>();
+        for (VectorSearchResultItem item : response.getResults()) {
+            if (item.getPostgresDocumentId() != null) {
+                candidateIds.add(item.getPostgresDocumentId());
+            }
+        }
+        Set<Integer> readable = documentAccessService.readableIds(candidateIds);
+
+        List<VectorSearchResultItem> visible = response.getResults().stream()
+                .filter(item -> item.getPostgresDocumentId() != null
+                        && readable.contains(item.getPostgresDocumentId()))
+                .toList();
+        return new VectorSearchResponse(visible);
     }
 
     @PostMapping("/document/{documentId}")
@@ -35,7 +69,7 @@ public class VectorSearchController {
         }
         request.setPostgresDocumentId(documentId);
         VectorSearchResponse response = qdrantService.search(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(readableOnly(response));
     }
 
     @GetMapping("/collection-info")

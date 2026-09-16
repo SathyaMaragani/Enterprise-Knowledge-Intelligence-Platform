@@ -45,7 +45,9 @@
 ## 3. Retrieve Documents
 - **URL**: `/api/documents`
 - **Method**: `GET`
-- **Purpose**: Fetch all document metadata.
+- **Purpose**: Fetch metadata for every document the caller may read: documents
+  they own, documents they hold a READ grant on, or all documents for an admin.
+  A user with no access receives `[]`.
 
 **Example Response**:
 ```json

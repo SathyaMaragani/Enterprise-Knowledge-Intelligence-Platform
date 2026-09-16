@@ -380,14 +380,13 @@ expiry timer, and storing the token in `localStorage`.
 | `POST /api/search` as `dave_tmp` | 200, 0 hits |
 | `GET /api/documents` as `dave_tmp` | **200 with all 10 documents** |
 
-Two backend defects surfaced and were **not** fixed here, because Frontend 1
-changes no backend code:
+Two backend defects surfaced. Frontend 1 changed no backend code, so both were
+left open at that milestone:
 
-- `GET /api/documents` skips the document permission check that
-  `GET /api/documents/{id}` and search both enforce. Any signed-in user can list
-  every document's title, description and owner. Fix this before Frontend 3
-  builds the repository view on it.
-- Bean validation failures fall through to the generic exception handler and
+- **Fixed (see Document Permission Leak Fix below):** `GET /api/documents`
+  skipped the document permission check that `GET /api/documents/{id}` and
+  search both enforce.
+- **Open:** bean validation failures fall through to the generic exception handler and
   return 500 with internal exception text instead of 400. The login form's
   `required` fields keep the UI from sending blank credentials, and the client
   never shows 5xx text.
@@ -401,6 +400,55 @@ changes no backend code:
   lasts as long as the tab instead of 24 hours. An httpOnly cookie would also
   resist XSS, but needs backend changes.
 
+## Document Permission Leak Fix
+**Status: VERIFIED**
+(Full backend suite against the live test and demo stacks, then re-checked with
+curl against a running server.)
+
+```
+Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
+  com.eip.backend.EipApplicationTests   55 passed  (48 existing + 7 new)
+BUILD SUCCESS
+```
+
+Three read endpoints returned document data without applying the permission
+rule:
+
+| Endpoint | Leaked before the fix |
+|---|---|
+| `GET /api/documents` | id, title, description, category and owner of every document |
+| `POST /api/search/vector` | document id, title and category of every hit |
+| `POST /api/search/vector/document/{id}` | chunk hits for any document, readable or not |
+
+The Frontend 1 baseline found the first. Checking the other endpoints that
+return document data found the two vector endpoints. The unified search
+(`POST /api/search`) and semantic search (`POST /api/documents/search/semantic`)
+endpoints already filtered correctly.
+
+- [x] `DocumentService` filters the list through `DocumentAccessService.readableIds`
+- [x] `VectorSearchController` filters both vector endpoints the same way; hits
+      without a document id are dropped, since they cannot be authorised
+- [x] The rule is still defined once, in `DocumentAccessService`; no second
+      owner/grant predicate was written
+- [x] 7 integration tests, written first and seen failing on the unfixed code
+      (restricted users received all 10 documents and all 30 vector hits)
+
+| Caller | `GET /api/documents` | `POST /api/search/vector`, topK 30 | `.../document/2` |
+|---|---|---|---|
+| `admin_user` | documents 1-10 | 30 hits | — |
+| `alice_mgr` (owns 2, 6, 7; READ on 4, 5) | 2, 4, 5, 6, 7 | 15 hits, 3 per readable document | 3 hits |
+| `dave_tmp` (no access) | `[]` | 0 hits | 0 hits |
+
+**Known ceilings, marked `ponytail:` in code:**
+- The document list loads every row and checks access with one `IN` query.
+  PostgreSQL caps a statement at 32767 bind parameters, so a very large table
+  fails outright. Move the owner/grant predicate into a paged query when
+  Frontend 3 adds pagination.
+- Vector results are filtered after Qdrant applies `topK`, so restricted users
+  can get fewer than `topK` hits. Passing readable ids to Qdrant as a payload
+  filter would fix that if it matters.
+
+## DSA-3 — TextHack (all 20 algorithms)
 **Status: COMPLETE and VERIFIED**
 (Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
 Maven, no JUnit, no network. `sh subjects/DSA-3/run-tests.sh`.)

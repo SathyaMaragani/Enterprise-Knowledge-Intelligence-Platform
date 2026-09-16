@@ -642,6 +642,98 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.totalHits").value(0));
     }
 
+    // ---------------------------------------------------------
+    // DOCUMENT LIST AND RAW VECTOR SEARCH PERMISSION TESTS
+    // ---------------------------------------------------------
+    // Fixture access: alice_mgr owns 2, 6, 7 and holds READ on 4 and 5.
+    // dave_tmp owns nothing and holds no grants. Admins read everything.
+
+    @Test
+    void testDocumentListShowsAdminEveryDocument() throws Exception {
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", containsInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testDocumentListShowsOnlyOwnedAndGrantedDocuments() throws Exception {
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", containsInAnyOrder(2, 4, 5, 6, 7)));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testDocumentListIsEmptyForUserWithoutAccess() throws Exception {
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testVectorSearchHidesUnreadableDocuments() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(30);
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(0)))
+                .andExpect(jsonPath("$.totalResults").value(0));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testVectorSearchReturnsOnlyReadableDocuments() throws Exception {
+        // topK 30 covers all 30 seeded points (3 per document), so the filtered
+        // result is exactly alice_mgr's 5 readable documents x 3 chunks.
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(30);
+
+        mockMvc.perform(post("/api/search/vector")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(15)))
+                .andExpect(jsonPath("$.totalResults").value(15))
+                .andExpect(jsonPath("$.results[*].postgresDocumentId", everyItem(in(List.of(2, 4, 5, 6, 7)))));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testVectorSearchByDocumentIdHidesUnreadableDocument() throws Exception {
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(5);
+
+        mockMvc.perform(post("/api/search/vector/document/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(0)));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testVectorSearchByDocumentIdAllowsGrantedDocument() throws Exception {
+        // Document 4 is owned by bob_eng; alice_mgr reads it through a READ grant.
+        VectorSearchRequest request = new VectorSearchRequest();
+        request.setVector(generateTestVector(384));
+        request.setTopK(5);
+
+        mockMvc.perform(post("/api/search/vector/document/4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results", hasSize(3)))
+                .andExpect(jsonPath("$.results[*].postgresDocumentId", everyItem(is(4))));
+    }
+
     @Test
     @WithUserDetails("dave_tmp")
     void testTextHackFuzzyHitsAreStillPermissionFiltered() throws Exception {

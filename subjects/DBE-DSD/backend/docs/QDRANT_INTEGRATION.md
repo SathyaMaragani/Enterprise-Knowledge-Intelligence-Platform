@@ -51,6 +51,11 @@ This tri-store design allows sub-millisecond similarity queries across millions 
 
 Executes cosine similarity search using a query vector with optional payload filtering.
 
+Results are limited to documents the caller may read: owned, granted READ, or
+any document for an admin. Filtering happens after Qdrant applies `topK`, so a
+user who cannot read every hit receives fewer than `topK` results, and
+`totalResults` counts only what is returned.
+
 **Request Body (`VectorSearchRequest`)**:
 ```json
 {
@@ -89,6 +94,8 @@ Executes cosine similarity search using a query vector with optional payload fil
 `POST /api/search/vector/document/{documentId}`
 
 Restricts the vector similarity search to chunks belonging specifically to `{documentId}`.
+
+If the caller may not read `{documentId}`, the response is empty (`totalResults: 0`).
 
 ### 4.3 Unified Semantic Search (Phase 1.4.3)
 `POST /api/documents/search/semantic`

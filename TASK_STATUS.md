@@ -144,6 +144,7 @@
 * [x] `CustomUserDetails` mapping database roles and permissions to authorities
 * [x] 401 Unauthorized and 403 Forbidden handlers
 * [x] Document-level RBAC (owner, explicit READ grant, or ROLE_ADMIN)
+* [x] RBAC enforced on every document read path, including the document list and raw vector search
 * [x] `JWT_SECRET` required from the environment; no committed default
 
 **Phases 1.5 and 1.6 complete.**
@@ -586,7 +587,7 @@ Current state:
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (87 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (94 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
 * [x] API tests (REST controllers verified)
 * [ ] Load testing
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)

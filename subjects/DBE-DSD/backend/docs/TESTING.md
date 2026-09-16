@@ -141,12 +141,12 @@ is public in the repository. To run the application (not the tests), copy
 
 ```
 Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
-Tests run: 48, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 55, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
 Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
 Tests run: 17, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 
-Tests run: 87, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

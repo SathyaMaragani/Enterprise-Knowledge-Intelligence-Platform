@@ -25,8 +25,8 @@ public class DocumentController {
         this.unifiedDocumentService = unifiedDocumentService;
     }
     @GetMapping
-    public List<DocumentResponse> getAllDocuments() {
-        return documentService.getAllDocuments();
+    public List<DocumentResponse> getReadableDocuments() {
+        return documentService.getReadableDocuments();
     }
 
     @GetMapping("/{id}")

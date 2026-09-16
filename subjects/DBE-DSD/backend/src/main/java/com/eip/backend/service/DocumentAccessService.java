@@ -15,9 +15,10 @@ import java.util.Set;
 /**
  * Single place where "may this user read this document?" is answered.
  *
- * Every read path -- single document fetch and search alike -- routes through
- * here, so the rule (owner OR explicit READ grant OR ROLE_ADMIN) is defined once
- * and cannot drift between endpoints. Fails closed: no authenticated principal
+ * Every read path -- single document fetch, the document list, unified search,
+ * semantic search and raw vector search -- routes through here, so the rule
+ * (owner OR explicit READ grant OR ROLE_ADMIN) is defined once and cannot drift
+ * between endpoints. Fails closed: no authenticated principal
  * means no access, regardless of what the URL matchers happen to allow today.
  */
 @Service
