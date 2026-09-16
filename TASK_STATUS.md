@@ -205,10 +205,16 @@ The architecture/scaffolding is:
 
 ### Actual algorithms
 
-* [ ] Naive pattern matching
-* [ ] KMP
-* [ ] Z Algorithm
-* [ ] Rabin-Karp
+**String module — VERIFIED** (96 assertions, 0 failures, `sh run-tests.sh`)
+
+* [x] Naive pattern matching — O(n·m) worst, reference implementation
+* [x] KMP — O(n+m), failure function exposed for period detection
+* [x] Z Algorithm — O(n+m), no sentinel, no concatenation
+* [x] Rabin-Karp — rolling hash, every hash hit verified by comparison
+* [x] `IntList` — growable int array (no `java.util` in core)
+* [x] `StringMatcher` — shared contract enabling cross-validation
+* [x] 4000-case randomised cross-validation against the naive reference
+* [x] Complexity reference (`docs/COMPLEXITY.md`)
 * [ ] Aho-Corasick
 * [ ] Suffix Array
 * [ ] LCP / Kasai
@@ -575,7 +581,7 @@ A comprehensive **development-status view** right now:
 | Java ONNX Embeddings (1.7B-3C)| 🟢 Verified   |
 | Real Semantic Search (1.7B-3B)| 🟢 Verified   |
 | Core Search Integration       | 🟢 Verified   |
-| DSA-3 TextHack                | 🟡 Scaffolded |
+| DSA-3 TextHack (string mod.)  | 🟡 In progress |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend                      | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |

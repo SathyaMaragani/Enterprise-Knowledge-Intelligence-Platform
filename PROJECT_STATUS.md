@@ -284,3 +284,53 @@ fixtures untouched, no request-time embedding, no API integration.
 - [x] Numerical compatibility tests (Python reference vs Java output)
 - [x] Retrieval equivalence tests (100% identical top-5 retrieval results on demo corpus)
 
+## DSA-3 — TextHack String Matching Module
+**Status: VERIFIED**
+(Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
+Maven, no JUnit, no network. `sh subjects/DSA-3/run-tests.sh`.)
+
+```
+Test Summary: 96 passed, 0 failed
+```
+
+### Implemented
+- [x] `texthack/core/IntList.java` — growable int array, doubling growth
+- [x] `texthack/core/StringMatcher.java` — shared contract across all matchers
+- [x] `texthack/string/NaiveSearch.java` — O(n·m), brute-force reference
+- [x] `texthack/string/KmpSearch.java` — O(n+m), failure function public
+- [x] `texthack/string/ZSearch.java` — O(n+m), Z-array public
+- [x] `texthack/string/RabinKarpSearch.java` — rolling hash with verification
+- [x] `tests/StringAlgorithmTests.java` — 96 assertions
+- [x] `docs/COMPLEXITY.md` — time/space reference for implemented and planned work
+
+### Subject constraints honoured
+- No `java.util.*` anywhere in the algorithm implementations. `ArrayList` would
+  also have been the wrong tool: it boxes every match position, and match
+  positions are dense primitive data.
+- Every algorithm carries documented time and space complexity.
+- No library call substitutes for an algorithm.
+
+### Three correctness decisions worth recording
+- **Z matching does not concatenate.** The textbook form builds the Z-array of
+  `pattern + sentinel + text`, which needs a character absent from both inputs —
+  impossible to promise over arbitrary document text. Computing the Z-array of
+  the pattern alone removes the assumption and drops space from O(n+m) to O(m).
+  The suite searches text containing `\u0000` to keep this honest.
+- **Rabin-Karp verifies every hash hit.** Equal hashes do not imply equal
+  strings. Reporting on hash equality alone passes small tests and then produces
+  false positives at corpus scale.
+- **Overlapping matches are reported.** KMP falls back through the failure
+  function after a hit rather than resetting to zero; resetting silently drops
+  every overlapping occurrence.
+
+### The randomised cross-validation earned its keep
+4000 generated cases over a 2-4 character alphabet run through all four matchers,
+each required to agree with the naive reference. It immediately caught a bug —
+in the *test*, not the algorithms: a hand-counted index in a fixed case was off
+by one. The diagnostic was that all four matchers agreed with each other and
+passed all 4000 random cases while disagreeing with the constant. The assertion
+now derives the index instead of hardcoding it.
+
+**Remaining:** 16 of 20 algorithms (Aho-Corasick, suffix array, LCP/Kasai, the DP
+edit-distance family, network flow, approximation, randomized), the benchmark
+harness, and the TextHack query engine. Search integration is phase 1.7C.
