@@ -386,10 +386,9 @@ left open at that milestone:
 - **Fixed (see Document Permission Leak Fix below):** `GET /api/documents`
   skipped the document permission check that `GET /api/documents/{id}` and
   search both enforce.
-- **Open:** bean validation failures fall through to the generic exception handler and
-  return 500 with internal exception text instead of 400. The login form's
-  `required` fields keep the UI from sending blank credentials, and the client
-  never shows 5xx text.
+- **Fixed (see API Error Handling below):** bean validation failures fell
+  through to the generic exception handler and returned 500 with internal
+  exception text instead of 400.
 
 **Decisions:**
 - **Plain JavaScript, not TypeScript**, per "no unnecessary dependencies". Revisit
@@ -447,6 +446,36 @@ endpoints already filtered correctly.
 - Vector results are filtered after Qdrant applies `topK`, so restricted users
   can get fewer than `topK` hits. Passing readable ids to Qdrant as a payload
   filter would fix that if it matters.
+
+## API Error Handling
+**Status: VERIFIED**
+(Full backend suite against the live test and demo stacks.)
+
+```
+Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
+  com.eip.backend.EipApplicationTests   62 passed  (55 existing + 7 new)
+BUILD SUCCESS
+```
+
+The blank-login 500 from the Frontend 1 baseline was one case of a wider gap:
+the exception handler had no mapping for Spring's own request errors, so each of
+them fell through to the catch-all, returned 500 and echoed the exception text.
+The 7 new tests were written first and all 7 returned 500 on the unfixed code.
+
+| Request | Before | After |
+|---|---|---|
+| Login with a blank or missing field | 500, validation exception text | 400, the field's own message |
+| Malformed JSON | 500 | 400 |
+| `GET /api/documents/not-a-number` | 500 | 400 |
+| `POST /api/health` (wrong method) | 500 | 405 |
+| Non-JSON body | 500 | 415 |
+| Login to a disabled account | 500 | 401, same message as a wrong password |
+| Anything unexpected | 500 with exception text | 500, generic message; full exception logged |
+
+**Why a disabled account gets the wrong-password message:** Spring checks
+whether an account is disabled before it checks the password. A distinct
+"disabled" answer would confirm an account exists to someone who does not know
+its password.
 
 ## Product UI — Sign-in and Dashboard
 **Status: VERIFIED**

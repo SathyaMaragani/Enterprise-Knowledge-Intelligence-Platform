@@ -2,6 +2,28 @@
 
 > **Authentication Note:** All endpoints except `/api/auth/**`, `/api/health`, and `/actuator/health` require a valid JWT token passed in the `Authorization` header as `Bearer <token>`.
 
+## Errors
+
+Every error response has the same body:
+
+```json
+{ "error": "Bad Request", "message": "Username is required" }
+```
+
+`message` is always safe to show a user. Unexpected failures are logged on the
+server and return a generic message, never exception text.
+
+| Code | `error` | When |
+|---|---|---|
+| 400 | Bad Request | Invalid body fields (every failing field's message, joined by `; `), malformed or missing JSON, a path or query parameter of the wrong type or missing, or an invalid search/vector request. |
+| 401 | Unauthorized | No or invalid bearer token, or a failed login. A wrong password, an unknown user and a disabled account all return `Invalid username or password`, so login responses never reveal which accounts exist. |
+| 403 | Forbidden | Authenticated, but not allowed to read the document. |
+| 404 | Not Found | No endpoint matches the path, or the document does not exist. |
+| 405 | Method Not Allowed | The path exists but not for this HTTP method. |
+| 415 | Unsupported Media Type | A body that is not JSON. |
+| 500 | Internal Server Error | Anything unexpected; the message is always `An unexpected error occurred.` |
+| 503 | Service Unavailable | Qdrant is unreachable for a request that needs it. |
+
 ## 0. Authentication
 - **URL**: `/api/auth/login`
 - **Method**: `POST`

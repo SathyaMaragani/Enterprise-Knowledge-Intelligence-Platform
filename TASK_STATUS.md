@@ -599,7 +599,8 @@ Current state:
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (94 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (101 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Consistent API errors: client mistakes return 4xx, 500s never expose exception text
 * [x] API tests (REST controllers verified)
 * [ ] Load testing
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)

@@ -745,4 +745,91 @@ class EipApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalHits").value(0));
     }
+
+    // ---------------------------------------------------------
+    // REQUEST ERROR HANDLING TESTS
+    // ---------------------------------------------------------
+    // Client mistakes must come back as 4xx with a readable message, never as a
+    // 500 whose message exposes framework or application class names.
+
+    @Test
+    void testLoginWithBlankUsernameIsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"\",\"password\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Username is required"));
+    }
+
+    @Test
+    void testLoginWithMissingFieldsReportsEveryField() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", allOf(
+                        containsString("Username is required"),
+                        containsString("Password is required"))));
+    }
+
+    @Test
+    void testMalformedJsonIsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\": "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message", not(containsString("com.eip"))))
+                .andExpect(jsonPath("$.message", not(containsString("jackson"))));
+    }
+
+    @Test
+    void testNonNumericDocumentIdIsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/documents/not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message", not(containsString("java.lang"))));
+    }
+
+    @Test
+    void testUnsupportedMethodIsMethodNotAllowed() throws Exception {
+        mockMvc.perform(post("/api/health"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.error").value("Method Not Allowed"));
+    }
+
+    @Test
+    void testUnsupportedContentTypeIsUnsupportedMediaType() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("admin_user"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.error").value("Unsupported Media Type"));
+    }
+
+    @Test
+    void testDisabledAccountLoginLooksLikeAnyFailedLogin() throws Exception {
+        // A disabled account is checked before the password. Answering "disabled"
+        // would confirm the account exists to anyone guessing names, so it must
+        // fail exactly like a wrong password does.
+        User disabled = new User();
+        disabled.setUsername("disabled_tmp_user");
+        disabled.setEmail("disabled_tmp_user@example.com");
+        disabled.setFullName("Disabled Temp");
+        disabled.setPasswordHash(userRepository.findByUsername("dave_tmp").orElseThrow().getPasswordHash());
+        disabled.setIsActive(false);
+        disabled.setRoles(new java.util.HashSet<>());
+        disabled = userRepository.save(disabled);
+
+        try {
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"disabled_tmp_user\",\"password\":\"password123\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Invalid username or password"));
+        } finally {
+            userRepository.delete(disabled);
+        }
+    }
 }
