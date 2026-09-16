@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { hasRole, roleLabel } from '../auth/roles.js';
 import { initials } from '../pages/dashboardData.js';
@@ -16,12 +16,13 @@ import {
   TagIcon,
 } from './icons.jsx';
 
-// Only the dashboard exists so far. The rest are shown, marked as coming, so the
-// navigation matches the product plan without linking to pages that do not exist.
+// Pages that are not built yet are shown, marked as coming, so the navigation
+// matches the product plan without linking to pages that do not exist.
 const NAV_ITEMS = [
   { label: 'Dashboard', to: '/', Icon: HomeIcon },
   { label: 'Search', Icon: SearchIcon },
-  { label: 'Repository', Icon: FileTextIcon },
+  // A document belongs to the repository, so its viewer keeps Repository lit.
+  { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
   { label: 'Categories', Icon: TagIcon },
   { label: 'Analytics', Icon: BarChartIcon },
   { label: 'Administration', Icon: ShieldIcon, requiresRole: 'ADMIN' },
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
 
 export default function Layout() {
   const { session, profile, logout } = useAuth();
+  const { pathname } = useLocation();
   const navItems = NAV_ITEMS.filter(({ requiresRole }) => !requiresRole || hasRole(profile, requiresRole));
 
   return (
@@ -37,9 +39,16 @@ export default function Layout() {
         <BrandMark subtitle="Knowledge. Connected." className="sidebar__brand" />
 
         <nav className="sidebar__nav" aria-label="Main">
-          {navItems.map(({ label, to, Icon }) =>
+          {navItems.map(({ label, to, also, Icon }) =>
             to ? (
-              <NavLink key={label} to={to} end className="nav-item">
+              <NavLink
+                key={label}
+                to={to}
+                end
+                className={({ isActive }) =>
+                  `nav-item${isActive || (also && pathname.startsWith(also)) ? ' active' : ''}`
+                }
+              >
                 <Icon />
                 <span>{label}</span>
               </NavLink>

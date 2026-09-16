@@ -1,0 +1,210 @@
+import { Link, useParams } from 'react-router';
+import { useApi } from '../api/useApi.js';
+import { CategoryTag, FileBadge, formatDateTime, StatusPill } from '../components/DocumentBits.jsx';
+import { AlertIcon } from '../components/icons.jsx';
+import { relativeTime } from './dashboardData.js';
+
+/** A missing or forbidden document gets a message a user can act on. */
+function errorMessage(error) {
+  if (error.status === 403) {
+    return 'You don’t have access to this document. Ask its owner or an administrator for access.';
+  }
+  if (error.status === 404) {
+    return error.body?.error === 'DOCUMENT_CONTENT_NOT_FOUND'
+      ? 'This document exists, but its content has not been stored yet.'
+      : 'This document does not exist.';
+  }
+  return error.message;
+}
+
+function formatValue(value) {
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  if (value !== null && typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+export default function DocumentPage() {
+  const { id } = useParams();
+  const valid = /^\d+$/.test(id ?? '');
+  const document = useApi(valid ? `/api/documents/${id}` : null);
+
+  const backLink = (
+    <Link className="back-link" to="/repository">
+      ← Repository
+    </Link>
+  );
+
+  if (!valid) {
+    return (
+      <div className="page">
+        {backLink}
+        <p className="form-error" role="alert">
+          This document does not exist.
+        </p>
+      </div>
+    );
+  }
+
+  if (document.status === 'loading' || document.status === 'idle') {
+    return (
+      <div className="page">
+        {backLink}
+        <p className="muted">Loading document…</p>
+      </div>
+    );
+  }
+
+  if (document.status === 'error') {
+    return (
+      <div className="page">
+        {backLink}
+        <p className="form-error" role="alert">
+          <AlertIcon size={16} /> {errorMessage(document.error)}
+        </p>
+      </div>
+    );
+  }
+
+  const doc = document.data;
+  const content = doc.content ?? {};
+  const chunks = [...(doc.chunks ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const metadata = Object.entries(doc.metadata ?? {});
+
+  return (
+    <div className="page">
+      {backLink}
+
+      <header className="glass-panel section doc-header">
+        <FileBadge type={doc.documentType} />
+        <div className="doc-header__text">
+          <h1 className="page-title">{doc.title}</h1>
+          {doc.description && <p className="muted">{doc.description}</p>}
+          <p className="doc-header__meta">
+            <CategoryTag category={doc.category} />
+            <StatusPill status={doc.status} />
+            <span className="muted">Owner: {doc.owner ?? '—'}</span>
+            <span className="muted" title={formatDateTime(doc.updatedAt)}>
+              Updated {relativeTime(doc.updatedAt)}
+            </span>
+          </p>
+        </div>
+      </header>
+
+      <div className="doc-layout">
+        <div className="doc-layout__main">
+          <section className="glass-panel section" aria-labelledby="content-title">
+            <div className="section__header">
+              <h2 id="content-title" className="section__title">
+                Content
+              </h2>
+              <span className="muted doc-stats">
+                {content.wordCount ?? '—'} words · {content.characterCount ?? '—'} characters
+                {content.language ? ` · ${content.language}` : ''}
+              </span>
+            </div>
+            {content.rawText ? (
+              <div className="doc-content">{content.rawText}</div>
+            ) : (
+              <p className="muted">No text content was extracted.</p>
+            )}
+          </section>
+
+          <section className="glass-panel section" aria-labelledby="chunks-title">
+            <h2 id="chunks-title" className="section__title">
+              Chunks <span className="muted">({chunks.length})</span>
+            </h2>
+            {chunks.length === 0 ? (
+              <p className="muted">This document has not been split into chunks.</p>
+            ) : (
+              <ol className="chunk-list">
+                {chunks.map((chunk) => (
+                  <li key={chunk.chunkId ?? chunk.position} className="chunk">
+                    <p className="chunk__meta">
+                      <span>#{(chunk.position ?? 0) + 1}</span>
+                      {chunk.chunkId && <code>{chunk.chunkId}</code>}
+                      {chunk.pageNumber != null && <span>Page {chunk.pageNumber}</span>}
+                      {chunk.tokenCount != null && <span>{chunk.tokenCount} tokens</span>}
+                    </p>
+                    <p className="chunk__text">{chunk.text}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
+
+        <aside className="doc-layout__aside">
+          <DetailPanel
+            title="Source"
+            rows={[
+              ['File', doc.source?.filename],
+              ['Type', doc.source?.mimeType],
+              ['Storage', doc.source?.storageType],
+              ['Reference', doc.source?.storageReference],
+            ]}
+          />
+          <DetailPanel
+            title="Processing"
+            rows={[
+              ['Status', doc.processing?.status],
+              ['Processed', doc.processing?.processedAt && formatDateTime(doc.processing.processedAt)],
+              ['Extractor', doc.processing?.extractorVersion],
+              ['Chunker', doc.processing?.chunkerVersion],
+            ]}
+          />
+          <DetailPanel
+            title="Version"
+            rows={[
+              ['Number', doc.version?.number],
+              ['Change', doc.version?.changeSummary],
+              ['Created', formatDateTime(doc.createdAt)],
+            ]}
+          />
+          {metadata.length > 0 && (
+            <DetailPanel title="Metadata" rows={metadata.map(([key, value]) => [key, formatValue(value)])} />
+          )}
+          {(doc.references ?? []).length > 0 && (
+            <section className="glass-panel section" aria-labelledby="references-title">
+              <h2 id="references-title" className="section__title">
+                References
+              </h2>
+              <ul className="reference-list">
+                {doc.references.map((reference, index) => (
+                  <li key={`${reference.reference}-${index}`}>
+                    <strong>{reference.title}</strong>
+                    <span className="muted">
+                      {reference.type} · {reference.reference}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function DetailPanel({ title, rows }) {
+  const id = `detail-${title.toLowerCase()}`;
+  return (
+    <section className="glass-panel section" aria-labelledby={id}>
+      <h2 id={id} className="section__title">
+        {title}
+      </h2>
+      <dl className="detail-list">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value === null || value === undefined || value === '' ? '—' : value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}

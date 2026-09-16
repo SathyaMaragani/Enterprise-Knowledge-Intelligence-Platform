@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
+import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
 import GlassDocs from '../components/GlassDocs.jsx';
 import Mountains from '../components/Mountains.jsx';
 import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
@@ -27,7 +29,6 @@ import {
   recentDocuments,
   relativeTime,
   searchMode,
-  STATUS_LABELS,
   summarize,
 } from './dashboardData.js';
 
@@ -221,7 +222,9 @@ function SearchResults({ search, onClear }) {
           {search.data.hits.map((hit) => (
             <li key={hit.documentId} className="hit">
               <div className="hit__body">
-                <p className="hit__title">{hit.title}</p>
+                <Link className="hit__title doc-link" to={`/documents/${hit.documentId}`}>
+                  {hit.title}
+                </Link>
                 {hit.description && <p className="hit__description">{hit.description}</p>}
                 <p className="hit__meta">
                   {hit.category && <span className="tag">{hit.category}</span>}
@@ -273,6 +276,9 @@ function RecentDocuments({ state }) {
         <h2 id="recent-documents-title" className="section__title">
           Recent Documents
         </h2>
+        <Link className="view-all" to="/repository">
+          View All →
+        </Link>
       </div>
 
       {state.status === 'loading' && <p className="muted">Loading documents…</p>}
@@ -300,20 +306,20 @@ function RecentDocuments({ state }) {
                 <tr key={doc.id}>
                   <td>
                     <div className="doc-title">
-                      <span className={`file-badge file-badge--${fileTone(doc.documentType)}`}>
-                        {doc.documentType ?? 'FILE'}
-                      </span>
+                      <FileBadge type={doc.documentType} />
                       <span>
-                        <span className="doc-title__name">{doc.title}</span>
+                        <Link className="doc-title__name doc-link" to={`/documents/${doc.id}`}>
+                          {doc.title}
+                        </Link>
                         {doc.description && <span className="doc-title__description">{doc.description}</span>}
                       </span>
                     </div>
                   </td>
-                  <td>{doc.category ? <span className="tag">{doc.category}</span> : '—'}</td>
                   <td>
-                    <span className={`status status--${(doc.status ?? '').toLowerCase()}`}>
-                      {STATUS_LABELS[doc.status] ?? doc.status}
-                    </span>
+                    <CategoryTag category={doc.category} />
+                  </td>
+                  <td>
+                    <StatusPill status={doc.status} />
                   </td>
                   <td className="muted">{relativeTime(doc.updatedAt)}</td>
                 </tr>
@@ -324,24 +330,6 @@ function RecentDocuments({ state }) {
       )}
     </section>
   );
-}
-
-function fileTone(type = '') {
-  switch (type.toUpperCase()) {
-    case 'PDF':
-      return 'red';
-    case 'DOC':
-    case 'DOCX':
-      return 'blue';
-    case 'XLS':
-    case 'XLSX':
-      return 'green';
-    case 'PPT':
-    case 'PPTX':
-      return 'orange';
-    default:
-      return 'slate';
-  }
 }
 
 function SystemOverview({ documents, collection }) {

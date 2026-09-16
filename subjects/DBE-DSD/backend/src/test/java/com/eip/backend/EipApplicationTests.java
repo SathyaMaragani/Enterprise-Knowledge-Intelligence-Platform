@@ -747,6 +747,109 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // PAGED REPOSITORY AND CATEGORY TESTS
+    // ---------------------------------------------------------
+    // Fixture documents all share one timestamp, so newest-first ordering falls
+    // back to the id tiebreak: 10, 9, 8, ...
+
+    @Test
+    void testDocumentPageForAdminIsOrderedAndCounted() throws Exception {
+        mockMvc.perform(get("/api/documents/page").param("size", "4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(4))
+                .andExpect(jsonPath("$.totalItems").value(10))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.items[*].id", contains(10, 9, 8, 7)))
+                .andExpect(jsonPath("$.items[0].title").value("NDA Template"))
+                .andExpect(jsonPath("$.items[0].owner").value("admin_user"));
+    }
+
+    @Test
+    void testDocumentPageLastPageHoldsTheRemainder() throws Exception {
+        mockMvc.perform(get("/api/documents/page").param("size", "4").param("page", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].id", contains(2, 1)));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testDocumentPageIsPermissionFiltered() throws Exception {
+        mockMvc.perform(get("/api/documents/page").param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(5))
+                .andExpect(jsonPath("$.items[*].id", contains(7, 6, 5, 4, 2)));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testDocumentPageIsEmptyForUserWithoutAccess() throws Exception {
+        mockMvc.perform(get("/api/documents/page"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0))
+                .andExpect(jsonPath("$.items", hasSize(0)));
+    }
+
+    @Test
+    void testDocumentPageFilters() throws Exception {
+        mockMvc.perform(get("/api/documents/page").param("category", "Finance"))
+                .andExpect(jsonPath("$.items[*].id", contains(7, 2)));
+        mockMvc.perform(get("/api/documents/page").param("status", "INDEXED"))
+                .andExpect(jsonPath("$.items[*].id", contains(10, 8, 7, 3, 2, 1)));
+        mockMvc.perform(get("/api/documents/page").param("q", "POLICY"))
+                .andExpect(jsonPath("$.items[*].id", contains(9)));
+        mockMvc.perform(get("/api/documents/page").param("category", "Finance").param("q", "budget"))
+                .andExpect(jsonPath("$.items[*].id", contains(7)));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testDocumentPageFiltersNeverWidenAccess() throws Exception {
+        // Legal holds documents 5 (READ grant) and 10 (not granted).
+        mockMvc.perform(get("/api/documents/page").param("category", "Legal"))
+                .andExpect(jsonPath("$.items[*].id", contains(5)));
+    }
+
+    @Test
+    void testDocumentPageRejectsInvalidPaging() throws Exception {
+        mockMvc.perform(get("/api/documents/page").param("size", "0"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/documents/page").param("size", "101"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/documents/page").param("page", "-1"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/documents/page").param("page", "x"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testPagedReadableQueryAgreesWithReadableIds() {
+        // The owner-or-READ-grant rule is written twice in DocumentRepository: as a
+        // bulk id check for search, and inside the paged query so paging can happen
+        // in SQL. This pins the two together for every non-admin fixture user.
+        List<Integer> allIds = documentRepository.findAll().stream().map(Document::getId).toList();
+        for (String username : List.of("alice_mgr", "bob_eng", "charlie_hr", "dave_tmp")) {
+            Integer userId = userRepository.findByUsername(username).orElseThrow().getId();
+            java.util.Set<Integer> paged = documentRepository
+                    .findReadable(false, userId, "", "", "", org.springframework.data.domain.Pageable.unpaged())
+                    .stream().map(Document::getId).collect(java.util.stream.Collectors.toSet());
+            assertEquals(documentRepository.findReadableIds(allIds, userId), paged, username);
+        }
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testCategoriesAreListedByName() throws Exception {
+        mockMvc.perform(get("/api/categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].name", contains(
+                        "Administration", "Finance", "HR", "Legal", "Research", "Technical")))
+                .andExpect(jsonPath("$[0].id").isNumber())
+                .andExpect(jsonPath("$[0].description").isString());
+    }
+
+    // ---------------------------------------------------------
     // CURRENT USER PROFILE TESTS
     // ---------------------------------------------------------
 

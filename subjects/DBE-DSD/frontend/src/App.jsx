@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from 'react-router';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import RepositoryPage from './pages/RepositoryPage.jsx';
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="repository" element={<RepositoryPage />} />
+        <Route path="documents/:id" element={<DocumentPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

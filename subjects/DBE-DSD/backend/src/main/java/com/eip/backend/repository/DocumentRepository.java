@@ -1,5 +1,6 @@
 package com.eip.backend.repository;
 import com.eip.backend.entity.Document;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -45,6 +46,53 @@ public interface DocumentRepository extends JpaRepository<Document, Integer> {
                                    @Param("category") String category,
                                    @Param("status") String status,
                                    Pageable pageable);
+
+    /**
+     * One page of the documents a user may read, filtered and counted in SQL.
+     *
+     * <p>The owner-or-READ-grant predicate repeats {@link #findReadableIds}: that
+     * method checks a known set of ids, this one has to find them without loading
+     * the table first. {@code testPagedReadableQueryAgreesWithReadableIds} keeps
+     * the two identical. Admins pass {@code admin = true} and skip the predicate,
+     * matching DocumentAccessService.
+     *
+     * <p>Empty strings mean "no filter", as in {@link #searchByKeyword}. {@code q}
+     * matches title or description, case-insensitively.
+     */
+    @Query(value = """
+        select d from Document d
+        left join d.category c
+        where (:admin = true
+               or d.owner.id = :userId
+               or exists (select 1 from DocumentPermission p
+                          where p.document.id = d.id
+                            and p.user.id = :userId
+                            and p.permissionType = 'READ'))
+          and (:category = '' or c.name = :category)
+          and (:status = '' or d.status = :status)
+          and (:q = '' or lower(d.title) like lower(concat('%', :q, '%'))
+                       or lower(d.description) like lower(concat('%', :q, '%')))
+        """,
+        countQuery = """
+        select count(d) from Document d
+        left join d.category c
+        where (:admin = true
+               or d.owner.id = :userId
+               or exists (select 1 from DocumentPermission p
+                          where p.document.id = d.id
+                            and p.user.id = :userId
+                            and p.permissionType = 'READ'))
+          and (:category = '' or c.name = :category)
+          and (:status = '' or d.status = :status)
+          and (:q = '' or lower(d.title) like lower(concat('%', :q, '%'))
+                       or lower(d.description) like lower(concat('%', :q, '%')))
+        """)
+    Page<Document> findReadable(@Param("admin") boolean admin,
+                                @Param("userId") Integer userId,
+                                @Param("category") String category,
+                                @Param("status") String status,
+                                @Param("q") String q,
+                                Pageable pageable);
 
     /**
      * Candidates for the Phase 1.7C TextHack lexical scan: every document passing

@@ -112,6 +112,20 @@ describe('authentication flow', () => {
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
+  it('returns the user to the page they asked for after signing in', async () => {
+    mockApi({
+      'POST /api/auth/login': jsonResponse(200, { token: tokenFor('bob_eng'), type: 'Bearer', username: 'bob_eng' }),
+      'GET /api/documents/3': jsonResponse(403, { error: 'Forbidden', message: 'no' }),
+    });
+    renderApp('/documents/3');
+    expect(signInHeading()).toBeTruthy();
+
+    signIn('bob_eng', 'stub-password');
+
+    expect(await screen.findByRole('link', { name: '← Repository' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Find what matters' })).toBeNull();
+  });
+
   it('keeps a signed-in user away from the sign-in page', () => {
     mockApi(DASHBOARD_ROUTES);
     sessionStorage.setItem('eip.token', tokenFor('bob_eng'));

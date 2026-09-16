@@ -104,8 +104,42 @@ server and return a generic message, never exception text.
 ]
 ```
 
+Ordered newest change first. Access is resolved inside the database query.
+
+### GET /api/documents/page
+One page of the documents the caller may read, newest change first (ties broken
+by newest id), filtered and counted in the database.
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `page` | `0` | Zero-based. 400 if negative or not a number. |
+| `size` | `20` | 1 to 100, otherwise 400. |
+| `category` | none | Exact category name. |
+| `status` | none | Exact status, e.g. `INDEXED`. |
+| `q` | none | Case-insensitive match in title or description. |
+
+Filters only narrow what the caller may already read; they never widen access.
+
+**Example Response** (`alice_mgr`, `?size=2`):
+```json
+{
+  "items": [
+    { "id": 7, "title": "Q2 Budget Draft", "category": "Finance", "owner": "alice_mgr", "status": "INDEXED", "documentType": "XLSX", "...": "..." },
+    { "id": 6, "title": "Office Layout Plan", "category": "Administration", "owner": "alice_mgr", "status": "ARCHIVED", "documentType": "PDF", "...": "..." }
+  ],
+  "page": 0,
+  "size": 2,
+  "totalItems": 5,
+  "totalPages": 3
+}
+```
+
 ### GET /api/documents/{id}
-Returns the unified document consisting of PostgreSQL metadata and MongoDB content data. Returns 404 if either record is missing.
+Returns the unified document consisting of PostgreSQL metadata and MongoDB content data. Returns 404 if either record is missing, and 403 if the caller may not read it.
+
+### GET /api/categories
+Every category, sorted by name: `[{ "id": 2, "name": "Finance", "description": "..." }]`.
+Any signed-in user may list them; category names are not document data.
 
 
 ### POST /api/documents/search/semantic

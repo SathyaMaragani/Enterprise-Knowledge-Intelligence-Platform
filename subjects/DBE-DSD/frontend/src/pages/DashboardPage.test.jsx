@@ -63,6 +63,8 @@ describe('dashboard', () => {
     ]);
     expect(within(rows[0]).getByText('Uploaded')).toBeTruthy();
     expect(within(rows[3]).getByText('Failed')).toBeTruthy();
+    expect(within(rows[0]).getByRole('link', { name: 'Vendor Contract A' }).getAttribute('href')).toBe('/documents/5');
+    expect(screen.getByRole('link', { name: 'View All →' }).getAttribute('href')).toBe('/repository');
   });
 
   it('still shows documents when vector statistics are unavailable', async () => {
@@ -96,9 +98,9 @@ describe('dashboard', () => {
     await screen.findByRole('table');
 
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard']);
-    // Four for everyone; Administration is added only for administrators.
-    expect(within(nav).getAllByText('Soon')).toHaveLength(4);
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard', 'Repository']);
+    // Three for everyone; Administration is added only for administrators.
+    expect(within(nav).getAllByText('Soon')).toHaveLength(3);
 
     expect(screen.getByRole('button', { name: /Upload Document/ }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: /Advanced Search/ }).disabled).toBe(false);
@@ -155,7 +157,7 @@ describe('dashboard search', () => {
 
     const results = await screen.findByText('1 result for “Finacial”');
     const panel = results.closest('.search-results');
-    expect(within(panel).getByText('Q1 Financial Report')).toBeTruthy();
+    expect(within(panel).getByRole('link', { name: 'Q1 Financial Report' }).getAttribute('href')).toBe('/documents/2');
     expect(within(panel).getByText('Keyword')).toBeTruthy();
     expect(within(panel).getByText('Fuzzy')).toBeTruthy();
     expect(within(panel).getByText('63%')).toBeTruthy();

@@ -2,10 +2,10 @@
 
 React single-page app for the Enterprise Knowledge Intelligence Platform.
 
-**Current state:** a sign-in page and a dashboard built to the product UI design,
-on top of Frontend 1's routing, JWT session handling, protected routes and
-sign-out. Search, repository, categories, analytics and administration pages are
-not built yet; the navigation shows them as "Soon".
+**Current state:** sign-in, dashboard, document repository and document viewer,
+built to the product UI design on top of Frontend 1's routing, JWT session
+handling, protected routes and sign-out. The search page, categories, analytics
+and administration are not built yet; the navigation shows them as "Soon".
 
 Stack: React 19, React Router 7, Vite 8, Vitest 4 with Testing Library and
 jsdom, and [ThreeUI Community](https://github.com/MengTo/threeui)
@@ -86,6 +86,37 @@ shows `—`; nothing falls back to placeholder numbers.
 
 The hero glow behind the glass documents is threeui's `nebula` scene.
 
+Recent document titles and search hits open the document viewer; "View All"
+opens the repository.
+
+### Repository (`/repository`)
+
+A paged table of every document the user may read, from
+`GET /api/documents/page` (10 per page), newest change first.
+
+| Control | Behaviour |
+|---|---|
+| Title/description filter | Applied on submit, not on every keystroke. |
+| Category | From `GET /api/categories`. |
+| Status | Indexed, Processing, Uploaded, Archived, Failed. |
+| Previous / Next | Disabled at the first and last page. |
+| Clear filters | Shown only while a filter is set. |
+
+Filters and page live in the URL (`/repository?page=1&status=INDEXED`), so
+reload, back and shared links keep the view. Changing a filter returns to the
+first page.
+
+### Document viewer (`/documents/:id`)
+
+`GET /api/documents/{id}`: the PostgreSQL metadata and the MongoDB content
+together. Shows the header (type, title, description, category, status, owner,
+last update), the extracted text with word and character counts, the chunks in
+order, and panels for source, processing, version, metadata and references.
+
+A 403 explains that the user lacks access; a 404 says whether the document or
+only its stored content is missing. A non-numeric id is rejected without a
+request.
+
 ## threeui scenes
 
 `src/components/ThreeBackdrop.jsx` renders a scene only when it is appropriate:
@@ -133,5 +164,5 @@ reads the token to display the username and time the sign-out.
 - **Production serving is not set up.** `npm run build` produces `dist/`, but
   serving it from the same origin as `/api` is part of the Dockerization
   milestone. Until then, the Vite proxy only covers development.
-- **No return to the requested page after sign-in.** Only one signed-in page
-  exists so far. Add this with the first real routed pages.
+- **Sign-in returns to the requested page.** Opening `/documents/3` while
+  signed out goes to sign-in, then back to `/documents/3`.

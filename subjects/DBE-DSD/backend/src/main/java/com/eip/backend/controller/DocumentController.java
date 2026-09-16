@@ -1,4 +1,5 @@
 package com.eip.backend.controller;
+import com.eip.backend.dto.DocumentPageResponse;
 import com.eip.backend.dto.DocumentResponse;
 import com.eip.backend.dto.SemanticSearchRequest;
 import com.eip.backend.dto.SemanticSearchResponse;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -27,6 +29,16 @@ public class DocumentController {
     @GetMapping
     public List<DocumentResponse> getReadableDocuments() {
         return documentService.getReadableDocuments();
+    }
+
+    /** A page of readable documents, newest change first, with optional filters. */
+    @GetMapping("/page")
+    public DocumentPageResponse getReadablePage(@RequestParam(defaultValue = "0") int page,
+                                                @RequestParam(defaultValue = "20") int size,
+                                                @RequestParam(required = false) String category,
+                                                @RequestParam(required = false) String status,
+                                                @RequestParam(required = false) String q) {
+        return documentService.getReadablePage(page, size, category, status, q);
     }
 
     @GetMapping("/{id}")

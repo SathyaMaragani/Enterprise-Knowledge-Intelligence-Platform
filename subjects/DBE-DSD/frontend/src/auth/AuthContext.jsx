@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { request, setUnauthorizedHandler, ApiError } from '../api/client.js';
 import { clearToken, readToken, saveToken, sessionFromToken } from './session.js';
 
@@ -90,8 +90,10 @@ export function useAuth() {
 
 export function RequireAuth({ children }) {
   const { session } = useAuth();
+  const location = useLocation();
   if (!session) {
-    return <Navigate to="/login" replace />;
+    // Remember where the user was going, so sign-in can return them there.
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   return children;
 }

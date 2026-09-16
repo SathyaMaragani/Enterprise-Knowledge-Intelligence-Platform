@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import BrandMark from '../components/BrandMark.jsx';
 import GlassStack from '../components/GlassStack.jsx';
@@ -48,6 +48,7 @@ const FEATURES = [
 
 export default function LoginPage() {
   const { session, login } = useAuth();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +57,8 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (session) {
-    return <Navigate to="/" replace />;
+    const from = location.state?.from;
+    return <Navigate to={from ? `${from.pathname}${from.search ?? ''}` : '/'} replace />;
   }
 
   async function handleSubmit(event) {

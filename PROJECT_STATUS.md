@@ -439,10 +439,9 @@ endpoints already filtered correctly.
 | `dave_tmp` (no access) | `[]` | 0 hits | 0 hits |
 
 **Known ceilings, marked `ponytail:` in code:**
-- The document list loads every row and checks access with one `IN` query.
-  PostgreSQL caps a statement at 32767 bind parameters, so a very large table
-  fails outright. Move the owner/grant predicate into a paged query when
-  Frontend 3 adds pagination.
+- ~~The document list loads every row and checks access with one `IN` query.~~
+  Resolved in Repository and Document Viewer below: access is now part of the
+  query itself.
 - Vector results are filtered after Qdrant applies `topK`, so restricted users
   can get fewer than `topK` hits. Passing readable ids to Qdrant as a payload
   filter would fix that if it matters.
@@ -476,6 +475,40 @@ The 7 new tests were written first and all 7 returned 500 on the unfixed code.
 whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
+
+## Repository and Document Viewer
+**Status: VERIFIED**
+(Backend suite against the live stacks; frontend tests and build; endpoints
+checked with curl against a running server; both pages checked in the browser
+at 1536×1024 and 375×812 with replayed live responses.)
+
+```
+Backend   Tests run: 114, Failures: 0, Errors: 0, Skipped: 0   (9 new)
+Frontend  Tests  98 passed (98)                                  (14 new)
+```
+
+**Backend**
+- [x] `GET /api/documents/page`: permission rule, category, status and text
+      filters, ordering, paging and the total count all run in PostgreSQL
+- [x] `GET /api/documents` now resolves access in the same query instead of
+      loading every document and checking an `IN` list of all ids, which removes
+      the 32767-bind-parameter ceiling recorded under the permission leak fix
+- [x] `GET /api/categories`, sorted by name
+- [x] Paging parameters validated: page ≥ 0, size 1–100, numeric
+
+**Frontend**
+- [x] Repository page: filters and page in the URL, pagination, empty and error states
+- [x] Document viewer: metadata, extracted text, ordered chunks, source,
+      processing, version, metadata and references; distinct 403 and 404 messages
+- [x] Dashboard titles and search hits link to the viewer; "View All" link
+- [x] Sign-in returns to the page that was requested
+
+**The permission rule now exists twice**, both in `DocumentRepository`: as a
+check on a known set of ids (search) and inside the paged query (listing). SQL
+paging cannot use the first without loading the table. A test compares the two
+for every non-admin fixture user, and two deliberate breakages confirmed the
+tests catch drift: removing the READ-grant clause from the paged query failed 3
+tests, and ignoring the admin flag failed 4.
 
 ## Current User Profile and Role-Aware UI
 **Status: VERIFIED**
