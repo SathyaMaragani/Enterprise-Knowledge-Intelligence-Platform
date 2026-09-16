@@ -1,10 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.jsx';
 import { request } from './api/client.js';
 import { AuthProvider } from './auth/AuthContext.jsx';
-import { jsonResponse, makeToken, mockFetch, tokenFor } from './test-utils.js';
+import { documentFixture, jsonResponse, makeToken, mockApi, tokenFor } from './test-utils.js';
 
 function renderApp(path = '/') {
   return render(
@@ -19,10 +19,22 @@ function renderApp(path = '/') {
 function signIn(username, password) {
   fireEvent.change(screen.getByLabelText('Username'), { target: { value: username } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
-  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
 }
 
-const signInHeading = () => screen.getByRole('heading', { name: 'Sign in' });
+function signOut() {
+  fireEvent.click(screen.getByRole('button', { expanded: false, name: /Signed in/ }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+}
+
+const signInHeading = () => screen.getByRole('heading', { name: 'Welcome Back' });
+const dashboardHeading = () => screen.getByRole('heading', { name: 'Find what matters' });
+
+// A signed-in shell loads dashboard data straight away; these keep it quiet.
+const DASHBOARD_ROUTES = {
+  'GET /api/documents': jsonResponse(200, [documentFixture()]),
+  'GET /api/search/vector/collection-info': jsonResponse(200, { pointsCount: 30 }),
+};
 
 describe('authentication flow', () => {
   beforeEach(() => sessionStorage.clear());
@@ -42,15 +54,18 @@ describe('authentication flow', () => {
     expect(signInHeading()).toBeTruthy();
   });
 
-  it('signs in against /api/auth/login and shows the signed-in shell', async () => {
+  it('signs in against /api/auth/login and shows the dashboard', async () => {
     const token = tokenFor('alice_mgr');
-    const fetchMock = mockFetch(jsonResponse(200, { token, type: 'Bearer', username: 'alice_mgr' }));
+    const fetchMock = mockApi({
+      ...DASHBOARD_ROUTES,
+      'POST /api/auth/login': jsonResponse(200, { token, type: 'Bearer', username: 'alice_mgr' }),
+    });
     renderApp('/');
 
     signIn('  alice_mgr ', 'stub-password');
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, alice_mgr' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Find what matters' })).toBeTruthy();
+    expect(screen.getByText('alice_mgr')).toBeTruthy();
 
     const [path, init] = fetchMock.mock.calls[0];
     expect(path).toBe('/api/auth/login');
@@ -61,19 +76,21 @@ describe('authentication flow', () => {
   });
 
   it('shows the rejection and stays signed out for bad credentials', async () => {
-    mockFetch(jsonResponse(401, { error: 'Unauthorized', message: 'Invalid username or password' }));
+    mockApi({
+      'POST /api/auth/login': jsonResponse(401, { error: 'Unauthorized', message: 'Invalid username or password' }),
+    });
     renderApp('/login');
 
     signIn('alice_mgr', 'wrong');
 
     expect((await screen.findByRole('alert')).textContent).toBe('Invalid username or password');
     expect(signInHeading()).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sign in' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: 'Sign In' }).disabled).toBe(false);
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
   it('refuses a login response without a usable token', async () => {
-    mockFetch(jsonResponse(200, { token: 'not-a-jwt', username: 'alice_mgr' }));
+    mockApi({ 'POST /api/auth/login': jsonResponse(200, { token: 'not-a-jwt', username: 'alice_mgr' }) });
     renderApp('/login');
 
     signIn('alice_mgr', 'stub-password');
@@ -82,22 +99,24 @@ describe('authentication flow', () => {
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
-  it('restores a valid session on reload and signs out', () => {
+  it('restores a valid session on reload and signs out from the account menu', () => {
+    mockApi(DASHBOARD_ROUTES);
     sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
     renderApp('/');
 
-    expect(screen.getByRole('heading', { name: 'Welcome, bob_eng' })).toBeTruthy();
+    expect(dashboardHeading()).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    signOut();
 
     expect(signInHeading()).toBeTruthy();
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
   it('keeps a signed-in user away from the sign-in page', () => {
+    mockApi(DASHBOARD_ROUTES);
     sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
     renderApp('/login');
-    expect(screen.getByRole('heading', { name: 'Welcome, bob_eng' })).toBeTruthy();
+    expect(dashboardHeading()).toBeTruthy();
   });
 
   it.each([
@@ -111,29 +130,75 @@ describe('authentication flow', () => {
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
-  it('signs out when the backend rejects the token on any request', async () => {
+  it('signs out when the backend rejects the token on the dashboard load', async () => {
+    mockApi({
+      'GET /api/documents': jsonResponse(401, { error: 'Unauthorized' }),
+      'GET /api/search/vector/collection-info': jsonResponse(401, { error: 'Unauthorized' }),
+    });
     sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
-    mockFetch(jsonResponse(401, { error: 'Unauthorized' }));
     renderApp('/');
 
-    await act(() => request('/api/documents').catch(() => {}));
+    expect(await screen.findByRole('heading', { name: 'Welcome Back' })).toBeTruthy();
+    expect(sessionStorage.getItem('eip.token')).toBeNull();
+  });
+
+  it('signs out when the backend rejects the token on any request', async () => {
+    mockApi(DASHBOARD_ROUTES);
+    sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
+    renderApp('/');
+
+    mockApi({ 'GET /api/anything': jsonResponse(401, { error: 'Unauthorized' }) });
+    await act(() => request('/api/anything').catch(() => {}));
 
     expect(signInHeading()).toBeTruthy();
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
-  it('signs out at the moment the token expires, without a request', () => {
+  it('signs out at the moment the token expires, without a request', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.UTC(2026, 0, 1));
+    mockApi(DASHBOARD_ROUTES);
     sessionStorage.setItem('eip.token', tokenFor('bob_eng', 60));
     renderApp('/');
-    expect(screen.getByRole('heading', { name: 'Welcome, bob_eng' })).toBeTruthy();
+    expect(dashboardHeading()).toBeTruthy();
 
-    act(() => vi.advanceTimersByTime(59_000));
-    expect(screen.getByRole('heading', { name: 'Welcome, bob_eng' })).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(59_000));
+    expect(dashboardHeading()).toBeTruthy();
 
-    act(() => vi.advanceTimersByTime(1_000));
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(signInHeading()).toBeTruthy();
     expect(sessionStorage.getItem('eip.token')).toBeNull();
+  });
+});
+
+describe('sign-in page', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('toggles password visibility', () => {
+    renderApp('/login');
+    const password = screen.getByLabelText('Password');
+
+    expect(password.type).toBe('password');
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(password.type).toBe('text');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(password.type).toBe('password');
+  });
+
+  it('explains password resets instead of linking nowhere', () => {
+    renderApp('/login');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Forgot password?' }));
+
+    expect(screen.getByText(/handled by your EIP administrator/)).toBeTruthy();
+  });
+
+  it('shows single sign-on as unavailable', () => {
+    renderApp('/login');
+
+    const sso = screen.getByRole('button', { name: 'Sign in with SSO' });
+
+    expect(sso.disabled).toBe(true);
+    expect(within(sso.parentElement).getByText(/not configured/)).toBeTruthy();
   });
 });

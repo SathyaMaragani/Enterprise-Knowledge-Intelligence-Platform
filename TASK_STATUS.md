@@ -485,7 +485,7 @@ This is where the four subjects become **one project**.
 Current state:
 
 ```text
-                React UI (Frontend 1: shell + auth)
+          React UI (sign-in + dashboard, threeui scenes)
                                  │
                                  ▼
                      Spring Boot API (Verified)
@@ -560,17 +560,29 @@ Current state:
 
 **Frontend 1 complete: no backend code changed.**
 
+### Product UI — Sign-in & Dashboard — VERIFIED
+
+* [x] Sign-in page to the product design: dusk hero (threeui `cloud-field`, SVG mountains, CSS 3D glass stack) and sign-in card
+* [x] Password show/hide; "Forgot password?" explains admin resets; SSO shown as not configured
+* [x] Dashboard shell: sidebar (unbuilt pages marked "Soon"), account menu with sign-out
+* [x] Dashboard hero with glass documents over threeui `nebula`
+* [x] Dashboard search: `POST /api/search` with category filter, inline results, Keyword/Semantic/Fuzzy match signals, mode chips driven by `sources`
+* [x] Recent Documents, System Overview and Recent Activity from live API data only
+* [x] threeui scenes load lazily, need WebGL, respect reduced motion, and cannot break the page
+* [x] Responsive down to 375px with no horizontal scroll
+* [x] 77/77 frontend tests passing; production build succeeds
+
 * [x] React application
 * [x] Login
-* [ ] Dashboard
+* [x] Dashboard
 * [ ] Document upload
 * [ ] Document repository
 * [ ] Document viewer
-* [ ] Search interface
-* [ ] Semantic search
-* [ ] Fuzzy search
-* [ ] Search filters
-* [ ] Search results
+* [x] Search interface (dashboard search with inline results; full search page pending)
+* [x] Semantic search (shown when the backend runs vector search)
+* [x] Fuzzy search (fuzzy matches flagged in results)
+* [ ] Search filters (category done; status and department pending)
+* [x] Search results
 * [ ] Admin/user management
 * [ ] Document permissions
 * [ ] ML insights
@@ -622,7 +634,8 @@ A comprehensive **development-status view** right now:
 | DSA-3 frontend wiring         | 🔴 Pending    |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
-| Frontend 2-5                  | 🔴 Pending    |
+| Product UI: sign-in + dashboard | 🟢 Verified |
+| Repository/Search/Admin pages | 🔴 Pending    |
 | Backend write APIs (upload)   | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |
 
@@ -645,9 +658,10 @@ DSA-3: TextHack, all 20 algorithms (452 assertions) + engine + benchmarks
 DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
 OSSP: Weeks 1–6 ShellForge (REPL, Input, Parser, Processes, Built-ins, Pipes/IPC)
 DBE: React shell + JWT authentication (Frontend 1)
+DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 
 REMAINING:
-Frontend 2–5: Dashboard, document repository, search UI, admin/ML/TextHack views
+Frontend: Document repository, full search page, admin/ML/TextHack views
 DBE: Write APIs (document upload and ingestion, registration, permission management)
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads

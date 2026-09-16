@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
-import HomePage from './pages/HomePage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 
 export default function App() {
@@ -15,7 +15,7 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<HomePage />} />
+        <Route index element={<DashboardPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

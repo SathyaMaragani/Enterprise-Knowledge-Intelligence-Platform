@@ -448,6 +448,58 @@ endpoints already filtered correctly.
   can get fewer than `topK` hits. Passing readable ids to Qdrant as a payload
   filter would fix that if it matters.
 
+## Product UI — Sign-in and Dashboard
+**Status: VERIFIED**
+(Frontend tests and production build on Node 20.20; pages checked in the browser
+at 1536×1024 and 375×812; dashboard data shapes confirmed against the live
+backend.)
+
+```
+Frontend (vitest run)
+  src/auth/session.test.js                 token decoding, expiry, storage
+  src/api/client.test.js                   bearer header, error mapping, 401 handling
+  src/App.test.jsx                         guard, sign-in, sign-out, restore, expiry, sign-in page
+  src/pages/DashboardPage.test.jsx         stats, recent documents, failures, search
+  src/pages/dashboardData.test.js          summaries, ordering, activity, relative time
+  src/components/ThreeBackdrop.test.jsx    WebGL and reduced-motion gating
+  Tests  77 passed (77)
+
+vite build   app 293 kB (92 kB gzip); threeui + three.js in lazy chunks
+```
+
+The sign-in page and dashboard were rebuilt to the supplied UI design, using
+ThreeUI Community (`@designcodeio/threeui`, MIT) for the animated backgrounds.
+
+- [x] Sign-in: threeui `cloud-field` sky behind SVG mountains, a CSS 3D glass
+      stack, feature list and sign-in card
+- [x] Dashboard: sidebar, account menu, hero over threeui `nebula`, search with
+      inline results, quick actions, recent documents, system overview, activity
+- [x] No backend code changed
+
+**The design shows more than the backend supports, so this is what those parts
+became:**
+
+| In the design | Built as | Why |
+|---|---|---|
+| "Username or Email" | Username | Login looks users up by username only |
+| Forgot password / SSO | Admin-reset notice; SSO disabled, "not configured" | Neither exists in the backend |
+| Keyword / Semantic / Hybrid selector | Indicators lit from the response's `sources` | The search API has no mode parameter |
+| 705 documents, 24 users, 99.9% uptime | Documents, categories, indexed, vector chunks | No user-count or uptime endpoint; every tile is live data |
+| Recent activity feed | Additions and edits from document timestamps | No audit trail is recorded |
+| "John Doe, Administrator" | Username and "Signed in" | The token and login response carry no name or role |
+| Search / Repository / Categories / Analytics / Administration | Navigation marked "Soon"; Upload, Analytics and Categories actions disabled | Those pages are not built |
+| Theme toggle, Privacy/Terms/Help/About links | Left out | No light theme or pages behind them |
+
+**Decisions:**
+- **Reduced motion is respected.** threeui's scenes have no pause or speed
+  control, so the only reduced-motion option is not rendering them. This host
+  has Windows animation effects turned off, which browsers report as
+  reduced motion; on it, the pages show their static gradients and SVG art.
+- **Scenes load lazily and fail safely.** About 1.5 MB of threeui and three.js
+  code is fetched only when a scene will render; an error inside one removes the
+  scene, not the page.
+- **Icons are inline SVG**, not an icon package, per "no unnecessary dependencies".
+
 ## DSA-3 — TextHack (all 20 algorithms)
 **Status: COMPLETE and VERIFIED**
 (Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
