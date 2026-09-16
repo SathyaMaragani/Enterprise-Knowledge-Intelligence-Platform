@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
 import GlassDocs from '../components/GlassDocs.jsx';
+import { SearchHitList, SearchModeChips } from '../components/SearchBits.jsx';
 import Mountains from '../components/Mountains.jsx';
 import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
 import {
@@ -12,36 +13,25 @@ import {
   CheckCircleIcon,
   DatabaseIcon,
   FileTextIcon,
-  LayersIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
-  SparkleIcon,
   TagIcon,
-  TypeIcon,
   UploadIcon,
   XIcon,
 } from '../components/icons.jsx';
 import {
   categoryNames,
-  MATCH_LABELS,
   recentActivity,
   recentDocuments,
   relativeTime,
-  searchMode,
   summarize,
 } from './dashboardData.js';
-
-const SEARCH_MODES = [
-  { id: 'keyword', title: 'Keyword', text: 'Exact & fuzzy match', Icon: TypeIcon },
-  { id: 'semantic', title: 'Semantic', text: 'AI-powered meaning', Icon: SparkleIcon },
-  { id: 'hybrid', title: 'Hybrid', text: 'Best of both worlds', Icon: LayersIcon },
-];
 
 export default function DashboardPage() {
   const documents = useApi('/api/documents');
   const collection = useApi('/api/search/vector/collection-info');
-  const searchInputRef = useRef(null);
+  const navigate = useNavigate();
 
   const docs = documents.status === 'ready' ? documents.data ?? [] : [];
 
@@ -64,7 +54,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <SearchPanel categories={categoryNames(docs)} inputRef={searchInputRef} />
+        <SearchPanel categories={categoryNames(docs)} />
 
         <section className="glass-panel section" aria-labelledby="quick-actions-title">
           <h2 id="quick-actions-title" className="section__title">
@@ -76,8 +66,8 @@ export default function DashboardPage() {
               tone="violet"
               Icon={SearchIcon}
               title="Advanced Search"
-              text="Refine your results"
-              onClick={() => searchInputRef.current?.focus()}
+              text="Filters, paging and scores"
+              onClick={() => navigate('/search')}
             />
             <QuickAction tone="green" Icon={BarChartIcon} title="View Analytics" />
             <QuickAction tone="amber" Icon={TagIcon} title="Manage Categories" />
@@ -109,7 +99,8 @@ export default function DashboardPage() {
   );
 }
 
-function SearchPanel({ categories, inputRef }) {
+function SearchPanel({ categories }) {
+  const inputRef = useRef(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState({ status: 'idle' });
@@ -133,7 +124,6 @@ function SearchPanel({ categories, inputRef }) {
     }
   }
 
-  const activeMode = search.status === 'ready' ? searchMode(search.data?.sources) : null;
 
   return (
     <section className="search" aria-label="Search">
@@ -165,27 +155,14 @@ function SearchPanel({ categories, inputRef }) {
         </button>
       </form>
 
-      {/* The backend picks the mode from what it can run; these report which one did. */}
-      <ul className="mode-chips" aria-label="Search modes">
-        {SEARCH_MODES.map(({ id, title, text, Icon }) => (
-          <li key={id} className={`mode-chip${activeMode === id ? ' is-active' : ''}`}>
-            <span className="mode-chip__icon">
-              <Icon size={18} />
-            </span>
-            <span>
-              <strong>{title}</strong>
-              <span className="mode-chip__text">{text}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <SearchModeChips sources={search.status === 'ready' ? search.data?.sources : null} />
 
-      <SearchResults search={search} onClear={() => setSearch({ status: 'idle' })} />
+      <SearchResults search={search} category={category} onClear={() => setSearch({ status: 'idle' })} />
     </section>
   );
 }
 
-function SearchResults({ search, onClear }) {
+function SearchResults({ search, category, onClear }) {
   if (search.status === 'idle') {
     return null;
   }
@@ -202,9 +179,17 @@ function SearchResults({ search, onClear }) {
             </>
           )}
         </h2>
-        <button type="button" className="icon-button" aria-label="Clear search results" onClick={onClear}>
-          <XIcon size={18} />
-        </button>
+        <span className="search-results__actions">
+          <Link
+            className="view-all"
+            to={`/search?${new URLSearchParams(category ? { q: search.query, category } : { q: search.query })}`}
+          >
+            Open in search →
+          </Link>
+          <button type="button" className="icon-button" aria-label="Clear search results" onClick={onClear}>
+            <XIcon size={18} />
+          </button>
+        </span>
       </div>
 
       {search.status === 'error' && (
@@ -218,32 +203,7 @@ function SearchResults({ search, onClear }) {
       )}
 
       {search.status === 'ready' && search.data.hits.length > 0 && (
-        <ol className="hit-list">
-          {search.data.hits.map((hit) => (
-            <li key={hit.documentId} className="hit">
-              <div className="hit__body">
-                <Link className="hit__title doc-link" to={`/documents/${hit.documentId}`}>
-                  {hit.title}
-                </Link>
-                {hit.description && <p className="hit__description">{hit.description}</p>}
-                <p className="hit__meta">
-                  {hit.category && <span className="tag">{hit.category}</span>}
-                  {(hit.matchedBy ?? []).map((signal) => (
-                    <span key={signal} className={`match match--${signal.toLowerCase()}`}>
-                      {MATCH_LABELS[signal] ?? signal}
-                    </span>
-                  ))}
-                </p>
-              </div>
-              <div className="hit__score" title="Relevance">
-                <span>{Math.round((hit.score ?? 0) * 100)}%</span>
-                <span className="score-bar">
-                  <span style={{ width: `${Math.round((hit.score ?? 0) * 100)}%` }} />
-                </span>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <SearchHitList hits={search.data.hits} />
       )}
     </div>
   );

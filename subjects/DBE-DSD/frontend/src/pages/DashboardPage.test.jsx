@@ -98,21 +98,25 @@ describe('dashboard', () => {
     await screen.findByRole('table');
 
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard', 'Repository']);
-    // Three for everyone; Administration is added only for administrators.
-    expect(within(nav).getAllByText('Soon')).toHaveLength(3);
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Dashboard',
+      'Search',
+      'Repository',
+    ]);
+    // Two for everyone; Administration is added only for administrators.
+    expect(within(nav).getAllByText('Soon')).toHaveLength(2);
 
     expect(screen.getByRole('button', { name: /Upload Document/ }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: /Advanced Search/ }).disabled).toBe(false);
   });
 
-  it('focuses the search box from the Advanced Search action', async () => {
-    renderDashboard();
+  it('opens the full search page from the Advanced Search action', async () => {
+    renderDashboard({ 'GET /api/categories': jsonResponse(200, []) });
     await screen.findByRole('table');
 
     fireEvent.click(screen.getByRole('button', { name: /Advanced Search/ }));
 
-    expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Search documents' }));
+    expect(await screen.findByRole('heading', { name: 'Search the knowledge base' })).toBeTruthy();
   });
 });
 
@@ -161,6 +165,10 @@ describe('dashboard search', () => {
     expect(within(panel).getByText('Keyword')).toBeTruthy();
     expect(within(panel).getByText('Fuzzy')).toBeTruthy();
     expect(within(panel).getByText('63%')).toBeTruthy();
+
+    expect(within(panel).getByRole('link', { name: 'Open in search →' }).getAttribute('href')).toBe(
+      '/search?q=Finacial&category=Finance',
+    );
 
     const searchCall = fetchMock.mock.calls.find(([path]) => path === '/api/search');
     expect(JSON.parse(searchCall[1].body)).toEqual({ query: 'Finacial', category: 'Finance', page: 0, size: 10 });

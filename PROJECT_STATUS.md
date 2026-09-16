@@ -476,6 +476,36 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Search Page
+**Status: VERIFIED**
+(Backend suite against the live stacks; frontend tests and build; status filter
+checked with curl against a running server; page contents checked in the
+browser through the DOM with a replayed live response.)
+
+```
+Backend   Tests run: 116, Failures: 0, Errors: 0, Skipped: 0   (2 new)
+Frontend  Tests  104 passed (104)                                (6 new)
+```
+
+- [x] `/search`: query, category, status and page in the URL; 10 results per
+      page with Previous/Next
+- [x] Detailed hits: status, owner, keyword score, raw semantic score, best
+      chunk, match signals, relevance bar, link to the viewer
+- [x] Hit list and mode chips shared with the dashboard; the dashboard's
+      results link to the full search, and Advanced Search opens it
+- [x] Sidebar Search is now a live link
+
+**Two backend search bugs found while adding the status filter, both fixed:**
+
+| Bug | Cause | Fix |
+|---|---|---|
+| A status-filtered search returned vector hits of any status | Only the keyword leg filtered on status; Qdrant has no status payload filter | After hydration, hits are filtered on their PostgreSQL status |
+| An admin could get a hit with no title or owner | A vector chunk whose document was gone from PostgreSQL still became a hit | Hits that do not hydrate are dropped |
+
+Both tests failed before the fix. Live: a vector-only search filtered to
+`FAILED` now returns document 9 alone, where it previously returned all 10
+documents.
+
 ## Repository and Document Viewer
 **Status: VERIFIED**
 (Backend suite against the live stacks; frontend tests and build; endpoints

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +113,15 @@ public class SearchService {
         Set<Integer> readable = documentAccessService.readableIds(hits.keySet());
         hits.keySet().retainAll(readable);
 
-        hydrate(hits);
+        // Both checks run on PostgreSQL's view of each document, so they hold for
+        // hits from either leg. A hit that did not hydrate has no document behind
+        // it (a chunk outliving its document); Qdrant cannot filter on status.
+        Set<Integer> present = hydrate(hits);
+        hits.keySet().retainAll(present);
+        String status = blankIfNull(request.getStatus());
+        if (!status.isEmpty()) {
+            hits.values().removeIf(hit -> !status.equals(hit.getStatus()));
+        }
 
         List<SearchHit> ranked = new ArrayList<>(hits.values());
         double activeWeight = (keywordRan ? KEYWORD_WEIGHT : 0) + (vectorRan ? VECTOR_WEIGHT : 0);
@@ -224,9 +233,15 @@ public class SearchService {
         return true;
     }
 
-    /** Fills in the PostgreSQL columns for hits that only vector search found. */
-    private void hydrate(Map<Integer, SearchHit> hits) {
+    /**
+     * Fills in the PostgreSQL columns for every hit.
+     *
+     * @return the ids that exist in PostgreSQL
+     */
+    private Set<Integer> hydrate(Map<Integer, SearchHit> hits) {
+        Set<Integer> present = new HashSet<>();
         for (Document document : documentRepository.findAllById(hits.keySet())) {
+            present.add(document.getId());
             SearchHit hit = hits.get(document.getId());
             hit.setTitle(document.getTitle());
             hit.setDescription(document.getDescription());
@@ -238,6 +253,7 @@ public class SearchService {
                 hit.setOwner(document.getOwner().getUsername());
             }
         }
+        return present;
     }
 
     private double combinedScore(SearchHit hit, double activeWeight) {

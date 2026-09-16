@@ -286,6 +286,35 @@ class SearchServiceTest {
     }
 
     @Test
+    void statusFilterAlsoAppliesToVectorOnlyHits() {
+        // Qdrant has no status payload filter, so without a check after hydration a
+        // status-filtered search would return vector hits of any status.
+        doc(1, "Draft Handbook", "x");                  // PUBLISHED
+        doc(2, "Indexed Handbook", "y").setStatus("INDEXED");
+        vectorReturns(vectorItem(1, 0.9f, "chunk-a"), vectorItem(2, 0.8f, "chunk-b"));
+
+        SearchRequest req = request(null, List.of(0.1f, 0.2f));
+        req.setStatus("INDEXED");
+        SearchResponse response = searchService.search(req);
+
+        assertEquals(1, response.getTotalHits());
+        assertEquals(2, response.getHits().get(0).getDocumentId());
+    }
+
+    @Test
+    void dropsVectorHitsForDocumentsMissingFromPostgres() {
+        // A chunk can outlive its document, for example after a failed cleanup.
+        // It has no title or owner to show, so it is not a result.
+        doc(1, "Still Here", "x");
+        vectorReturns(vectorItem(1, 0.7f, "chunk-a"), vectorItem(42, 0.95f, "chunk-orphan"));
+
+        SearchResponse response = searchService.search(request(null, List.of(0.1f, 0.2f)));
+
+        assertEquals(1, response.getTotalHits());
+        assertEquals(1, response.getHits().get(0).getDocumentId());
+    }
+
+    @Test
     void pageBeyondTheEndIsEmptyRatherThanAnError() {
         Document only = doc(1, "Policy", "x");
         keywordReturns(only);

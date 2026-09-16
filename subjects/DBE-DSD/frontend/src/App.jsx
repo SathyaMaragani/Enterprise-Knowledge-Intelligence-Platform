@@ -5,6 +5,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RepositoryPage from './pages/RepositoryPage.jsx';
+import SearchPage from './pages/SearchPage.jsx';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="repository" element={<RepositoryPage />} />
         <Route path="documents/:id" element={<DocumentPage />} />
       </Route>

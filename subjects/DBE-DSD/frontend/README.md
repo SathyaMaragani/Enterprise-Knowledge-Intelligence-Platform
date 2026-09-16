@@ -2,10 +2,10 @@
 
 React single-page app for the Enterprise Knowledge Intelligence Platform.
 
-**Current state:** sign-in, dashboard, document repository and document viewer,
-built to the product UI design on top of Frontend 1's routing, JWT session
-handling, protected routes and sign-out. The search page, categories, analytics
-and administration are not built yet; the navigation shows them as "Soon".
+**Current state:** sign-in, dashboard, search, document repository and document
+viewer, built to the product UI design on top of Frontend 1's routing, JWT
+session handling, protected routes and sign-out. Categories, analytics and
+administration are not built yet; the navigation shows them as "Soon".
 
 Stack: React 19, React Router 7, Vite 8, Vitest 4 with Testing Library and
 jsdom, and [ThreeUI Community](https://github.com/MengTo/threeui)
@@ -73,10 +73,10 @@ sign-in form.
 
 | Section | Data |
 |---|---|
-| Search bar | `POST /api/search` with the query and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy). |
+| Search bar | `POST /api/search` with the query and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy), plus an "Open in search" link carrying the query and category to the search page. |
 | Keyword / Semantic / Hybrid | Report which mode the backend ran, from the response's `sources`. The backend chooses the mode, so these are not a selector. |
 | Category filter | Categories of the documents the user can read. |
-| Quick Actions | Advanced Search focuses the search bar. Upload, Analytics and Categories are marked "Coming soon". |
+| Quick Actions | Advanced Search opens the search page. Upload, Analytics and Categories are marked "Coming soon". |
 | Recent Documents | `GET /api/documents`, newest update first. |
 | System Overview | Documents, categories and indexed counts over the user's readable documents; vector chunks from `GET /api/search/vector/collection-info`, which is collection-wide. |
 | Recent Activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
@@ -88,6 +88,24 @@ The hero glow behind the glass documents is threeui's `nebula` scene.
 
 Recent document titles and search hits open the document viewer; "View All"
 opens the repository.
+
+### Search (`/search`)
+
+`POST /api/search`, 10 results per page. The query, category, status and page
+live in the URL (`/search?q=leave&status=INDEXED&page=1`), so searches can be
+shared, reloaded and revisited with back.
+
+| Element | Behaviour |
+|---|---|
+| Search bar | Runs on submit. Nothing is sent until there is a query. |
+| Category / Status | Narrow the results and return to the first page. |
+| Mode chips | Light up Keyword, Semantic or Hybrid from the response's `sources`. |
+| Results | Title (opens the viewer), description, category, status and match signals; owner, keyword score, raw semantic score and best chunk; overall relevance bar. |
+| Previous / Next | Shown when there is more than one page. |
+
+The previous results stay on screen while the next page or filter loads.
+Department is not offered: it only filters vector search, and no endpoint lists
+departments.
 
 ### Repository (`/repository`)
 

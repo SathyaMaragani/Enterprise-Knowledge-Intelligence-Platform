@@ -144,9 +144,9 @@ Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSeman
 Tests run: 75, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
 Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
-Tests run: 17, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
+Tests run: 19, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 
-Tests run: 114, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 116, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

@@ -176,7 +176,7 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
 | `vector` | one of `query`/`vector` | Must be exactly 384 floats. When omitted and the embedding model is enabled, the server embeds `query` itself. |
 | `category` | no | Applied to both backends. |
 | `department` | no | Qdrant payload filter; ignored by keyword search. |
-| `status` | no | PostgreSQL document status; ignored by vector search. |
+| `status` | no | PostgreSQL document status. Applied to hits from both keyword and vector search. |
 | `page` | no | Zero-based, default `0`. |
 | `size` | no | Default `10`, maximum `100`. |
 
@@ -204,6 +204,11 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
   "sources": ["KEYWORD"]
 }
 ```
+
+Every hit is checked against PostgreSQL after fusion: hits whose document no
+longer exists there (a vector chunk outliving its document) are dropped, and
+`status` is enforced on the document's current status, since Qdrant has no
+status filter.
 
 **Ranking**: `score` is a 0..1 blend of `keywordScore` (weight 0.4) and
 `vectorScore` (weight 0.6), normalised over whichever backends actually ran — a
