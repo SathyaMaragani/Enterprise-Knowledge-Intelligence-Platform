@@ -477,7 +477,7 @@ than rewritten.
 
 ---
 
-# 🟡 Integration — Core Search & DB Layers Complete
+# 🟡 Integration — Backend Search Complete, Frontend Pending
 
 This is where the four subjects become **one project**.
 
@@ -501,13 +501,13 @@ Current state:
                      ▼                       ▼
                   TextHack               In-Process
                  (DSA-3)                 Java ONNX
-                 Pending               (MiniLM-L6-v2)
+             Verified (1.7C)           (MiniLM-L6-v2)
                      │                       │
                      └───────────┬───────────┘
                                  │
                                  ▼
                       Unified Search Engine
-                    (Keyword + Vector Fusion)
+              (Keyword + Fuzzy + Vector Fusion)
 ```
 
 ### Integration tasks
@@ -571,7 +571,7 @@ Current state:
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Integration tests (63 passed across PostgreSQL, MongoDB, Qdrant, and ONNX)
+* [x] Backend tests (87 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
 * [x] API tests (REST controllers verified)
 * [ ] Load testing
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)
@@ -602,9 +602,11 @@ A comprehensive **development-status view** right now:
 | Real Semantic Search (1.7B-3B)| 🟢 Verified   |
 | Core Search Integration       | 🟢 Verified   |
 | DSA-3 TextHack (all 20 algos) | 🟢 Verified   |
-| DSA-3 frontend/API wiring     | 🔴 Pending    |
+| TextHack → Search (1.7C)      | 🟢 Verified   |
+| DSA-3 frontend wiring         | 🔴 Pending    |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend                      | 🔴 Pending    |
+| Backend write APIs (upload)   | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |
 
 ## The important thing
@@ -622,21 +624,16 @@ ML: Real Embedding Evaluation (1.7B-2)
 DBE/ML: Demo Enterprise Corpus + Vector Ingestion (1.7B-3A)
 DBE: In-process Java ONNX MiniLM Query Embedding (1.7B-3C)
 DBE: Spring Boot Real Semantic Search Integration (1.7B-3B)
-OSSP: Weeks 1–5 ShellForge (REPL, Input, Parser, Processes, Pipes/IPC)
+DSA-3: TextHack, all 20 algorithms (452 assertions) + engine + benchmarks
+DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
+OSSP: Weeks 1–6 ShellForge (REPL, Input, Parser, Processes, Built-ins, Pipes/IPC)
 
-NEXT LOGICAL SEQUENCE:
- ↓
-OSSP: Weeks 6+ ShellForge (Signals, Process Groups, Job Control)
- ↓
-DSA-3: TextHack Core Algorithms & Benchmarks
- ↓
+REMAINING:
+Frontend: React application and search UI
+DBE: Write APIs (document upload and ingestion, registration, permission management)
 ML: Classification, Clustering & Feature Engineering (Future COs)
- ↓
-DSA-3 Integration with Search (Fuzzy / TextHack Scorers)
- ↓
-Frontend: React Application & Search UI
- ↓
-Production Docker Deployment & Full Compose
+OSSP: Signals, process groups, job control, memory, file I/O, threads
+Deployment: Dockerize Spring Boot and frontend, load and performance testing
 ```
 
-For your immediate academic progress, you now have **three verified databases + a complete Spring Boot backend with JWT/RBAC + in-process Java ONNX semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–5 verified and DSA-3 scaffolded and ready for algorithmic implementation.
+For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–6 and all 20 DSA-3 algorithms verified. The backend has no write path yet: documents cannot be uploaded, edited or deleted through the API.
