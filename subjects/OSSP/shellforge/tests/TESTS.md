@@ -6,64 +6,158 @@ This Windows host has no `gcc`/`make`, so all tests below are executed inside a
 container:
 
 ```bash
-docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make && ./bin/shellforge"
+docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 ```
 
-## Test Procedure
+`make test` runs all three automated suites in order: Week 4, Week 5, Week 6.
+
+## Automated Suites
+
+| Suite | Chapter | Assertions |
+|---|---|---|
+| `tests/test_week4.sh` | Processes and command execution | 21 |
+| `tests/test_week5.sh` | Built-in commands and environment variables | 32 |
+| `tests/test_week6.sh` | Pipes and IPC | 23 |
+
+Run one suite on its own:
+
+```bash
+docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "sh tests/test_week5.sh"
+```
+
+Each suite ends by rebuilding under `-fsanitize=address,undefined` and asserting
+that no AddressSanitizer, LeakSanitizer or UndefinedBehaviorSanitizer report
+appears. Before trusting a clean sanitizer result, confirm the leak detector is
+actually active — compile a deliberate one-line leak and check it is reported.
+
+## Manual Test Procedure
 
 1. **Program starts successfully.**
    - Action: Run `./bin/shellforge`.
    - Expected: Program launches without errors.
 2. **Startup banner appears.**
    - Action: Observe output.
-   - Expected: `Welcome to ShellForge Version 3.0` banner is displayed.
+   - Expected: `Welcome to ShellForge Version 6.0` banner is displayed.
 3. **A command is tokenized into argv[].**
-   - Action: Enter `ls -l /home`.
+   - Action: Run with `--debug-tokens` and enter `ls -l /home`.
    - Expected: `argv[0] = ls`, `argv[1] = -l`, `argv[2] = /home`, `argv[3] = NULL`.
-4. **Single-word command.**
-   - Action: Enter `pwd`.
-   - Expected: `argv[0] = pwd`, `argv[1] = NULL`.
-5. **Irregular spacing collapses.**
+4. **Irregular spacing collapses.**
    - Action: Enter `  ls   -l    /home  ` with leading, trailing and repeated spaces, and a tab.
    - Expected: Identical result to test 3 — consecutive delimiters produce no empty tokens.
-6. **Multiple commands can be entered.**
-   - Action: Enter several commands in succession.
-   - Expected: Each is tokenized independently; no state leaks between lines.
-7. **Empty and whitespace-only input.**
-   - Action: Press Enter on an empty line, then enter a line of only spaces and tabs.
-   - Expected: No token output, no crash, prompt returns.
-8. **"exit" terminates the program.**
+5. **Empty and whitespace-only input.**
+   - Action: Press Enter on an empty line, then a line of only spaces and tabs.
+   - Expected: No output, no crash, prompt returns.
+6. **External command executes.**
+   - Action: Enter `echo hello`.
+   - Expected: `hello`, produced by a forked child running `/bin/echo`.
+7. **Unknown command is handled.**
+   - Action: Enter `nosuchcommand`.
+   - Expected: `ShellForge: nosuchcommand: No such file or directory`; shell survives.
+8. **`exit` terminates the program.**
    - Action: Enter `exit`.
-   - Expected: Output `Exiting ShellForge...` and program cleanly exits.
+   - Expected: `Exiting ShellForge...` and a clean exit.
 9. **EOF terminates gracefully.**
-   - Action: Press Ctrl+D (Unix) or Ctrl+Z (Windows).
-   - Expected: Program handles EOF without infinite loops and cleanly exits.
+   - Action: Press Ctrl+D.
+   - Expected: No infinite loop; exit code 0.
 10. **Project builds using make.**
-    - Action: Run `make clean` then `make`.
-    - Expected: Compiles with no warnings or errors under `-Wall -Wextra`.
+    - Action: `make clean` then `make`.
+    - Expected: Compiles with no warnings under `-Wall -Wextra`.
 11. **Long input test.**
-    - Action: Paste a string of >1024 characters into the prompt.
-    - Expected: The input buffer grows without crashing or truncating, and memory is freed.
+    - Action: Enter a command with an argument over 1024 characters.
+    - Expected: The input buffer grows without truncation, and memory is freed.
 12. **Token vector growth.**
-    - Action: Enter a command with more than 64 arguments (200 exercises two growth steps).
-    - Expected: All tokens are returned in order and the vector is `NULL`-terminated at the correct index.
-13. **Memory validation.**
-    - Action: Build with `-fsanitize=address,undefined` and run the cases above,
-      or run under Valgrind (`valgrind --leak-check=full ./bin/shellforge`).
-    - Expected: Zero memory leaks, zero invalid reads/writes, zero undefined behaviour.
-    - Note: confirm the leak detector is actually active before trusting a clean
-      result — compile a deliberate one-line leak and check it is reported.
+    - Action: Enter a command with more than 64 arguments.
+    - Expected: All tokens returned in order, vector `NULL`-terminated correctly.
 
-## Results (Week 3)
+## Week 5 — Built-in Commands and Environment Variables
 
-Executed in `gcc:13`. All of the above pass:
+The point of these cases is that built-ins run **in the shell process**. Test 2
+is the decisive one: if `cd` were forked, the child would change its own working
+directory and exit, and the following `pwd` would print the original directory.
 
-| Test | Result |
+1. **`pwd` built-in**: prints the working directory via `getcwd()`.
+2. **`cd` persists in the parent**: `cd /tmp` then `pwd` prints `/tmp`; successive
+   `cd` calls accumulate.
+3. **Bare `cd` follows `$HOME`**: `cd /tmp`, then `cd`, then `pwd` returns to `$HOME`.
+4. **`cd` to a missing directory**: reports `ShellForge: cd: <path>: No such file or directory`
+   and the shell survives.
+5. **`cd` argument count**: more than one argument is rejected.
+6. **`PWD` tracks `cd`**: `env` reports `PWD=/tmp` after `cd /tmp`. `PWD` is an
+   ordinary environment variable and does not follow `chdir()` on its own.
+7. **`env` built-in**: prints `HOME`, `USER`, `PATH`, `SHELL`, `PWD`.
+8. **`env` NULL-safety**: run under `env -u USER`; the unset variable renders as
+   `USER=(not set)` rather than being passed as `NULL` to `printf("%s")`.
+9. **`help` built-in**: lists every built-in.
+10. **`clear` built-in**: emits the ANSI erase-display sequence, with no subprocess.
+11. **`exit` routes through the parser**: `exit` with surrounding whitespace still
+    terminates, and nothing after it runs.
+12. **Built-ins do not shadow external programs**: `echo` still reaches `execvp()`,
+    and an unknown command fails without taking the shell down.
+13. **EOF termination**: empty input exits 0.
+14. **Sanitizers**: every built-in path is exercised under ASan + UBSan.
+
+### Week 5 results
+
+Executed in `gcc:13`:
+
+| Test category | Result |
 |---|---|
-| Build under `-Wall -Wextra` | Clean, zero warnings |
-| Tokenization (tests 3-6) | Matches expected `argv[]` exactly |
-| Empty / whitespace-only (test 7) | No output, no crash |
-| `exit` and EOF (tests 8-9) | Both exit cleanly; empty stdin exits 0 |
-| Long input, 3000 chars (test 11) | Buffer grew, token returned intact at full length |
-| 200-token growth (test 12) | `argv[200] = NULL`, all tokens in order |
-| ASan + UBSan (test 13) | No reports; detector verified against a control leak |
+| Build under `-Wall -Wextra` | Clean, 0 warnings |
+| `pwd` built-in | Passed |
+| `cd` persistence in parent process | Passed |
+| Bare `cd` follows `$HOME` | Passed |
+| `cd` error and argument-count handling | Passed |
+| `PWD` updated after `chdir()` | Passed |
+| `env` output and NULL-safety | Passed |
+| `help` listing | Passed |
+| `clear` ANSI sequence | Passed |
+| `exit` via parser, incl. whitespace | Passed |
+| Fall-through to `execvp()` | Passed |
+| EOF termination | Passed |
+| ASan / LeakSanitizer / UBSan | 0 leaks, 0 errors |
+| **`tests/test_week5.sh`** | **32 passed, 0 failed** |
+
+## Week 6 — Pipes and IPC
+
+1. **Direct IPC parent to child**: parent writes to `pipefd[1]`, child reads from `pipefd[0]`.
+2. **Direct IPC child to parent**: child writes, parent reads.
+3. **EOF detection**: when the writer closes `pipefd[1]`, the reader's `read()` returns `0`.
+4. **Interactive `demo-ipc`**: running `demo-ipc` inside the shell triggers the demonstration.
+5. **Two-process pipeline**: `echo Hello World | grep Hello` filters through the pipe.
+6. **Word count pipeline**: `seq 1 5 | wc -l` returns `5` without deadlocking.
+7. **Unspaced metacharacter**: `echo unspaced_pipe|cat` parses `|` as its own token.
+8. **Multi-argument pipeline**: `ls -la bin | grep shellforge` passes flags on both sides.
+9. **Leading pipe**: `| ls` is rejected as a syntax error.
+10. **Trailing pipe**: `ls |` is rejected as a syntax error.
+11. **Multi-stage boundary**: three-stage pipelines are rejected; only two stages are supported.
+12. **Left-side failure**: `nonexistent_left_cmd | wc -l` exits the child cleanly and the right side sees EOF.
+13. **Right-side failure**: `echo hello | nonexistent_right_cmd` reports on stderr and returns to the prompt.
+14. **Buffer and vector growth in a pipeline**: 1200-character argument and 100-argument vector both survive.
+15. **Sanitizers**: pipeline and IPC paths run under ASan + UBSan.
+
+### Week 6 results
+
+| Test category | Result |
+|---|---|
+| Build under `-Wall -Wextra` | Clean, 0 warnings |
+| Parent to child IPC | Passed |
+| Child to parent IPC | Passed |
+| EOF detection (`read() == 0`) | Passed |
+| Two-process pipelines | Passed |
+| Unspaced pipe tokenization | Passed |
+| Pipe syntax errors (leading, trailing) | Passed |
+| Multi-stage boundary rejection | Passed |
+| Pipeline failure handling, both sides | Passed |
+| Buffer and token vector growth | Passed |
+| ASan / UBSan | 0 leaks, 0 errors |
+| **`tests/test_week6.sh`** | **23 passed, 0 failed** |
+
+## Regression Summary
+
+All three suites pass together via `make test`:
+
+```
+tests/test_week4.sh    21 passed, 0 failed
+tests/test_week5.sh    32 passed, 0 failed
+tests/test_week6.sh    23 passed, 0 failed
+```

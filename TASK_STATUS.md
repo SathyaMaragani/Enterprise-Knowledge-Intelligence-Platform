@@ -169,6 +169,23 @@
 
 **Phase 1.7A complete: 55 passed, 0 failed, 0 skipped.**
 
+### Real Semantic Search Integration (Phase 1.7B) — VERIFIED
+
+* [x] Standalone Demo Environment (`subjects/DBE-DSD/database/demo/docker-compose.demo.yml`)
+* [x] Isolated demo ports (PostgreSQL 5436, MongoDB 27019, Qdrant 6345/6346) preserving existing 10 test fixtures
+* [x] Python ingestion pipeline (`embed_and_ingest.py`) generating 384-D `all-MiniLM-L6-v2` embeddings
+* [x] 315 synthetic enterprise documents (705 chunks) embedded and ingested into demo Qdrant collection
+* [x] In-process Java ONNX runtime (`MiniLmOnnxEncoder`) using Hugging Face `tokenizers` and `onnxruntime`
+* [x] Attention-mask-aware mean pooling and L2 vector normalization in pure Java
+* [x] Numerical equivalence verified: <1.5e-7 maximum absolute float difference vs Python SentenceTransformers
+* [x] Retrieval equivalence verified: 100% (32/32) top-5 document retrieval parity on demo corpus
+* [x] `EmbeddingService` Spring component with automatic fallback / graceful degradation when model is offline
+* [x] `SearchService` integration: on-the-fly vectorization of query text (`POST /api/search` with natural language `query`)
+* [x] Hybrid search: multi-backend fan-out (PostgreSQL keyword + Qdrant ONNX semantic) with normalized fusion scoring
+* [x] 63/63 tests passing (55 existing regression + 8 new semantic/ONNX integration tests, 0 failed, 0 skipped)
+
+**Phase 1.7B complete: real semantic search operational in-process via Java ONNX runtime.**
+
 ---
 
 # 🟡 DSA-3 — TextHack
@@ -227,9 +244,9 @@ The architecture/scaffolding is:
 
 ---
 
-# 🟢 OSSP — ShellForge (Weeks 1-3)
+# 🟢 OSSP — ShellForge (Weeks 1-6)
 
-Weeks 1-3 are implemented and now actually compiled and executed. The host has
+Weeks 1-6 are implemented, compiled, and verified. The host has
 no gcc/make, so the build runs in a `gcc:13` container.
 
 ### Week 1 — VERIFIED
@@ -271,6 +288,57 @@ no gcc/make, so the build runs in a `gcc:13` container.
 * [x] ASan + UBSan clean
 * [x] Week 3 documentation, updated README and TESTS
 
+### Week 4 — VERIFIED
+
+* [x] `executor.h`
+* [x] `executor.c`
+* [x] `fork()` process creation
+* [x] `execvp()` program execution with PATH search
+* [x] `waitpid()` process synchronization & zombie reaping
+* [x] Process lifecycle & state tracking (`WIFEXITED`, `WEXITSTATUS`, `WIFSIGNALED`)
+* [x] Child `_exit()` safety after failed `execvp()`
+* [x] Stdio stream flushing (`fflush(stdout)`, `fflush(stderr)`) prior to `fork()`
+* [x] Automated test suite (`test_week4.sh`, 21 assertions passed in `gcc:13`)
+* [x] Memory validation (ASan + UBSan clean, 0 leaks, 0 errors)
+* [x] Week 4 documentation (`WEEK4.md`, updated `OSSP_MAPPING.md`, `TESTS.md`, `README.md`)
+
+### Week 5 — VERIFIED (Built-in Commands & Environment Variables)
+
+* [x] `builtin.h`, `builtin.c`
+* [x] Built-in dispatch ahead of the fork path, with a three-way return contract
+* [x] `cd` via `chdir()`, defaulting to `$HOME`, rejecting extra arguments
+* [x] `pwd` via `getcwd()`, return value checked
+* [x] `env` via `getenv()`, NULL-safe for unset variables
+* [x] `clear` via ANSI escape (no `system()` subprocess)
+* [x] `help` listing the built-ins
+* [x] `exit` unwinding through `main()` so allocations are freed first
+* [x] `PWD` kept in step with `chdir()`
+* [x] Fall-through to `fork()`/`execvp()` for non-built-ins
+* [x] Automated test suite (`test_week5.sh`, 32 assertions passed in `gcc:13`)
+* [x] ASan + LeakSanitizer + UBSan clean across every built-in path
+* [x] Week 5 documentation (`WEEK5.md`, updated `OSSP_MAPPING.md`, `TESTS.md`, `README.md`)
+
+### Week 6 — VERIFIED (Pipes & IPC)
+
+* [x] Anonymous pipes via `pipe()`
+* [x] File descriptor redirection via `dup2()`
+* [x] Two-process pipeline execution (`cmd1 | cmd2`)
+* [x] Unspaced pipe tokenization (`cmd1|cmd2`)
+* [x] Direct IPC demonstrations (Parent -> Child, Child -> Parent)
+* [x] File descriptor lifecycle cleanup in parent & children
+* [x] EOF detection behavior (`read() == 0`)
+* [x] `--demo-ipc` CLI flag & interactive `demo-ipc` shell command
+* [x] Automated test suite (`test_week6.sh`, 23 assertions passed in `gcc:13`)
+* [x] Regression testing (`test_week4.sh` 21, `test_week5.sh` 32 assertions passed)
+
+**Correction:** this pipes/IPC work was previously filed as Week 5 and marked
+verified against the wrong chapter. The Week 5 handbook specifies built-in
+commands and environment variables; pipes and IPC are Week 6. The implementation
+was correct — only its chapter label was wrong — so it was relabelled rather
+than rewritten.
+* [x] Memory validation (ASan + UBSan clean, 0 leaks, 0 errors)
+* [x] Week 5 documentation (`WEEK5.md`, updated `OSSP_MAPPING.md`, `TESTS.md`, `README.md`)
+
 ### Future OSSP
 
 #### CO-1
@@ -280,16 +348,16 @@ no gcc/make, so the build runs in a `gcc:13` container.
 
 #### CO-2 — Processes
 
-* [ ] `fork()`
-* [ ] `exec()`
-* [ ] `wait()`
-* [ ] Process lifecycle
-* [ ] Process control
-* [ ] Job management
+* [x] `fork()`
+* [x] `exec()` / `execvp()`
+* [x] `wait()` / `waitpid()`
+* [x] Process lifecycle
+* [ ] Process control (advanced / signals)
+* [ ] Job management (background `&` / jobs)
 
 #### CO-3 — IPC
 
-* [ ] Anonymous pipes
+* [x] Anonymous pipes
 * [ ] Named pipes/FIFOs
 * [ ] Signals
 * [ ] Signal handlers
@@ -328,9 +396,9 @@ no gcc/make, so the build runs in a `gcc:13` container.
 
 ---
 
-# 🔴 ML — Mostly Pending
+# 🟡 ML — Foundations, Evaluation & Embeddings Complete
 
-### Foundation
+### Foundation — VERIFIED
 
 * [x] ML directory structure
 * [x] Dataset directories
@@ -343,88 +411,94 @@ no gcc/make, so the build runs in a `gcc:13` container.
 * [x] Evaluation directory
 * [x] `requirements.txt`
 
-### Dataset
+### Dataset (Phase 1.7B-1) — VERIFIED
 
-* [ ] Select public enterprise-document dataset
-* [ ] Download dataset
-* [ ] Store raw dataset
-* [ ] Document dataset source/license
-* [ ] Clean dataset
-* [ ] Create processed dataset
+* [x] Select public enterprise-document dataset (FiQA-2018, CC-BY-SA-4.0)
+* [x] Download dataset (57,638 documents, 648 judged test queries, 1,706 relevance judgments)
+* [x] Store raw dataset (`subjects/ML/data/raw/`)
+* [x] Document dataset source/license (`subjects/ML/docs/DATASET_AND_MODEL_SELECTION.md`)
+* [x] Clean dataset (NFKC normalization, overlapping window chunking: 76,723 chunks)
+* [x] Create processed dataset (`subjects/ML/data/processed/fiqa_processed.jsonl`)
 
-### ML Pipeline
+### ML Pipeline & Evaluation — VERIFIED
 
-* [ ] Text preprocessing
-* [ ] Tokenization
-* [ ] Stop-word handling
-* [ ] TF-IDF
-* [ ] Feature engineering
-* [ ] Document classification
-* [ ] Classification evaluation
-* [ ] Document clustering
-* [ ] Clustering evaluation
-* [ ] Semantic/ranking model
-* [ ] Ranking evaluation
-* [ ] Model persistence
-* [ ] Model inference API
+* [x] Text preprocessing (`src/preprocessing/chunking.py`)
+* [x] Tokenization and stop-word handling
+* [x] TF-IDF baseline retriever (`src/ranking/tfidf_baseline.py` — nDCG@10 = 0.1447, MRR = 0.1792)
+* [x] Dense embedding evaluation framework (`src/evaluation/metrics.py`, `src/evaluation/subset.py`)
+* [x] Dense vs Sparse comparison (`src/evaluation/compare.py` — dense decisively beats TF-IDF by +0.2531 nDCG@10, p < 0.0001)
+* [x] Model evaluation: `all-MiniLM-L6-v2` vs `bge-small-en-v1.5` evaluated on bounded FiQA subset
+* [x] Decision record documented (`subjects/ML/docs/PHASE_1_7B_2_EVALUATION.md`)
+* [ ] Feature engineering (tabular / classification features)
+* [ ] Document classification (future CO)
+* [ ] Classification evaluation (future CO)
+* [ ] Document clustering (future CO)
+* [ ] Clustering evaluation (future CO)
+* [x] Semantic/ranking model selection (`all-MiniLM-L6-v2`)
+* [x] Ranking evaluation (1.7B-1 baseline + 1.7B-2 dense evaluation: +0.2531 nDCG@10 over TF-IDF)
+* [x] Model persistence (ONNX model `model.onnx` + `tokenizer.json` in backend resources)
+* [x] Model inference API (in-process Java ONNX runtime `MiniLmOnnxEncoder` and `EmbeddingService`)
 
-### Embeddings
+### Embeddings & Vector Ingestion (Phase 1.7B-2, 1.7B-3A/B/C) — VERIFIED
 
-* [ ] Select embedding model
-* [ ] Generate real embeddings
-* [ ] Replace synthetic Qdrant vectors
-* [ ] Store embeddings in Qdrant
-* [ ] Semantic search
-* [ ] Hybrid search
+* [x] Select embedding model (`sentence-transformers/all-MiniLM-L6-v2`, 384-D, cosine distance)
+* [x] Generate real embeddings (`subjects/ML/src/embeddings/encoder.py`, `embed_and_ingest.py`)
+* [x] Isolated demo corpus vectors (705 chunks with real vectors in demo Qdrant; 10 frozen regression fixtures preserved)
+* [x] Store embeddings in Qdrant (`knowledge_chunks` collection, cosine metric)
+* [x] In-process Java ONNX query embedding (`MiniLmOnnxEncoder`)
+* [x] Semantic search operational in Spring Boot (`POST /api/search`, `POST /api/search/vector`)
+* [x] Hybrid search operational in Spring Boot (PostgreSQL keyword + Qdrant semantic fusion)
 
 ---
 
-# 🔴 Integration — Pending
+# 🟡 Integration — Core Search & DB Layers Complete
 
 This is where the four subjects become **one project**.
 
-Eventually:
+Current state:
 
 ```text
-                         React UI
-                            │
-                            ▼
-                     Spring Boot API
-                            │
-             ┌──────────────┼──────────────┐
-             │              │              │
-             ▼              ▼              ▼
-        PostgreSQL       MongoDB        Qdrant
-        DBE & DSD        DBE & DSD      DBE & DSD
-             │              │              │
-             └──────────────┼──────────────┘
-                            │
-                    ┌───────┴───────┐
-                    ▼               ▼
-                 TextHack           ML
-                  DSA-3             ML
-                    │               │
-                    └───────┬───────┘
-                            │
-                            ▼
-                      Search Engine
+                         React UI (Pending)
+                                 │
+                                 ▼
+                     Spring Boot API (Verified)
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+              ▼                  ▼                  ▼
+         PostgreSQL           MongoDB             Qdrant
+       (Meta & RBAC)       (Doc Content)      (384-D Vectors)
+              │                  │                  │
+              └──────────────────┼──────────────────┘
+                                 │
+                     ┌───────────┴───────────┐
+                     ▼                       ▼
+                  TextHack               In-Process
+                 (DSA-3)                 Java ONNX
+                 Pending               (MiniLM-L6-v2)
+                     │                       │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                      Unified Search Engine
+                    (Keyword + Vector Fusion)
 ```
 
 ### Integration tasks
 
-* [ ] PostgreSQL + MongoDB
-* [ ] MongoDB + Qdrant
-* [ ] Spring Boot + Qdrant
-* [ ] Spring Boot + ML
-* [ ] Spring Boot + TextHack
-* [ ] Search orchestration
-* [ ] Permission-aware search
-* [ ] Keyword search
-* [ ] Fuzzy search
-* [ ] Semantic search
-* [ ] Hybrid search
-* [ ] Search ranking
-* [ ] Unified search response
+* [x] PostgreSQL + MongoDB (Unified document response, cross-database join)
+* [x] MongoDB + Qdrant (Document content + chunk vector correlation)
+* [x] Spring Boot + Qdrant (Vector search client, payload filtering, cosine similarity)
+* [x] Spring Boot + ML (In-process Java ONNX runtime `all-MiniLM-L6-v2` query encoder)
+* [ ] Spring Boot + TextHack (DSA integration pending)
+* [x] Search orchestration (`SearchService` multi-backend fan-out and fusion)
+* [x] Permission-aware search (`DocumentAccessService` security filtering)
+* [x] Keyword search (PostgreSQL ILIKE search)
+* [ ] Fuzzy search (TextHack / Levenshtein / DSA pending)
+* [x] Semantic search (Qdrant + ONNX MiniLM vector search)
+* [x] Hybrid search (Weighted score fusion of keyword + semantic hits)
+* [x] Search ranking (Normalized 0..1 scoring with provenance tracking)
+* [x] Unified search response (`POST /api/search` with metadata, chunks, and matchedBy)
 
 ---
 
@@ -462,73 +536,80 @@ Eventually:
 
 ---
 
-# 🔴 Deployment & Testing
+# 🟡 Deployment & Testing
 
-* [ ] Dockerize PostgreSQL
-* [ ] Dockerize MongoDB
-* [ ] Dockerize Qdrant
+* [x] Dockerize PostgreSQL (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
+* [x] Dockerize MongoDB (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
+* [x] Dockerize Qdrant (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
 * [ ] Dockerize Spring Boot
-* [ ] Dockerize ML service
+* [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
-* [ ] Full `docker-compose`
-* [ ] Integration tests
-* [ ] API tests
+* [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
+* [x] Integration tests (63 passed across PostgreSQL, MongoDB, Qdrant, and ONNX)
+* [x] API tests (REST controllers verified)
 * [ ] Load testing
-* [ ] Security testing
+* [x] Security testing (JWT, RBAC, document permission enforcement tests)
 * [ ] Performance benchmarking
-* [ ] Deployment documentation
+* [x] Deployment documentation (`QDRANT_INTEGRATION.md`, compose docs)
 
 ---
 
 # Overall Progress
 
-A rough **development-status view** right now:
+A comprehensive **development-status view** right now:
 
-| Area                     | Status        |
-| ------------------------ | ------------- |
-| Repository Architecture  | 🟢 Complete   |
-| PostgreSQL               | 🟢 Verified   |
-| MongoDB                  | 🟢 Verified   |
-| Qdrant                   | 🟢 Verified   |
-| Spring Boot + PostgreSQL | 🟢 Verified   |
-| Spring Boot + MongoDB    | 🟢 Verified   |
-| Spring Boot + Qdrant     | 🟢 Verified   |
-| Authentication / RBAC    | 🟢 Verified   |
-| Unified Search (1.7A)    | 🟢 Verified   |
-| ML 1.7B-1 Dataset/Eval   | 🟢 Verified   |
-| ML 1.7B-2 Embeddings     | 🔴 Pending    |
-| DSA-3 TextHack           | 🟡 Scaffolded |
-| OSSP ShellForge (Wk 1-3) | 🟢 Verified   |
-| Frontend                 | 🔴 Pending    |
-| Integration              | 🔴 Pending    |
-| Deployment               | 🔴 Pending    |
+| Area                          | Status        |
+| ----------------------------- | ------------- |
+| Repository Architecture       | 🟢 Complete   |
+| PostgreSQL                    | 🟢 Verified   |
+| MongoDB                       | 🟢 Verified   |
+| Qdrant                        | 🟢 Verified   |
+| Spring Boot + PostgreSQL      | 🟢 Verified   |
+| Spring Boot + MongoDB         | 🟢 Verified   |
+| Spring Boot + Qdrant          | 🟢 Verified   |
+| Authentication / RBAC         | 🟢 Verified   |
+| Unified Search (1.7A)         | 🟢 Verified   |
+| ML 1.7B-1 Dataset/Eval        | 🟢 Verified   |
+| ML 1.7B-2 Embeddings Eval     | 🟢 Verified   |
+| Demo Corpus & Vectors (1.7B-3A)| 🟢 Verified  |
+| Java ONNX Embeddings (1.7B-3C)| 🟢 Verified   |
+| Real Semantic Search (1.7B-3B)| 🟢 Verified   |
+| Core Search Integration       | 🟢 Verified   |
+| DSA-3 TextHack                | 🟡 Scaffolded |
+| OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
+| Frontend                      | 🔴 Pending    |
+| Deployment (Containers)       | 🟡 Partial    |
 
 ## The important thing
 
 We're **not behind**. We've deliberately built the foundation first.
 
-The next logical sequence is:
-
 ```text
-NOW
+COMPLETED:
+DBE: PostgreSQL + MongoDB + Qdrant
+DBE: Spring Boot + DB Integrations
+DBE: Authentication / RBAC (JWT)
+DBE: Unified Hybrid Search (1.7A)
+ML: FiQA Dataset + Preprocessing + TF-IDF Baseline (1.7B-1)
+ML: Real Embedding Evaluation (1.7B-2)
+DBE/ML: Demo Enterprise Corpus + Vector Ingestion (1.7B-3A)
+DBE: In-process Java ONNX MiniLM Query Embedding (1.7B-3C)
+DBE: Spring Boot Real Semantic Search Integration (1.7B-3B)
+OSSP: Weeks 1–5 ShellForge (REPL, Input, Parser, Processes, Pipes/IPC)
+
+NEXT LOGICAL SEQUENCE:
  ↓
-DBE: Spring Boot + Qdrant
+OSSP: Weeks 6+ ShellForge (Signals, Process Groups, Job Control)
  ↓
-DBE: Authentication/RBAC
+DSA-3: TextHack Core Algorithms & Benchmarks
  ↓
-OSSP: Weeks 1–2 ShellForge
+ML: Classification, Clustering & Feature Engineering (Future COs)
  ↓
-DSA-3: TextHack core
+DSA-3 Integration with Search (Fuzzy / TextHack Scorers)
  ↓
-ML: Dataset + pipeline
+Frontend: React Application & Search UI
  ↓
-Integration
- ↓
-Frontend
- ↓
-Testing
- ↓
-Final deployment
+Production Docker Deployment & Full Compose
 ```
 
-For your immediate academic progress, you now have **three verified databases + a verified Spring/PostgreSQL backend**, while OSSP and DSA-3 are scaffolded and ready to start.
+For your immediate academic progress, you now have **three verified databases + a complete Spring Boot backend with JWT/RBAC + in-process Java ONNX semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–5 verified and DSA-3 scaffolded and ready for algorithmic implementation.

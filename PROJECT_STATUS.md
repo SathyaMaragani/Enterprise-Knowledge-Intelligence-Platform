@@ -68,7 +68,7 @@
 - [x] Docker-based environment validation
 
 
-## OSSP — Weeks 1-3 (ShellForge)
+## OSSP — Weeks 1-6 (ShellForge)
 **Status: VERIFIED**
 (This Windows host has no gcc/make, which is why Weeks 1-2 previously stood
 unverified. Built and executed in a `gcc:13` container instead, which compiles
@@ -97,6 +97,39 @@ all three weeks' sources together.)
 `#include ""../include/...` lines carry a stray quote, and its Makefile target
 has no prerequisites so it never rebuilds. This repository keeps its existing
 `-Iinclude` include style and object-file Makefile instead.
+
+### Week 4 — Processes and command execution
+- [x] `include/executor.h`, `src/executor.c`
+- [x] `fork()` / `execvp()` / `waitpid()` with exit-status and signal reporting
+- [x] Child `_exit()` after a failed `execvp()`; stdio flushed before `fork()`
+- [x] 21 assertions passing in `gcc:13`
+
+### Week 5 — Built-in commands and environment variables
+- [x] `include/builtin.h`, `src/builtin.c`
+- [x] `cd`, `pwd`, `env`, `clear`, `help`, `exit` executed in the shell process
+- [x] `cd` persistence across commands verified — the decisive proof built-ins
+      are not forked, since a child's `chdir()` would die with the child
+- [x] `PWD` updated on `chdir()`; `getenv()` results NULL-guarded
+- [x] Non-built-ins fall through to the Week 4 fork/exec path
+- [x] 32 assertions passing; ASan + LeakSanitizer + UBSan clean
+
+### Week 6 — Pipes and IPC
+- [x] `pipe()`, `dup2()`, two-process pipelines, parent/child IPC demos
+- [x] File-descriptor lifecycle handled so the reader receives EOF
+- [x] 23 assertions passing
+
+**Chapter-label correction:** the pipes/IPC work was previously recorded as
+Week 5 and marked verified against the wrong handbook chapter. Week 5 is built-in
+commands and environment variables; pipes and IPC are Week 6. The code was
+correct and was relabelled, not rewritten.
+
+**Three deviations from the Week 5 listing**, each documented in `WEEK5.md`:
+`getenv()` results are NULL-checked (the listing passes a possible `NULL` to
+`printf("%s")`, which is undefined behaviour and reachable whenever `USER` is
+unset); `clear` writes the ANSI escape instead of `system("clear")`, which would
+fork a shell to run a binary absent from many images; and `exit` returns a
+sentinel instead of calling `exit()`, so `main()` frees the line buffer and token
+vector first and the leak checker stays clean.
 
 ## Phase 1.4.3 — Qdrant Vector Integration
 **Status: VERIFIED**

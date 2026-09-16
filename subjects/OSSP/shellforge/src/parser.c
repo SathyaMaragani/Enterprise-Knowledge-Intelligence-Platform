@@ -4,39 +4,74 @@
 #include "parser.h"
 
 #define TOKEN_BUFSIZE 64
-#define TOKEN_DELIMITERS " \t\r\n\a"
+static char PIPE_TOKEN[] = "|";
+
+static inline int is_delimiter(char c) {
+    return (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\a');
+}
 
 /*
  * Splits a command line into a NULL-terminated argument vector.
  *
- * The result has exactly the shape execvp() expects:
- *
- *     "ls -l /home"  ->  argv[0] = "ls"
- *                        argv[1] = "-l"
- *                        argv[2] = "/home"
- *                        argv[3] = NULL
- *
- * strtok() writes '\0' over each delimiter it finds, so the returned
- * pointers point into `line` itself rather than to copies. `line` must stay
- * alive for as long as the tokens are used, and must be freed by the caller.
+ * Slices strings directly in the caller's `line` buffer by inserting '\0'.
+ * Recognizes the pipe metacharacter '|' as an individual token, whether
+ * surrounded by whitespace (e.g. "cmd1 | cmd2") or adjacent to arguments
+ * (e.g. "cmd1|cmd2").
  */
 char **parse_line(char *line) {
     int bufsize = TOKEN_BUFSIZE;
     int position = 0;
     char **tokens = malloc(sizeof(char *) * bufsize);
-    char *token;
+    char *p = line;
 
     if (!tokens) {
         fprintf(stderr, "ShellForge: allocation error\n");
         exit(EXIT_FAILURE);
     }
 
-    token = strtok(line, TOKEN_DELIMITERS);
-    while (token != NULL) {
-        tokens[position] = token;
-        position++;
+    while (*p != '\0') {
+        /* Skip leading delimiters */
+        while (*p != '\0' && is_delimiter(*p)) {
+            *p = '\0';
+            p++;
+        }
+        if (*p == '\0') {
+            break;
+        }
 
-        /* Keep one slot free so the terminating NULL always fits. */
+        if (*p == '|') {
+            /* Pipe metacharacter is its own token */
+            *p = '\0';
+            tokens[position++] = PIPE_TOKEN;
+            p++;
+        } else {
+            /* Start of a normal token */
+            tokens[position++] = p;
+            while (*p != '\0' && !is_delimiter(*p) && *p != '|') {
+                p++;
+            }
+            if (*p == '|') {
+                /* Terminate this token and record pipe token in the next slot */
+                *p = '\0';
+                p++;
+                if (position >= bufsize - 1) {
+                    bufsize += bufsize;
+                    char **temp = realloc(tokens, sizeof(char *) * bufsize);
+                    if (!temp) {
+                        fprintf(stderr, "ShellForge: allocation error\n");
+                        free(tokens);
+                        exit(EXIT_FAILURE);
+                    }
+                    tokens = temp;
+                }
+                tokens[position++] = PIPE_TOKEN;
+            } else if (*p != '\0') {
+                *p = '\0';
+                p++;
+            }
+        }
+
+        /* Keep at least one slot free so the terminating NULL always fits */
         if (position >= bufsize) {
             bufsize += bufsize;
             char **temp = realloc(tokens, sizeof(char *) * bufsize);
@@ -47,8 +82,6 @@ char **parse_line(char *line) {
             }
             tokens = temp;
         }
-
-        token = strtok(NULL, TOKEN_DELIMITERS);
     }
 
     tokens[position] = NULL;
@@ -57,7 +90,7 @@ char **parse_line(char *line) {
 
 /*
  * Frees only the vector, not the strings it holds: those are slices of the
- * caller's `line` buffer, which the caller frees separately.
+ * caller's `line` buffer or static token strings.
  */
 void free_tokens(char **tokens) {
     free(tokens);
