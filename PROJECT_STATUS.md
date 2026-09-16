@@ -284,16 +284,22 @@ fixtures untouched, no request-time embedding, no API integration.
 - [x] Numerical compatibility tests (Python reference vs Java output)
 - [x] Retrieval equivalence tests (100% identical top-5 retrieval results on demo corpus)
 
-## DSA-3 — TextHack String Matching Module
-**Status: VERIFIED**
+## DSA-3 — TextHack String Algorithms Module
+**Status: COMPLETE and VERIFIED**
 (Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
 Maven, no JUnit, no network. `sh subjects/DSA-3/run-tests.sh`.)
 
 ```
-Test Summary: 96 passed, 0 failed
+tests.StringAlgorithmTests        96 passed, 0 failed
+tests.SuffixAndMultiPatternTests  75 passed, 0 failed
+--------------------------------------------------
+module total                     171 passed, 0 failed
 ```
 
-### Implemented
+Zero `-Xlint:all` warnings. 7 of the 20 listed algorithms, completing the
+String Algorithms module.
+
+### Part 1 — single-pattern matchers
 - [x] `texthack/core/IntList.java` — growable int array, doubling growth
 - [x] `texthack/core/StringMatcher.java` — shared contract across all matchers
 - [x] `texthack/string/NaiveSearch.java` — O(n·m), brute-force reference
@@ -331,6 +337,40 @@ by one. The diagnostic was that all four matchers agreed with each other and
 passed all 4000 random cases while disagreeing with the constant. The assertion
 now derives the index instead of hardcoding it.
 
-**Remaining:** 16 of 20 algorithms (Aho-Corasick, suffix array, LCP/Kasai, the DP
-edit-distance family, network flow, approximation, randomized), the benchmark
-harness, and the TextHack query engine. Search integration is phase 1.7C.
+### Part 2 — multi-pattern and suffix structures
+
+- [x] `texthack/core/CharMap.java` — sorted char→int map, binary search lookup
+- [x] `texthack/string/AhoCorasick.java` — trie, failure links, output links
+- [x] `texthack/string/SuffixArray.java` — prefix doubling, counting sort, O(n log n)
+- [x] `texthack/string/LcpArray.java` — Kasai, O(n) from the suffix array
+- [x] `tests/SuffixAndMultiPatternTests.java` — 75 assertions
+
+```
+tests.StringAlgorithmTests        96 passed, 0 failed
+tests.SuffixAndMultiPatternTests  75 passed, 0 failed
+```
+
+**Aho-Corasick is not a `StringMatcher`, deliberately.** That interface answers
+"where does this one pattern occur" and returns bare offsets, which cannot carry
+which of several patterns matched. Forcing it in would mean discarding pattern
+identity, or building one automaton per pattern and losing the single-pass
+advantage that is the whole point. It has its own API returning `Match[]`, and
+the four single-pattern matchers were not modified.
+
+**Why `CharMap` exists.** Trie nodes need child lookup keyed by `char`.
+`HashMap` is barred and boxes both key and value; a flat `int[65536]` per node
+covers the whole UTF-16 range at 256 KB per node, which is unusable beyond a toy
+alphabet. Trie nodes are overwhelmingly sparse, so parallel sorted arrays with
+binary search give memory proportional to real children and O(log k) lookup.
+
+**Cross-validation extended to the new algorithms.** Aho-Corasick is checked
+against running the naive matcher once per pattern (1500 random multi-pattern
+cases); the suffix array against a brute-force O(n² log n) suffix sort (800
+cases); the LCP array against direct pairwise comparison (800 cases). Nested
+patterns are covered explicitly, since `he` inside both `she` and `hers` is
+reachable only through the output-link chain.
+
+**Remaining:** 13 of 20 algorithms (the DP edit-distance family, network flow,
+approximation, randomized), the benchmark harness, and the TextHack query engine.
+Search integration is phase 1.7C. The DP family is next and is the part directly
+useful for fuzzy search scoring.

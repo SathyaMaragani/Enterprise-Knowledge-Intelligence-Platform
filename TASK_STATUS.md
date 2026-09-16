@@ -205,7 +205,8 @@ The architecture/scaffolding is:
 
 ### Actual algorithms
 
-**String module — VERIFIED** (96 assertions, 0 failures, `sh run-tests.sh`)
+**String Algorithms module — COMPLETE and VERIFIED**
+(171 assertions across two suites, 0 failures, 0 `-Xlint:all` warnings, `sh run-tests.sh`)
 
 * [x] Naive pattern matching — O(n·m) worst, reference implementation
 * [x] KMP — O(n+m), failure function exposed for period detection
@@ -215,9 +216,12 @@ The architecture/scaffolding is:
 * [x] `StringMatcher` — shared contract enabling cross-validation
 * [x] 4000-case randomised cross-validation against the naive reference
 * [x] Complexity reference (`docs/COMPLEXITY.md`)
-* [ ] Aho-Corasick
-* [ ] Suffix Array
-* [ ] LCP / Kasai
+* [x] Aho-Corasick — trie, failure links, output links, multi-pattern, overlapping
+* [x] `CharMap` — sorted char→int map for trie children (no `java.util`)
+* [x] Suffix Array — prefix doubling with counting sort, O(n log n)
+* [x] LCP / Kasai — O(n) from the suffix array, repeated prefixes handled
+* [x] Cross-validation: Aho-Corasick vs per-pattern naive, suffix array vs
+      brute-force sort, LCP vs pairwise comparison
 * [ ] Levenshtein Distance
 * [ ] Damerau-Levenshtein
 * [ ] Needleman-Wunsch
@@ -581,7 +585,8 @@ A comprehensive **development-status view** right now:
 | Java ONNX Embeddings (1.7B-3C)| 🟢 Verified   |
 | Real Semantic Search (1.7B-3B)| 🟢 Verified   |
 | Core Search Integration       | 🟢 Verified   |
-| DSA-3 TextHack (string mod.)  | 🟡 In progress |
+| DSA-3 String Algorithms       | 🟢 Verified   |
+| DSA-3 TextHack (DP/graph/rnd) | 🔴 Pending    |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend                      | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |

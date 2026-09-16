@@ -57,13 +57,22 @@ benchmarks/         performance harness            (not yet implemented)
 | Module | Implemented | Verified |
 |---|---|---|
 | String matching | Naive, KMP, Z-Algorithm, Rabin-Karp | 96 assertions, 0 failures |
-| String matching | Aho-Corasick, Suffix Array, LCP/Kasai | not started |
+| Multi-pattern | Aho-Corasick | 75 assertions, 0 failures |
+| Suffix structures | Suffix array, LCP/Kasai | (same suite) |
 | Dynamic programming | — | not started |
 | Network flow | — | not started |
 | Approximation | — | not started |
 | Randomized | — | not started |
 
-4 of the 20 listed algorithms are implemented.
+**The String Algorithms module is complete**: 7 of the 20 listed algorithms,
+171 assertions across two suites, zero failures, zero `-Xlint:all` warnings.
+
+Aho-Corasick deliberately does **not** implement `StringMatcher`. That interface
+answers "where does this one pattern occur" and returns bare offsets, which
+cannot express which of several patterns matched. Forcing it in would mean either
+discarding pattern identity or building one automaton per pattern, throwing away
+the algorithm's only advantage. It has its own API returning `Match[]`; the four
+single-pattern matchers are untouched.
 
 ## How the string matchers are tested
 

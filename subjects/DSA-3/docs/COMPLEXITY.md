@@ -12,6 +12,56 @@ from the space column since every matcher pays it equally.
 | KMP | O(m) | O(n) | O(n) | O(m) | No pathological input |
 | Z-Algorithm | O(m) | O(n) | O(n) | O(m) | No sentinel, no concatenation |
 | Rabin-Karp | O(m) | O(n·m) | O(n) | O(1) | Worst case needs adversarial collisions |
+| Aho-Corasick | O(m) | O(n + z) | O(n + z) | O(m) | Multi-pattern; m = total pattern length, z = matches |
+
+### Multi-pattern matching
+
+**Aho-Corasick** searches for all k patterns in one pass. Running a single-pattern
+matcher once per pattern costs O(k·n); Aho-Corasick costs O(n + z) regardless of
+k, which is the entire reason to build the automaton.
+
+The +z term is not avoidable overhead — it is the cost of emitting z matches, and
+any algorithm reporting them all pays it. Output links keep it *proportional* to
+z rather than to failure-chain depth: without them, reporting matches at a
+position means walking the whole failure chain each time, even through nodes that
+terminate nothing.
+
+Nested patterns are the case that exposes a broken implementation. With
+`{he, she, his, hers}` over `"ushers"`, `he` occurs inside both `she` and `hers`,
+and it is reachable only via the output-link chain, because the automaton is
+sitting at a deeper node when the shorter match ends.
+
+## Suffix Structures
+
+| Algorithm | Time | Space | Notes |
+|---|---|---|---|
+| Suffix array (prefix doubling) | O(n log n) | O(n) | Counting sort per round, no comparison sort |
+| Suffix array (brute force) | O(n² log n) | O(n) | Test reference only |
+| LCP array (Kasai) | O(n) | O(n) | Requires the suffix array |
+| LCP array (pairwise) | O(n²) | O(n) | Test reference only |
+
+**Suffix array by prefix doubling.** Sorting n suffixes with a comparison sort
+costs O(n² log n), since comparing two suffixes is itself O(n). Prefix doubling
+sorts by the first 2^k characters per round, and the ranks from round k let round
+k+1 compare 2^(k+1) characters in constant time — each suffix's second half is
+another suffix whose rank is already known. Each round sorts pairs with counting
+sort in O(n), giving O(n log n) across log n rounds.
+
+Counting sort also sidesteps needing any sorting utility, which `java.util` would
+have supplied and the subject rules bar.
+
+**Determinism.** All suffixes of a string are distinct, so the ordering is total
+and unique — there are no ties to break, and output is fully determined by input.
+
+**LCP by Kasai.** Computing each adjacent pair independently is O(n) per pair and
+O(n²) overall. Kasai walks suffixes in *text* order instead of rank order and
+carries the match length forward: removing the leading character of a suffix can
+shorten its LCP with its predecessor by at most one. Total increase and total
+decrease are each bounded by n, so it is O(n) despite the nested loop.
+
+Repetitive input is where this matters. For `a^n` the suffixes are fully nested
+and the LCP array is `[0, 1, 2, ..., n-1]`; the carried length is exactly the
+overlap being reused instead of rescanned.
 
 ### Why the worst cases differ
 
@@ -62,6 +112,8 @@ containing `\u0000` to keep this honest.
 | `IntList` | `add` | O(1) amortised | Growth by doubling |
 | `IntList` | `get` | O(1) | Bounds-checked |
 | `IntList` | `toArray` | O(n) | Trimmed copy |
+| `CharMap` | `get` | O(log k) | Binary search over k children |
+| `CharMap` | `put` | O(k) | Insertion shift keeps keys sorted |
 
 `IntList` exists because `java.util.*` is barred from the algorithm
 implementations. It is also the right structure regardless: `ArrayList<Integer>`
@@ -73,9 +125,6 @@ Not yet implemented. Listed so the table has one home as the module grows.
 
 | Algorithm | Category | Expected Time | Expected Space |
 |---|---|---|---|
-| Aho-Corasick | String | O(n + m + z) for z matches | O(m·Σ) |
-| Suffix Array | String | O(n log n) construction | O(n) |
-| LCP / Kasai | String | O(n) given suffix array | O(n) |
 | Levenshtein | DP | O(n·m) | O(min(n, m)) rolling |
 | Damerau-Levenshtein | DP | O(n·m) | O(n·m) |
 | Needleman-Wunsch | DP | O(n·m) | O(n·m) |
