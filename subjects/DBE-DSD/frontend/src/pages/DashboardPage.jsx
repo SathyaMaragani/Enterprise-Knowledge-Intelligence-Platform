@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
 import GlassDocs from '../components/GlassDocs.jsx';
 import { SearchHitList, SearchModeChips } from '../components/SearchBits.jsx';
@@ -32,6 +34,8 @@ export default function DashboardPage() {
   const documents = useApi('/api/documents');
   const collection = useApi('/api/search/vector/collection-info');
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const canUpload = can(profile, 'DOCUMENT_CREATE');
 
   const docs = documents.status === 'ready' ? documents.data ?? [] : [];
 
@@ -61,7 +65,14 @@ export default function DashboardPage() {
             Quick Actions
           </h2>
           <div className="quick-actions">
-            <QuickAction tone="blue" Icon={UploadIcon} title="Upload Document" />
+            <QuickAction
+              tone="blue"
+              Icon={UploadIcon}
+              title="Upload Document"
+              text="Add to repository"
+              onClick={canUpload ? () => navigate('/upload') : undefined}
+              unavailableText={profile ? 'Not permitted for your role' : undefined}
+            />
             <QuickAction
               tone="violet"
               Icon={SearchIcon}
@@ -209,7 +220,7 @@ function SearchResults({ search, category, onClear }) {
   );
 }
 
-function QuickAction({ tone, Icon, title, text, onClick }) {
+function QuickAction({ tone, Icon, title, text, onClick, unavailableText = 'Coming soon' }) {
   const available = Boolean(onClick);
   return (
     <button
@@ -223,7 +234,7 @@ function QuickAction({ tone, Icon, title, text, onClick }) {
       </span>
       <span>
         <strong>{title}</strong>
-        <span className="quick-action__text">{available ? text : 'Coming soon'}</span>
+        <span className="quick-action__text">{available ? text : unavailableText}</span>
       </span>
     </button>
   );

@@ -19,10 +19,11 @@ export function setUnauthorizedHandler(handler) {
 /**
  * Calls the backend and returns the parsed JSON body (null when empty).
  *
- * Requests carry the stored bearer token unless `auth` is false. Failures throw
- * ApiError with a message fit to show a user.
+ * `body` is sent as JSON; `form` (a FormData) is sent as multipart, with the
+ * browser setting the boundary. Requests carry the stored bearer token unless
+ * `auth` is false. Failures throw ApiError with a message fit to show a user.
  */
-export async function request(path, { method = 'GET', body, auth = true } = {}) {
+export async function request(path, { method = 'GET', body, form, auth = true } = {}) {
   const headers = { Accept: 'application/json' };
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -43,7 +44,7 @@ export async function request(path, { method = 'GET', body, auth = true } = {}) 
     response = await fetch(path, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: form ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
   } catch {
     throw new ApiError(0, 'Cannot reach the server. Check that the backend is running.');

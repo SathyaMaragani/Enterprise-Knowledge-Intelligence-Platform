@@ -12,7 +12,19 @@ import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.eip.backend.repository.DocumentRepository;
+import com.eip.backend.repository.KnowledgeDocumentRepository;
+import com.eip.backend.service.EmbeddingService;
+import com.eip.backend.service.QdrantService;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,6 +50,18 @@ public class DemoSemanticSearchIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private QdrantService qdrantService;
+
+    @Autowired
+    private EmbeddingService embeddingService;
+
+    @Autowired
+    private DocumentRepository documentRepository;
+
+    @Autowired
+    private KnowledgeDocumentRepository knowledgeDocumentRepository;
 
     @Test
     @WithUserDetails("demo_admin")
@@ -97,5 +121,56 @@ public class DemoSemanticSearchIntegrationTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hits", hasSize(0)));
+    }
+
+    @Test
+    @WithUserDetails("demo_admin")
+    void testUploadedDocumentIsEmbeddedSearchableAndFullyDeleted() throws Exception {
+        // A topic absent from the demo corpus, searched with different wording, so
+        // a hit can only come from the new document's own embedding.
+        String text = "The rooftop beekeeping programme lets employees tend honeybee hives during lunch breaks. "
+                + "Volunteers wear protective suits, inspect the frames every week and harvest honey each autumn. "
+                + "The honey is shared with staff and donated to local food banks.";
+        MockMultipartFile file = new MockMultipartFile("file", "beekeeping.md", "text/markdown",
+                                                       text.getBytes(StandardCharsets.UTF_8));
+
+        String body = mockMvc.perform(multipart("/api/documents")
+                        .file(file)
+                        .param("title", "Rooftop Beekeeping Programme")
+                        .param("category", "Administration"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("INDEXED"))
+                .andExpect(jsonPath("$.vectorsStored").value(true))
+                .andExpect(jsonPath("$.chunkCount").value(1))
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(body).get("id").asInt();
+        List<Float> probe = embeddingService.embedQuery("bees");
+
+        try {
+            assertEquals(1, qdrantService.searchByDocumentId(id, probe, 10).getResults().size());
+
+            SearchRequest req = new SearchRequest();
+            req.setQuery("looking after insects that make honey on top of the office building");
+            req.setSize(5);
+            JsonNode response = objectMapper.readTree(mockMvc.perform(post("/api/search")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString());
+            JsonNode top = response.get("hits").get(0);
+            assertEquals(id, top.get("documentId").asInt(), "the uploaded document should rank first: " + response);
+            assertTrue(top.get("matchedBy").toString().contains("VECTOR"));
+
+            mockMvc.perform(delete("/api/documents/" + id)).andExpect(status().isNoContent());
+
+            assertEquals(0, qdrantService.searchByDocumentId(id, probe, 10).getResults().size());
+            assertTrue(documentRepository.findById(id).isEmpty());
+            assertTrue(knowledgeDocumentRepository.findByPostgresDocumentId(id).isEmpty());
+        } finally {
+            // Leave the demo stack as it was even if an assertion failed midway.
+            qdrantService.deleteDocumentChunks(id);
+            knowledgeDocumentRepository.deleteByPostgresDocumentId(id);
+            documentRepository.findById(id).ifPresent(documentRepository::delete);
+        }
     }
 }

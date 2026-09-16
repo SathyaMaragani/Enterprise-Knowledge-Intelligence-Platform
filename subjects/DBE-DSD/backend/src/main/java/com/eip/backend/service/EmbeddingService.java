@@ -16,6 +16,11 @@ public class EmbeddingService {
         this.encoder = encoder;
     }
 
+    /** False when the embedding model is disabled or failed to load. */
+    public boolean isAvailable() {
+        return encoder != null;
+    }
+
     public List<Float> embedQuery(String query) {
         if (encoder == null || query == null || query.trim().isEmpty()) {
             return null;

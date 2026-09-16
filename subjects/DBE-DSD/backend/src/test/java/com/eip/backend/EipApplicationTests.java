@@ -747,6 +747,207 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // DOCUMENT UPLOAD AND DELETE TESTS
+    // ---------------------------------------------------------
+    // Embedding is disabled on the test stack, so uploads store content and chunks
+    // but no vectors (status UPLOADED). The vector path runs against the demo stack
+    // in DemoSemanticSearchIntegrationTest. Every test removes what it created, so
+    // the 10 fixture documents stay as they are.
+
+    @Autowired
+    private com.eip.backend.repository.DocumentVersionRepository documentVersionRepository;
+
+    private static String wordsText(String prefix, int count) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 1; i <= count; i++) {
+            text.append(prefix).append(i).append(i % 12 == 0 ? "\n" : " ");
+        }
+        return text.toString();
+    }
+
+    private static org.springframework.mock.web.MockMultipartFile textFile(String name, String content) {
+        return new org.springframework.mock.web.MockMultipartFile(
+                "file", name, "text/plain", content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private Integer uploadedId(org.springframework.test.web.servlet.MvcResult result) throws Exception {
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asInt();
+    }
+
+    /** Removes an uploaded document from MongoDB and PostgreSQL directly, whatever the test did. */
+    private void removeUpload(Integer id) {
+        if (id == null) {
+            return;
+        }
+        knowledgeDocumentRepository.deleteByPostgresDocumentId(id);
+        documentRepository.findById(id).ifPresent(documentRepository::delete);
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testManagerUploadsDocumentToPostgresAndMongo() throws Exception {
+        String text = "Quarterly zebra-budget planning notes\r\n" + wordsText("zb", 399);
+        Integer id = null;
+        try {
+            org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(
+                            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents")
+                                    .file(textFile("zebra-notes.md", text))
+                                    .param("title", "Zebra Budget Notes")
+                                    .param("description", "Planning notes for the zebra budget")
+                                    .param("category", "Finance"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.title").value("Zebra Budget Notes"))
+                    .andExpect(jsonPath("$.status").value("UPLOADED"))
+                    .andExpect(jsonPath("$.vectorsStored").value(false))
+                    .andExpect(jsonPath("$.chunkCount").value(3))
+                    .andReturn();
+            id = uploadedId(result);
+            assertEquals("/api/documents/" + id, result.getResponse().getHeader("Location"));
+
+            Document stored = documentRepository.findById(id).orElseThrow();
+            assertEquals("UPLOADED", stored.getStatus());
+            assertEquals("MD", stored.getDocumentType());
+            assertTrue(stored.getStorageReference().startsWith("mongodb:knowledge_documents/"));
+            assertEquals(1, documentVersionRepository.findByDocumentId(id).size());
+
+            var knowledge = knowledgeDocumentRepository.findByPostgresDocumentId(id).orElseThrow();
+            assertEquals(text.replace("\r\n", "\n"), knowledge.getContent().getRawText());
+            assertEquals(403, knowledge.getContent().getWordCount()); // 4 header words + 399
+            assertEquals(List.of("doc" + id + "-chunk1", "doc" + id + "-chunk2", "doc" + id + "-chunk3"),
+                         knowledge.getChunks().stream().map(c -> c.getChunkId()).toList());
+            assertEquals("COMPLETED", knowledge.getProcessing().getStatus());
+            assertEquals("words-180-40", knowledge.getProcessing().getChunkerVersion());
+            assertEquals(1, knowledge.getVersion().getNumber());
+            assertEquals("Finance", knowledge.getMetadata().get("department"));
+            assertEquals("alice_mgr", knowledge.getMetadata().get("uploaded_by"));
+
+            // Readable as a unified document, listed for its owner, keyword-searchable.
+            mockMvc.perform(get("/api/documents/" + id))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.category").value("Finance"))
+                    .andExpect(jsonPath("$.owner").value("alice_mgr"))
+                    .andExpect(jsonPath("$.content.wordCount").value(403))
+                    .andExpect(jsonPath("$.chunks", hasSize(3)));
+            mockMvc.perform(get("/api/documents/page").param("q", "zebra"))
+                    .andExpect(jsonPath("$.items[*].id", contains(id)));
+            mockMvc.perform(post("/api/search")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(unifiedSearch("Zebra Budget", null, null, null)))
+                    .andExpect(jsonPath("$.hits[0].documentId").value(id));
+        } finally {
+            removeUpload(id);
+        }
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testUploadTitleDefaultsToFileNameAndTextIsTrimmedOfBom() throws Exception {
+        Integer id = null;
+        try {
+            org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(
+                            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents")
+                                    .file(textFile("C:\\Users\\alice\\quarterly-notes.txt", "\uFEFFshort note"))
+                                    .param("category", "HR"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.title").value("quarterly-notes"))
+                    .andExpect(jsonPath("$.chunkCount").value(1))
+                    .andReturn();
+            id = uploadedId(result);
+
+            var knowledge = knowledgeDocumentRepository.findByPostgresDocumentId(id).orElseThrow();
+            assertEquals("short note", knowledge.getContent().getRawText());
+            assertEquals("quarterly-notes.txt", knowledge.getSource().getFilename());
+            assertEquals("TXT", documentRepository.findById(id).orElseThrow().getDocumentType());
+        } finally {
+            removeUpload(id);
+        }
+    }
+
+    @Test
+    @WithUserDetails("bob_eng")
+    void testEmployeeCannotUpload() throws Exception {
+        long before = documentRepository.count();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents")
+                        .file(textFile("notes.txt", "hello"))
+                        .param("category", "HR"))
+                .andExpect(status().isForbidden());
+        assertEquals(before, documentRepository.count());
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testUploadRejectsInvalidInputWithoutStoringAnything() throws Exception {
+        long before = documentRepository.count();
+        long mongoBefore = knowledgeDocumentRepository.count();
+        var upload = (java.util.function.Function<org.springframework.mock.web.MockMultipartFile,
+                org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder>) file ->
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents").file(file);
+
+        mockMvc.perform(upload.apply(textFile("n.txt", "text")).param("category", "Nope"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Unknown category: Nope"));
+        mockMvc.perform(upload.apply(textFile("n.txt", "text")))
+                .andExpect(jsonPath("$.message").value("Choose a category"));
+        mockMvc.perform(upload.apply(textFile("report.pdf", "%PDF-1.7")).param("category", "HR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only .txt and .md files can be uploaded"));
+        mockMvc.perform(upload.apply(textFile("empty.txt", "")).param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("Choose a non-empty file to upload"));
+        mockMvc.perform(upload.apply(textFile("blank.txt", " \n\t ")).param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("The file has no text"));
+        mockMvc.perform(upload.apply(new org.springframework.mock.web.MockMultipartFile(
+                                "file", "latin1.txt", "text/plain", new byte[]{'c', 'a', 'f', (byte) 0xE9}))
+                                .param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("The file must be UTF-8 text"));
+        mockMvc.perform(upload.apply(textFile("big.txt", "a".repeat(1024 * 1024 + 1))).param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("Files can be at most 1 MB"));
+        mockMvc.perform(upload.apply(textFile("t.txt", "text")).param("category", "HR").param("title", "x".repeat(256)))
+                .andExpect(jsonPath("$.message").value("Titles can be at most 255 characters"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents")
+                                .param("category", "HR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Part 'file' is required"));
+
+        assertEquals(before, documentRepository.count());
+        assertEquals(mongoBefore, knowledgeDocumentRepository.count());
+    }
+
+    @Test
+    void testAdminDeletesUploadedDocumentEverywhere() throws Exception {
+        Integer id = null;
+        try {
+            id = uploadedId(mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                    .multipart("/api/documents")
+                                    .file(textFile("temporary.txt", "temporary document to delete"))
+                                    .param("category", "Legal"))
+                    .andExpect(status().isCreated())
+                    .andReturn());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/documents/" + id))
+                    .andExpect(status().isNoContent());
+
+            assertTrue(documentRepository.findById(id).isEmpty());
+            assertTrue(knowledgeDocumentRepository.findByPostgresDocumentId(id).isEmpty());
+            assertTrue(documentVersionRepository.findByDocumentId(id).isEmpty());
+            mockMvc.perform(get("/api/documents/" + id)).andExpect(status().isNotFound());
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/documents/" + id))
+                    .andExpect(status().isNotFound());
+        } finally {
+            removeUpload(id);
+        }
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testManagerCannotDelete() throws Exception {
+        // Seed roles give DOCUMENT_DELETE to administrators only, even for owned documents.
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/documents/2"))
+                .andExpect(status().isForbidden());
+        assertTrue(documentRepository.findById(2).isPresent());
+        assertTrue(knowledgeDocumentRepository.findByPostgresDocumentId(2).isPresent());
+    }
+
+    // ---------------------------------------------------------
     // PAGED REPOSITORY AND CATEGORY TESTS
     // ---------------------------------------------------------
     // Fixture documents all share one timestamp, so newest-first ordering falls

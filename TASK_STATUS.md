@@ -575,7 +575,7 @@ Current state:
 * [x] React application
 * [x] Login
 * [x] Dashboard
-* [ ] Document upload
+* [x] Document upload (upload page; delete from the viewer)
 * [x] Document repository (paged, filtered, URL-addressable)
 * [x] Document viewer (metadata, content, chunks, source, processing, version)
 * [x] Search interface (search page with URL state and paging; inline results on the dashboard)
@@ -599,7 +599,9 @@ Current state:
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
 * [ ] Dockerize frontend
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (116 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (137 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] `POST /api/documents`: upload to PostgreSQL, MongoDB (chunked) and Qdrant (embedded), with rollback
+* [x] `DELETE /api/documents/{id}`: removes vectors, content and metadata
 * [x] Consistent API errors: client mistakes return 4xx, 500s never expose exception text
 * [x] `GET /api/auth/me` profile (name, roles, permissions); only `POST /api/auth/login` is public
 * [x] Role-aware UI: account menu shows name and role; Administration shown to admins only
@@ -642,7 +644,8 @@ A comprehensive **development-status view** right now:
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
 | Product UI: sign-in + dashboard | 🟢 Verified |
 | Repository/Search/Admin pages | 🔴 Pending    |
-| Backend write APIs (upload)   | 🔴 Pending    |
+| Document upload and delete    | 🟢 Verified   |
+| Admin write APIs (users)      | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |
 
 ## The important thing
@@ -668,7 +671,7 @@ DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 
 REMAINING:
 Frontend: Document repository, full search page, admin/ML/TextHack views
-DBE: Write APIs (document upload and ingestion, registration, permission management)
+DBE: Admin APIs (user management, document permission management)
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads
 Deployment: Dockerize Spring Boot and frontend, load and performance testing

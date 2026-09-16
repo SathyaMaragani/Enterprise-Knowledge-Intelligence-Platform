@@ -76,7 +76,7 @@ sign-in form.
 | Search bar | `POST /api/search` with the query and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy), plus an "Open in search" link carrying the query and category to the search page. |
 | Keyword / Semantic / Hybrid | Report which mode the backend ran, from the response's `sources`. The backend chooses the mode, so these are not a selector. |
 | Category filter | Categories of the documents the user can read. |
-| Quick Actions | Advanced Search opens the search page. Upload, Analytics and Categories are marked "Coming soon". |
+| Quick Actions | Upload Document opens the upload page for roles with `DOCUMENT_CREATE` and says "Not permitted for your role" otherwise. Advanced Search opens the search page. Analytics and Categories are marked "Coming soon". |
 | Recent Documents | `GET /api/documents`, newest update first. |
 | System Overview | Documents, categories and indexed counts over the user's readable documents; vector chunks from `GET /api/search/vector/collection-info`, which is collection-wide. |
 | Recent Activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
@@ -134,6 +134,32 @@ order, and panels for source, processing, version, metadata and references.
 A 403 explains that the user lacks access; a 404 says whether the document or
 only its stored content is missing. A non-numeric id is rejected without a
 request.
+
+Roles with `DOCUMENT_DELETE` get a Delete button, which asks for confirmation
+before calling `DELETE /api/documents/{id}`. On success the repository opens
+with a notice; on failure the document stays open with the error.
+
+### Upload (`/upload`)
+
+`POST /api/documents` as multipart form data. Reached from the dashboard's
+Upload Document action or the repository's Upload document button, both shown
+only to roles with `DOCUMENT_CREATE`.
+
+| Field | Behaviour |
+|---|---|
+| File | `.txt`, `.md` or `.markdown`, non-empty, at most 1 MB. Checked on selection and again on submit. |
+| Title | Optional; the placeholder shows the file name it defaults to. |
+| Description | Optional. |
+| Category | Required, from `GET /api/categories`. |
+| Department | Optional; defaults to the category. |
+
+After a successful upload the new document opens with a notice saying how many
+chunks were stored and what search can find: title, description and meaning
+when vectors were stored; only title and description when they were not.
+Backend rejections are shown on the form, which stays filled in.
+
+A role without `DOCUMENT_CREATE` sees an explanation instead of the form, and a
+profile that cannot be loaded is reported rather than left loading.
 
 ## threeui scenes
 

@@ -18,16 +18,18 @@ function restoreSession() {
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(restoreSession);
-  const [profile, setProfile] = useState(null);
+  // undefined while loading, null when unavailable (signed out or failed).
+  const [profile, setProfile] = useState(undefined);
   const token = session?.token ?? null;
 
   // Who the user is and what they may do, loaded once per token. Until it
   // arrives, or if it fails, the UI shows only what needs no role.
   useEffect(() => {
-    setProfile(null);
     if (!token) {
+      setProfile(null);
       return undefined;
     }
+    setProfile(undefined);
     let active = true;
     request('/api/auth/me').then(
       (data) => active && setProfile(data),

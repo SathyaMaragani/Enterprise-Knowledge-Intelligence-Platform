@@ -49,6 +49,18 @@ describe('request', () => {
     expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
   });
 
+  it('sends form data as multipart without forcing a content type', async () => {
+    const fetchMock = mockFetch(jsonResponse(201, { id: 11 }));
+    const form = new FormData();
+    form.append('category', 'HR');
+
+    await expect(request('/api/documents', { method: 'POST', form })).resolves.toEqual({ id: 11 });
+
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.body).toBe(form);
+    expect(init.headers['Content-Type']).toBeUndefined();
+  });
+
   it('returns null for an empty success body', async () => {
     mockFetch(jsonResponse(204));
     await expect(request('/api/anything')).resolves.toBeNull();

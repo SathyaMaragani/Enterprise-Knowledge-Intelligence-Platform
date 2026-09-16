@@ -6,6 +6,7 @@ import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RepositoryPage from './pages/RepositoryPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
+import UploadPage from './pages/UploadPage.jsx';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="repository" element={<RepositoryPage />} />
         <Route path="documents/:id" element={<DocumentPage />} />
+        <Route path="upload" element={<UploadPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

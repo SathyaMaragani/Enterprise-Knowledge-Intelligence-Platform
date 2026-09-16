@@ -7,7 +7,10 @@ import com.eip.backend.exception.QdrantUnavailableException;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.qdrant.client.ConditionFactory;
+import io.qdrant.client.PointIdFactory;
 import io.qdrant.client.QdrantClient;
+import io.qdrant.client.ValueFactory;
+import io.qdrant.client.VectorsFactory;
 import io.qdrant.client.WithPayloadSelectorFactory;
 import io.qdrant.client.grpc.Collections;
 import io.qdrant.client.grpc.JsonWithInt;
@@ -17,9 +20,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -155,6 +161,73 @@ public class QdrantService {
         }
 
         return new VectorSearchResponse(items);
+    }
+
+    /** One chunk of an uploaded document, ready to store: its id, position and embedding. */
+    public record ChunkVector(String chunkId, int position, List<Float> vector) {
+    }
+
+    /**
+     * Stores a document's chunk embeddings, with the payload search filters on.
+     *
+     * <p>Point ids are name-based UUIDs of the chunk id, so re-running an upload
+     * overwrites its points instead of duplicating them.
+     */
+    public void upsertDocumentChunks(Integer documentId, String title, String category, String department,
+                                     List<ChunkVector> chunks) {
+        if (chunks.isEmpty()) {
+            return;
+        }
+        List<Points.PointStruct> points = new ArrayList<>(chunks.size());
+        for (ChunkVector chunk : chunks) {
+            if (chunk.vector().size() != vectorDimension) {
+                throw new IllegalArgumentException("Chunk vector must have " + vectorDimension + " dimensions");
+            }
+            Map<String, JsonWithInt.Value> payload = new HashMap<>();
+            payload.put("postgres_document_id", ValueFactory.value((long) documentId));
+            payload.put("chunk_id", ValueFactory.value(chunk.chunkId()));
+            payload.put("title", ValueFactory.value(title));
+            payload.put("chunk_position", ValueFactory.value((long) chunk.position()));
+            payload.put("processing_status", ValueFactory.value("INDEXED"));
+            if (category != null) {
+                payload.put("category", ValueFactory.value(category));
+            }
+            if (department != null) {
+                payload.put("department", ValueFactory.value(department));
+            }
+            points.add(Points.PointStruct.newBuilder()
+                    .setId(PointIdFactory.id(pointId(chunk.chunkId())))
+                    .setVectors(VectorsFactory.vectors(chunk.vector()))
+                    .putAllPayload(payload)
+                    .build());
+        }
+        try {
+            qdrantClient.upsertAsync(collectionName, points).get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Qdrant upsert was interrupted", e);
+        } catch (ExecutionException | TimeoutException e) {
+            handleExecutionException("Qdrant upsert failed", e);
+        }
+    }
+
+    /** Removes every chunk point belonging to a document. */
+    public void deleteDocumentChunks(Integer documentId) {
+        Points.Filter filter = Points.Filter.newBuilder()
+                .addMust(ConditionFactory.match("postgres_document_id", (long) documentId))
+                .build();
+        try {
+            qdrantClient.deleteAsync(collectionName, filter).get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Qdrant delete was interrupted", e);
+        } catch (ExecutionException | TimeoutException e) {
+            handleExecutionException("Qdrant delete failed", e);
+        }
+    }
+
+    static UUID pointId(String chunkId) {
+        return UUID.nameUUIDFromBytes(("eip:" + chunkId).getBytes(StandardCharsets.UTF_8));
     }
 
     public VectorSearchResponse searchByDocumentId(Integer documentId, List<Float> vector, Integer topK) {

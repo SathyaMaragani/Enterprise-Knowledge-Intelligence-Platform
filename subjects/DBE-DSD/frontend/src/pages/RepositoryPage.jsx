@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { useApi } from '../api/useApi.js';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
-import { SearchIcon } from '../components/icons.jsx';
+import { SearchIcon, UploadIcon } from '../components/icons.jsx';
 import { relativeTime, STATUS_LABELS } from './dashboardData.js';
 
 export const REPOSITORY_PAGE_SIZE = 10;
@@ -18,6 +20,8 @@ export function repositoryPath({ page, category, status, q }) {
 
 export default function RepositoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { profile } = useAuth();
+  const notice = useLocation().state?.notice;
   // Filters live in the URL, so reload, back and shared links keep the view.
   const filters = {
     page: Math.max(0, Number.parseInt(searchParams.get('page') ?? '0', 10) || 0),
@@ -48,11 +52,25 @@ export default function RepositoryPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <p className="eyebrow eyebrow--spaced">Repository</p>
-        <h1 className="page-title">Documents</h1>
-        <p className="muted">Every document you can read, newest change first.</p>
+      <header className="page-header page-header--with-action">
+        <div>
+          <p className="eyebrow eyebrow--spaced">Repository</p>
+          <h1 className="page-title">Documents</h1>
+          <p className="muted">Every document you can read, newest change first.</p>
+        </div>
+        {can(profile, 'DOCUMENT_CREATE') && (
+          <Link className="btn btn--primary btn--small" to="/upload">
+            <UploadIcon size={18} />
+            Upload document
+          </Link>
+        )}
       </header>
+
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
 
       <section className="glass-panel section">
         <div className="filter-bar">

@@ -20,7 +20,8 @@ server and return a generic message, never exception text.
 | 403 | Forbidden | Authenticated, but not allowed to read the document. |
 | 404 | Not Found | No endpoint matches the path, or the document does not exist. |
 | 405 | Method Not Allowed | The path exists but not for this HTTP method. |
-| 415 | Unsupported Media Type | A body that is not JSON. |
+| 413 | Payload Too Large | An upload over 1 MB. |
+| 415 | Unsupported Media Type | A body the endpoint does not accept, such as plain text sent to a JSON endpoint. |
 | 500 | Internal Server Error | Anything unexpected; the message is always `An unexpected error occurred.` |
 | 503 | Service Unavailable | Qdrant is unreachable for a request that needs it. |
 
@@ -140,6 +141,61 @@ Returns the unified document consisting of PostgreSQL metadata and MongoDB conte
 ### GET /api/categories
 Every category, sorted by name: `[{ "id": 2, "name": "Finance", "description": "..." }]`.
 Any signed-in user may list them; category names are not document data.
+
+### POST /api/documents
+Uploads a document owned by the caller. Requires the `DOCUMENT_CREATE` permission
+(admins and managers in the seed roles); otherwise 403.
+
+`multipart/form-data` fields:
+
+| Field | Required | Notes |
+|---|---|---|
+| `file` | yes | A `.txt`, `.md` or `.markdown` file, UTF-8, non-blank, at most 1 MB. |
+| `category` | yes | An existing category name. |
+| `title` | no | Defaults to the file name without its extension. At most 255 characters. |
+| `description` | no | |
+| `department` | no | Stored in metadata and on vector points; defaults to the category. |
+
+What happens, in order:
+
+1. A PostgreSQL row is created with status `PROCESSING`.
+2. The text is stored in MongoDB with its word and character counts, split into
+   180-word chunks overlapping by 40 words (the ML pipeline's chunking), with
+   processing and version metadata.
+3. A version-1 row is added to `document_versions`.
+4. If the embedding model is enabled, every chunk is embedded and stored in
+   Qdrant with the payload search filters on (`postgres_document_id`,
+   `chunk_id`, `title`, `category`, `department`, `chunk_position`,
+   `processing_status`).
+5. The status becomes `INDEXED` (vectors stored) or `UPLOADED` (no embedding
+   model, or Qdrant unavailable).
+
+If step 2, 3 or 5 fails, the earlier writes are removed before the error is
+returned, so a failed upload leaves nothing behind. A Qdrant failure alone does
+not fail the upload; the document is kept as `UPLOADED`.
+
+**Response** `201 Created`, with `Location: /api/documents/{id}`:
+```json
+{ "id": 31, "title": "Budget notes", "status": "INDEXED", "chunkCount": 3, "vectorsStored": true }
+```
+
+Keyword search covers a document's title and description. Its body is found only
+through semantic search, so an `UPLOADED` document cannot yet be found by its
+content.
+
+Errors: 400 with a specific message (`Only .txt and .md files can be uploaded`,
+`The file must be UTF-8 text`, `The file has no text`, `Choose a category`,
+`Unknown category: X`, `Part 'file' is required`, ...), 403 without the
+permission, 413 over 1 MB.
+
+### DELETE /api/documents/{id}
+Deletes a document from Qdrant, MongoDB and PostgreSQL, in that order. Requires
+the `DOCUMENT_DELETE` permission (administrators in the seed roles) and read
+access to the document. Versions, grants and tags cascade.
+
+Returns 204, or 403 without the permission, 404 if the document does not exist,
+and 503 if Qdrant is unreachable. Qdrant is removed first, so a 503 means nothing
+was deleted and the request can simply be retried.
 
 
 ### POST /api/documents/search/semantic

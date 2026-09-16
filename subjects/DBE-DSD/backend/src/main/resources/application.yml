@@ -17,6 +17,12 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  servlet:
+    multipart:
+      # Document uploads are plain text; DocumentIngestionService enforces the same 1 MB.
+      max-file-size: 1MB
+      max-request-size: 2MB
+
   data:
     mongodb:
       uri: mongodb://${MONGO_USERNAME:eip_mongo_user}:${MONGO_PASSWORD:mongo_pass_123}@${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DATABASE:eip_doc_db}?authSource=admin

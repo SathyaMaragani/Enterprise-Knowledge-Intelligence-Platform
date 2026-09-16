@@ -1,5 +1,9 @@
-import { Link, useParams } from 'react-router';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, formatDateTime, StatusPill } from '../components/DocumentBits.jsx';
 import { AlertIcon } from '../components/icons.jsx';
 import { relativeTime } from './dashboardData.js';
@@ -31,6 +35,8 @@ export default function DocumentPage() {
   const { id } = useParams();
   const valid = /^\d+$/.test(id ?? '');
   const document = useApi(valid ? `/api/documents/${id}` : null);
+  const { profile } = useAuth();
+  const notice = useLocation().state?.notice;
 
   const backLink = (
     <Link className="back-link" to="/repository">
@@ -78,6 +84,12 @@ export default function DocumentPage() {
     <div className="page">
       {backLink}
 
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+
       <header className="glass-panel section doc-header">
         <FileBadge type={doc.documentType} />
         <div className="doc-header__text">
@@ -92,6 +104,7 @@ export default function DocumentPage() {
             </span>
           </p>
         </div>
+        {can(profile, 'DOCUMENT_DELETE') && <DeleteDocument id={doc.id} title={doc.title} />}
       </header>
 
       <div className="doc-layout">
@@ -186,6 +199,56 @@ export default function DocumentPage() {
           )}
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Delete with a confirmation step; the backend removes vectors, content and metadata. */
+function DeleteDocument({ id, title }) {
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function confirmDelete() {
+    setDeleting(true);
+    setError(null);
+    try {
+      await request(`/api/documents/${id}`, { method: 'DELETE' });
+      navigate('/repository', { state: { notice: `Deleted “${title}”.` } });
+    } catch (err) {
+      setError(err.message);
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="doc-header__actions">
+      {!confirming ? (
+        <button type="button" className="btn btn--danger btn--small" onClick={() => setConfirming(true)}>
+          Delete
+        </button>
+      ) : (
+        <div className="confirm" role="group" aria-label="Confirm delete">
+          <span>Delete permanently?</span>
+          <button
+            type="button"
+            className="btn btn--outline btn--small"
+            disabled={deleting}
+            onClick={() => setConfirming(false)}
+          >
+            Cancel
+          </button>
+          <button type="button" className="btn btn--danger btn--small" disabled={deleting} onClick={confirmDelete}>
+            {deleting ? 'Deleting…' : 'Delete permanently'}
+          </button>
+        </div>
+      )}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

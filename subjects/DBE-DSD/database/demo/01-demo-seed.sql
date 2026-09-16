@@ -26,6 +26,30 @@ INSERT INTO roles (id, name, description) VALUES
 (3, 'EMPLOYEE', 'Employee')
 ON CONFLICT (name) DO NOTHING;
 
+-- Role permissions, mirroring database/postgresql/seed.sql. The demo loads
+-- only schema.sql and this file, so without these no role -- not even ADMIN --
+-- holds DOCUMENT_CREATE or DOCUMENT_DELETE. Added by hand: emit.py does not
+-- produce the roles, demo_admin or permissions blocks in this file.
+INSERT INTO permissions (name, description) VALUES
+('DOCUMENT_CREATE', 'Can create new documents'),
+('DOCUMENT_READ', 'Can read documents'),
+('DOCUMENT_UPDATE', 'Can update existing documents'),
+('DOCUMENT_DELETE', 'Can delete documents'),
+('USER_MANAGE', 'Can manage users and roles'),
+('ROLE_MANAGE', 'Can create and modify roles')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = 'ADMIN'
+ON CONFLICT DO NOTHING;
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'MANAGER' AND p.name IN ('DOCUMENT_CREATE', 'DOCUMENT_READ', 'DOCUMENT_UPDATE')
+ON CONFLICT DO NOTHING;
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = 'EMPLOYEE' AND p.name = 'DOCUMENT_READ'
+ON CONFLICT DO NOTHING;
+
 -- Users
 INSERT INTO users (username, email, password_hash, full_name) VALUES ('dana_hr', 'dana_hr@demo.example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Dana Whitfield');
 INSERT INTO users (username, email, password_hash, full_name) VALUES ('omar_hr', 'omar_hr@demo.example.com', '$2a$10$.qLHFgbEflNqmlMhgu5uJe5YJWkOCzOCTso6kq53N7c0arzlwQTyW', 'Omar Siddiqui');

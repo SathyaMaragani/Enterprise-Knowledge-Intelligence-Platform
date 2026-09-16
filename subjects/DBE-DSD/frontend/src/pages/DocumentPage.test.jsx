@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
@@ -78,6 +78,79 @@ describe('document viewer', () => {
     expect(screen.getByText('Kafka docs')).toBeTruthy();
     expect(screen.getByRole('link', { name: '← Repository' }).getAttribute('href')).toBe('/repository');
     expect(screen.getByRole('link', { name: 'Repository' }).className).toContain('active');
+  });
+
+  it('shows a notice passed from the previous page', async () => {
+    mockApi({ 'GET /api/documents/3': jsonResponse(200, DOCUMENT) });
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/documents/3', state: { notice: 'Uploaded “x”.' } }]}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect((await screen.findByRole('status')).textContent).toBe('Uploaded “x”.');
+  });
+
+  it('offers delete only to roles with DOCUMENT_DELETE', async () => {
+    renderDocument('/documents/3', {
+      'GET /api/documents/3': jsonResponse(200, DOCUMENT),
+      'GET /api/auth/me': jsonResponse(200, { username: 'bob_eng', roles: ['EMPLOYEE'], permissions: ['DOCUMENT_READ'] }),
+    });
+
+    await screen.findByRole('button', { name: /Account menu for bob_eng/ });
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  });
+
+  it('deletes after confirmation and returns to the repository with a notice', async () => {
+    const fetchMock = mockApi({
+      'GET /api/documents/3': jsonResponse(200, DOCUMENT),
+      'GET /api/auth/me': jsonResponse(200, { username: 'admin_user', roles: ['ADMIN'], permissions: ['DOCUMENT_DELETE'] }),
+      'DELETE /api/documents/3': jsonResponse(204),
+      'GET /api/categories': jsonResponse(200, []),
+      'GET /api/documents/page?page=0&size=10': jsonResponse(200, { items: [], page: 0, size: 10, totalItems: 0, totalPages: 0 }),
+    });
+    render(
+      <MemoryRouter initialEntries={['/documents/3']}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    const confirm = screen.getByRole('group', { name: 'Confirm delete' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+
+    expect((await screen.findByRole('status')).textContent).toBe('Deleted “System Architecture v2”.');
+    expect(screen.getByRole('heading', { name: 'Documents' })).toBeTruthy();
+  });
+
+  it('keeps the document open when delete fails', async () => {
+    mockApi({
+      'GET /api/documents/3': jsonResponse(200, DOCUMENT),
+      'GET /api/auth/me': jsonResponse(200, { username: 'admin_user', roles: ['ADMIN'], permissions: ['DOCUMENT_DELETE'] }),
+      'DELETE /api/documents/3': jsonResponse(503, { message: 'Qdrant service is unavailable' }),
+    });
+    render(
+      <MemoryRouter initialEntries={['/documents/3']}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/server is unavailable/);
+    expect(screen.getByRole('heading', { level: 1, name: 'System Architecture v2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete permanently' }).disabled).toBe(false);
   });
 
   it('explains a forbidden document', async () => {

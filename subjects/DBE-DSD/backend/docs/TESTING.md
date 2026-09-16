@@ -6,9 +6,22 @@ The backend suite is split in two:
 |---|---|---|
 | Unit | `SearchServiceTest` | No — fusion, ranking and permission logic run against in-process stubs. |
 | Unit | `LexicalScorerTest` | No — the TextHack keyword scorer, pure functions. |
+| Unit | `TextChunkerTest` | No — word-window chunking for uploads. |
+| Unit | `DocumentIngestionServiceTest` | No — upload rollback across the three stores, against stubs. |
 | Unit | `MiniLmOnnxEncoderTest` | No — but needs the ONNX model under `models/minilm/`. |
 | Integration | `EipApplicationTests` | Yes — the test stack below, seeded. |
-| Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). |
+| Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). Uploads, embeds and deletes one document, leaving the stack as it was. |
+
+Upload tests create documents and always remove them, so the 10 fixture
+documents and the 705 demo vectors are unchanged afterwards.
+
+**Demo stacks created before the upload endpoints** lack role permissions, so
+the demo upload test gets 403. Recreate the demo stack, or apply the block to the
+running database:
+
+```bash
+sed -n '/^INSERT INTO permissions/,/^-- Users/p' subjects/DBE-DSD/database/demo/01-demo-seed.sql | grep -v '^-- Users' | docker exec -i eip-demo-postgres psql -U eip_demo -d eip_db
+```
 
 Running `./mvnw test` runs all of them. The integration tests will fail without
 their stacks, so start them first.
@@ -140,13 +153,15 @@ is public in the repository. To run the application (not the tests), copy
 ### Expected result
 
 ```
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
-Tests run: 75, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
+Tests run: 81, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.DocumentIngestionServiceTest
 Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
 Tests run: 19, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.TextChunkerTest
 
-Tests run: 116, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 137, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

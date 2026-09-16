@@ -476,6 +476,73 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Document Upload and Delete
+**Status: VERIFIED**
+(Backend suite against the live test and demo stacks; frontend tests and build;
+upload, permission, size-limit and delete checked with curl against a running
+server; upload form and delete confirmation checked in the browser at 375, 780
+and 1536 px.)
+
+```
+Backend   Tests run: 137, Failures: 0, Errors: 0, Skipped: 0   (21 new)
+  EipApplicationTests                  81  (6 new: upload, validation, permissions, delete)
+  DemoSemanticSearchIntegrationTest     3  (1 new: upload is embedded, found by meaning, deleted)
+  DocumentIngestionServiceTest          6  (new: rollback paths)
+  TextChunkerTest                       8  (new)
+Frontend  Tests  119 passed (119)                                (15 new)
+```
+
+**Backend**
+- [x] `POST /api/documents` (multipart): `.txt`/`.md`, UTF-8, at most 1 MB;
+      requires `DOCUMENT_CREATE`
+- [x] Stores a PostgreSQL row, MongoDB content with 180/40-word chunks (the ML
+      pipeline's chunking), a version-1 history row, and chunk embeddings in
+      Qdrant when the model is enabled
+- [x] Status `INDEXED` with vectors, `UPLOADED` without (model off or Qdrant down)
+- [x] Failures after the first write undo the earlier writes: nothing is left behind
+- [x] `DELETE /api/documents/{id}`: requires `DOCUMENT_DELETE` and read access;
+      removes Qdrant points first, so an unreachable Qdrant (503) deletes nothing
+- [x] 413 for oversized uploads, 400 for a missing file part, 404 for a missing document
+
+**Frontend**
+- [x] `/upload`: file, title, description, category, department; client checks
+      mirror the backend's; opens the new document with a notice
+- [x] Delete with confirmation on the viewer for roles with `DOCUMENT_DELETE`
+- [x] Upload entry points on the dashboard and repository, gated on `DOCUMENT_CREATE`
+
+**Verified end to end on the demo stack:** an uploaded document about rooftop
+beekeeping was stored as `INDEXED`, then ranked first, matched by `VECTOR`, for
+"looking after insects that make honey on top of the office building", a query
+sharing no keywords with it. Deleting it removed its Qdrant points, MongoDB
+content and PostgreSQL row; the stack was back at 315 documents and 705 vectors.
+
+**Live, on the test stack:** a manager's upload returned 201 as `UPLOADED`; the
+owner could read it and another user got 403; an employee's upload got 403; a
+1.1 MB file got 413; the manager's delete got 403 and an admin's 204; both
+stores were back at 10 documents.
+
+**Found and fixed along the way:**
+- **The demo stack had no role permissions at all.** Its seed loads only
+  `schema.sql` plus `demo/01-demo-seed.sql`, which never inserted permissions,
+  so no role (not even ADMIN) held `DOCUMENT_CREATE`. The seed now mirrors the
+  base seed's role permissions, applied to the running demo database too. The
+  seed file was already hand-edited beyond what `subjects/ML/src/demo/emit.py`
+  generates (roles, `demo_admin`), so it was patched directly rather than
+  regenerated; regenerating would drop those edits.
+- **Keyword search covers title and description only.** A live upload was not
+  found by a word from its body on the test stack, where embeddings are off.
+  The upload notice now says exactly what search can find. Full-text keyword
+  search over the stored content, using the existing MongoDB text index, is a
+  possible follow-up.
+
+**Known ceilings, marked `ponytail:` in code:**
+- Embeddings are computed inside the upload request. A 1 MB file is about a
+  thousand chunks, which takes tens of seconds on CPU; larger files would need a
+  background job.
+
+**Not built:** editing an existing document's metadata or content
+(`DOCUMENT_UPDATE`), and PDF or DOCX text extraction.
+
 ## Search Page
 **Status: VERIFIED**
 (Backend suite against the live stacks; frontend tests and build; status filter
