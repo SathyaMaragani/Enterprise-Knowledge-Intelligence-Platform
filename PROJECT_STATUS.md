@@ -339,7 +339,68 @@ document passing the filters, up to 5000, and scores it in memory. That is fine
 for the fixture and demo corpora. Past that scale, move candidate generation into
 PostgreSQL (`pg_trgm`) or a token index and keep `LexicalScorer` for ranking.
 
-## DSA-3 — TextHack (all 20 algorithms)
+## Frontend 1 — Application Shell and Authentication
+**Status: VERIFIED**
+(Frontend tests and production build run on Node 20.20; sign-in verified live
+through the Vite proxy against Spring Boot on the test stack.)
+
+```
+Frontend (vitest run)
+  src/auth/session.test.js    token decoding, expiry, storage
+  src/api/client.test.js      bearer header, error mapping, 401 handling
+  src/App.test.jsx            guard, sign-in, sign-out, restore, expiry
+  Tests  35 passed (35)
+
+vite build                    ✓ built, 264 kB JS (84 kB gzip)
+
+Backend regression            87 passed, 0 failed, 0 skipped (unchanged)
+```
+
+- [x] `subjects/DBE-DSD/frontend`: React 19, React Router 7, Vite 8
+- [x] Login page, protected routes, signed-in layout, sign-out
+- [x] JWT session in `sessionStorage`, ended when `exp` passes
+- [x] Authenticated API client: bearer header, sign-out on a rejected token,
+      5xx exception text never shown to users
+- [x] Vite dev proxy for `/api`, so no CORS configuration was added to the backend
+- [x] `frontend/README.md` documents running, testing and the auth design
+
+**The tests can fail.** Four deliberate breakages were each caught: the expiry
+boundary (`<=` → `<`), treating a failed login as a sign-out, removing the
+expiry timer, and storing the token in `localStorage`.
+
+**API baseline, recorded live before building on it:**
+
+| Call | Result |
+|---|---|
+| Login, correct credentials | 200 `{token, username, type}`; JWT claims are `sub`, `iat`, `exp` only |
+| Login, wrong password or unknown user | 401 `Invalid username or password` |
+| Login, blank username | **500**, with the raw validation exception in `message` |
+| Protected endpoint, no token or garbage token | 401 |
+| `GET /api/documents/4` as `dave_tmp` | 403 |
+| `POST /api/search` as `dave_tmp` | 200, 0 hits |
+| `GET /api/documents` as `dave_tmp` | **200 with all 10 documents** |
+
+Two backend defects surfaced and were **not** fixed here, because Frontend 1
+changes no backend code:
+
+- `GET /api/documents` skips the document permission check that
+  `GET /api/documents/{id}` and search both enforce. Any signed-in user can list
+  every document's title, description and owner. Fix this before Frontend 3
+  builds the repository view on it.
+- Bean validation failures fall through to the generic exception handler and
+  return 500 with internal exception text instead of 400. The login form's
+  `required` fields keep the UI from sending blank credentials, and the client
+  never shows 5xx text.
+
+**Decisions:**
+- **Plain JavaScript, not TypeScript**, per "no unnecessary dependencies". Revisit
+  when the search DTOs arrive in Frontend 4.
+- **Package versions are held for Node 20.** The latest Vitest, jsdom and React
+  Router require Node 22, and the host runs Node 20.20.
+- **`sessionStorage`, not `localStorage`:** a token left on a shared machine
+  lasts as long as the tab instead of 24 hours. An httpOnly cookie would also
+  resist XSS, but needs backend changes.
+
 **Status: COMPLETE and VERIFIED**
 (Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
 Maven, no JUnit, no network. `sh subjects/DSA-3/run-tests.sh`.)

@@ -484,7 +484,7 @@ This is where the four subjects become **one project**.
 Current state:
 
 ```text
-                         React UI (Pending)
+                React UI (Frontend 1: shell + auth)
                                  │
                                  ▼
                      Spring Boot API (Verified)
@@ -542,10 +542,25 @@ Current state:
 
 ---
 
-# 🔴 Frontend
+# 🟡 Frontend
 
-* [ ] React application
-* [ ] Login
+### Frontend 1 — Application Shell & Authentication — VERIFIED
+
+* [x] React 19 + Vite 8 application (`subjects/DBE-DSD/frontend`)
+* [x] Routing with protected routes (anonymous visitors go to `/login`)
+* [x] Login page against `POST /api/auth/login`
+* [x] JWT session in `sessionStorage`; expiry ends the session on time
+* [x] Authenticated API client (bearer header, 401 handling, safe error messages)
+* [x] Sign-out and signed-in layout/navigation
+* [x] Dev proxy for `/api` (no backend CORS change), `API_TARGET` configurable
+* [x] 35/35 frontend tests passing; production build succeeds
+* [x] Verified live: browser → Vite proxy → Spring Boot on the test stack
+* [x] Backend regression unchanged: 87/87
+
+**Frontend 1 complete: no backend code changed.**
+
+* [x] React application
+* [x] Login
 * [ ] Dashboard
 * [ ] Document upload
 * [ ] Document repository
@@ -605,7 +620,8 @@ A comprehensive **development-status view** right now:
 | TextHack → Search (1.7C)      | 🟢 Verified   |
 | DSA-3 frontend wiring         | 🔴 Pending    |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
-| Frontend                      | 🔴 Pending    |
+| Frontend 1 (shell + auth)     | 🟢 Verified   |
+| Frontend 2-5                  | 🔴 Pending    |
 | Backend write APIs (upload)   | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |
 
@@ -627,9 +643,10 @@ DBE: Spring Boot Real Semantic Search Integration (1.7B-3B)
 DSA-3: TextHack, all 20 algorithms (452 assertions) + engine + benchmarks
 DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
 OSSP: Weeks 1–6 ShellForge (REPL, Input, Parser, Processes, Built-ins, Pipes/IPC)
+DBE: React shell + JWT authentication (Frontend 1)
 
 REMAINING:
-Frontend: React application and search UI
+Frontend 2–5: Dashboard, document repository, search UI, admin/ML/TextHack views
 DBE: Write APIs (document upload and ingestion, registration, permission management)
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads
