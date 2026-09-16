@@ -284,7 +284,7 @@ fixtures untouched, no request-time embedding, no API integration.
 - [x] Numerical compatibility tests (Python reference vs Java output)
 - [x] Retrieval equivalence tests (100% identical top-5 retrieval results on demo corpus)
 
-## DSA-3 — TextHack String Algorithms Module
+## DSA-3 — TextHack (all 20 algorithms)
 **Status: COMPLETE and VERIFIED**
 (Compiled with `javac 25.0.1` under `-Xlint:all` and executed on this host; no
 Maven, no JUnit, no network. `sh subjects/DSA-3/run-tests.sh`.)
@@ -370,7 +370,69 @@ cases); the LCP array against direct pairwise comparison (800 cases). Nested
 patterns are covered explicitly, since `he` inside both `she` and `hers` is
 reachable only through the output-link chain.
 
-**Remaining:** 13 of 20 algorithms (the DP edit-distance family, network flow,
-approximation, randomized), the benchmark harness, and the TextHack query engine.
-Search integration is phase 1.7C. The DP family is next and is the part directly
-useful for fuzzy search scoring.
+### Parts 3-5 — DP, graph/flow, approximation, randomized, engine
+
+- [x] `texthack/dp/` — Levenshtein (rolling rows), Damerau-Levenshtein
+      (unrestricted **and** OSA), Needleman-Wunsch, Smith-Waterman, `Alignment`
+- [x] `texthack/graph/` — `FlowNetwork` (forward-star residual graph),
+      Ford-Fulkerson, Edmonds-Karp (+ min-cut), Dinic, bipartite matching
+- [x] `texthack/approximation/` — vertex cover (ratio 2), list and LPT makespan
+- [x] `texthack/randomized/` — Miller-Rabin, universal hashing, reservoir sampling
+- [x] `texthack/core/Prng.java` — SplitMix64, seeded and reproducible
+- [x] `texthack/engine/` — TextHack facade, query parser, citation flow,
+      complexity registry
+- [x] `benchmarks/Benchmark.java`, `examples/Demos.java`
+- [x] Four new suites: 61 + 45 + 86 + 89 assertions
+
+```
+tests.StringAlgorithmTests             96 passed, 0 failed
+tests.SuffixAndMultiPatternTests       75 passed, 0 failed
+tests.DpTests                          61 passed, 0 failed
+tests.GraphTests                       45 passed, 0 failed
+tests.ApproximationAndRandomizedTests  86 passed, 0 failed
+tests.EngineTests                      89 passed, 0 failed
+-----------------------------------------------------------
+total                                 452 passed, 0 failed
+```
+
+39 source files, zero `-Xlint:all` warnings, ~5s for the whole suite.
+
+### Cross-validation, extended to every module
+Each optimised implementation is checked against a deliberately slow reference:
+Levenshtein against a full-matrix version (3000 cases); three max-flow algorithms
+against **each other** on 600 random networks, plus flow conservation and the
+max-flow min-cut theorem; vertex cover and LPT against brute-force optima;
+Miller-Rabin against trial division for every n up to 20,000; bipartite matching
+against the max-flow reduction.
+
+### Two decisions worth recording
+- **Aho-Corasick is not a `StringMatcher`.** That interface returns bare offsets
+  and cannot carry which of several patterns matched. It has its own `Match[]`
+  API; the four single-pattern matchers were untouched.
+- **Miller-Rabin does not use `BigInteger.modPow`.** That would be replacing the
+  algorithm with a library call. Russian-peasant doubling avoids the silent
+  overflow of `(a*b) % m` above ~3e9, at the cost of the extra log factor — which
+  is where the O(k·log³n) bound comes from.
+
+### A correction to this document's own earlier claim
+An earlier version of `COMPLEXITY.md` listed "Interval Scheduling" under
+Approximation. Earliest-finish-time interval scheduling is **exact**, not an
+approximation, so it was the wrong algorithm for that category. Makespan
+minimisation on identical machines is implemented instead, with the two ratios
+above.
+
+### Two tests that were wrong, not the code
+Both were caught by measurement rather than reasoning, which is the point of the
+cross-validation approach:
+- A hand-counted string index was off by one; all four matchers agreed with each
+  other and with 4000 random cases while disagreeing with the constant.
+- A fuzzy-search assertion expected `"receive"` to rank first for query
+  `"recieve"`. Measured, `"relieve"` is distance **1** (a single l/c
+  substitution) while `"receive"` is a transposition and therefore 2 under plain
+  Levenshtein. The algorithm was right; the expectation was not.
+
+**Not implemented, deliberately:** the Indian-language Wikipedia corpus is a data
+acquisition and licensing task rather than an algorithm, and DSA frontend/API
+integration depends on the React frontend (pending) plus the Spring wiring
+deferred to phase 1.7C. The engine is a plain library with no Spring dependency
+specifically so that integration is later wiring rather than a rewrite.

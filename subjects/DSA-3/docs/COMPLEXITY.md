@@ -125,16 +125,126 @@ Not yet implemented. Listed so the table has one home as the module grows.
 
 | Algorithm | Category | Expected Time | Expected Space |
 |---|---|---|---|
-| Levenshtein | DP | O(n·m) | O(min(n, m)) rolling |
-| Damerau-Levenshtein | DP | O(n·m) | O(n·m) |
-| Needleman-Wunsch | DP | O(n·m) | O(n·m) |
-| Smith-Waterman | DP | O(n·m) | O(n·m) |
-| Ford-Fulkerson | Graph | O(E·maxflow) | O(V + E) |
-| Edmonds-Karp | Graph | O(V·E²) | O(V + E) |
-| Dinic | Graph | O(V²·E) | O(V + E) |
-| Bipartite Matching | Graph | O(V·E) | O(V + E) |
-| Vertex Cover (2-approx) | Approximation | O(V + E) | O(V) |
-| Interval Scheduling | Approximation | O(n log n) | O(n) |
-| Miller-Rabin | Randomized | O(k·log³n) | O(1) |
-| Randomized Hashing | Randomized | O(n) | O(1) |
-| Reservoir Sampling | Randomized | O(n) | O(k) |
+*(All previously planned algorithms are now implemented; see the sections above
+and below.)*
+
+## Dynamic Programming
+
+| Algorithm | Time | Space | Notes |
+|---|---|---|---|
+| Levenshtein | O(n·m) | O(min(n, m)) | Rolling rows; shorter string on the row axis |
+| Damerau-Levenshtein (unrestricted) | O(n·m) | O(n·m) | Full matrix required by the transposition term |
+| Damerau-Levenshtein (OSA, restricted) | O(n·m) | O(n·m) | Different answers from the above; see below |
+| Needleman-Wunsch (global) | O(n·m) | O(n·m) | Matrix retained for traceback |
+| Smith-Waterman (local) | O(n·m) | O(n·m) | Scores floored at zero |
+
+**Levenshtein trades alignment for space.** Each row depends only on the row
+above, so two rows suffice and the shorter string goes on the row axis, giving
+O(min(n,m)). The cost is that the alignment itself cannot be recovered —
+traceback needs the whole matrix, which is why the two alignment algorithms keep
+it.
+
+**Restricted and unrestricted Damerau-Levenshtein are different functions.** OSA
+permits a transposition only of characters adjacent in both strings and never
+edits a substring twice; the unrestricted version has no such limit and is a
+true metric. On `"CA"` → `"ABC"` OSA gives 3 and unrestricted gives 2. Both are
+implemented, and the suite pins that disagreement, because a codebase calling
+one by the other's name will eventually mislead someone.
+
+**Local beats global when agreement is partial.** Two documents sharing one
+quoted paragraph and nothing else score poorly under Needleman-Wunsch, whose gap
+penalties accumulate across the non-matching remainder. Smith-Waterman's zero
+floor lets the alignment restart, isolating the shared passage.
+
+## Network Flow
+
+| Algorithm | Time | Space | Notes |
+|---|---|---|---|
+| Ford-Fulkerson (DFS) | O(E · maxflow) | O(V) | Bound depends on capacities |
+| Edmonds-Karp (BFS) | O(V·E²) | O(V) | Bound depends only on the graph |
+| Dinic | O(V²·E) | O(V) | O(E·√E) on unit capacities |
+| Bipartite matching (Kuhn) | O(V·E) | O(V) | Equivalent to unit-capacity max flow |
+
+**Why the Ford-Fulkerson bound mentions the flow value.** DFS makes no promise
+about path length. The classic bad case is two wide paths joined by a
+capacity-1 edge: choosing the path through the bottleneck augments one unit at a
+time, so a four-vertex graph can take a million iterations. Edmonds-Karp removes
+exactly that by always taking the shortest augmenting path, which is why its
+bound is in V and E alone.
+
+**Reverse edges are what make augmenting paths correct.** Every edge is stored
+with a paired reverse edge; pushing flow forward credits the reverse. Sending
+flow back along it cancels an earlier decision, so no greedy choice permanently
+traps the algorithm below the true maximum.
+
+**Dinic's current-arc optimisation is not optional.** Without the per-vertex
+cursor, each phase rescans exhausted edges and costs O(V·E) instead of O(E).
+
+## Approximation
+
+| Algorithm | Time | Space | Ratio |
+|---|---|---|---|
+| Vertex cover (maximal matching) | O(V + E) | O(V) | 2 |
+| List scheduling | O(n·m) | O(n + m) | 2 − 1/m |
+| LPT scheduling | O(n log n + n·m) | O(n + m) | 4/3 − 1/(3m) |
+
+**Correction to an earlier version of this table.** It previously listed
+"Interval Scheduling" under Approximation. Earliest-finish-time interval
+scheduling is **exact**, not an approximation, so it was the wrong algorithm for
+this category. Makespan minimisation on identical machines is implemented
+instead — genuinely NP-hard, with the two ratios above.
+
+**Taking both endpoints is why the vertex-cover bound is provable.** The edges
+picked share no endpoints, so they form a matching M; any cover must contain an
+endpoint of each, giving optimum ≥ |M|, while the algorithm returns exactly
+2|M|. The "obvious" alternative of repeatedly taking the highest-degree vertex
+has no constant-factor guarantee at all — it is Θ(log n) in the worst case, and
+is a standard trap because it looks better on typical inputs.
+
+**LPT differs from list scheduling only in job order**, and that alone improves
+the guarantee from 2 to 4/3. Long jobs scheduled last land on an already-full
+machine and extend the makespan by their whole duration; scheduled first they
+are absorbed while every machine is empty.
+
+**Heapsort, not quicksort**, for the LPT ordering: job lists frequently arrive
+pre-sorted, which is precisely the input that degrades naive quicksort to O(n²).
+
+## Randomized
+
+| Algorithm | Time | Space | Notes |
+|---|---|---|---|
+| Miller-Rabin (deterministic witnesses) | O(k · log³n) | O(1) | Exact for all 64-bit n |
+| Miller-Rabin (random witnesses) | O(k · log³n) | O(1) | Error < 4^−k, one-sided |
+| Universal hashing (integer) | O(1) | O(1) | Collision probability ≤ 1/m |
+| Universal hashing (string) | O(L) | O(1) | Collision probability ≤ L/p |
+| Reservoir sampling (Algorithm R) | O(n) | O(k) | One pass, unknown stream length |
+| SplitMix64 PRNG | O(1) | O(1) | Deterministic, seeded, not cryptographic |
+
+**Why log³ and not log².** The obvious `(a * b) % m` overflows a signed long
+once m exceeds roughly 3 × 10⁹ — silently, producing wrong answers rather than
+an error. `BigInteger.modPow` would avoid it but would be replacing the
+algorithm with a library call, which the subject rules bar. Multiplication is
+therefore done by Russian-peasant doubling, adding an O(log n) factor inside
+each of the O(log n) squarings.
+
+**Deterministic for 64-bit inputs.** The witness set {2, 3, 5, …, 37} is proven
+sufficient below 3.3 × 10²⁴, which covers every `long`. So `isPrime` is exact,
+not probable; the randomised variant exists because the subject asks for a
+randomized algorithm and because it is what generalises beyond 64 bits.
+
+**Carmichael numbers are the test that matters.** 561, 1105, 1729 and their
+relatives satisfy Fermat's little theorem for every coprime base, so a Fermat
+test calls them prime. Miller-Rabin does not, and the suite checks ten of them.
+
+**Universal hashing removes the fixed worst case.** Any deterministic hash has
+some input set that collides badly; if that set is attacker-chosen the structure
+degrades. Drawing h at random from a family with a proven collision bound makes
+the guarantee hold in expectation over the choice of h, whatever the inputs. The
+string family is the Rabin-Karp construction with a randomly chosen base — which
+is exactly what removes Rabin-Karp's adversarial case.
+
+**Reservoir sampling's index draw must be inclusive.** Item i is accepted with
+probability k/(i+1), which requires drawing from [0, i] and not [0, i). The
+off-by-one still produces plausible-looking samples and is invisible to any
+check short of a distribution test, so the suite runs 40,000 trials and asserts
+each of ten elements is chosen about a tenth of the time.

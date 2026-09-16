@@ -11,7 +11,9 @@ set -e
 cd "$(dirname "$0")"
 
 OUT=out
-SOURCES=$(find texthack tests -name '*.java')
+# benchmarks and examples are compiled too, so they cannot silently rot, but
+# only the test suites are executed here.
+SOURCES=$(find texthack tests benchmarks examples -name '*.java')
 
 echo "=========================================="
 echo " Building TextHack"
@@ -24,7 +26,7 @@ echo
 # Every suite runs even if an earlier one fails, so a single regression does not
 # hide the state of the rest. `set -e` is suspended around each run for that
 # reason, and the exit codes are collected and reported at the end.
-SUITES="tests.StringAlgorithmTests tests.SuffixAndMultiPatternTests"
+SUITES="tests.StringAlgorithmTests tests.SuffixAndMultiPatternTests tests.DpTests tests.GraphTests tests.ApproximationAndRandomizedTests tests.EngineTests"
 STATUS=0
 
 for suite in $SUITES; do

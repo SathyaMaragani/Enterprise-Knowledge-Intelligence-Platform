@@ -54,18 +54,58 @@ benchmarks/         performance harness            (not yet implemented)
 
 ## Status
 
-| Module | Implemented | Verified |
+| Module | Implemented | Suite |
 |---|---|---|
-| String matching | Naive, KMP, Z-Algorithm, Rabin-Karp | 96 assertions, 0 failures |
-| Multi-pattern | Aho-Corasick | 75 assertions, 0 failures |
-| Suffix structures | Suffix array, LCP/Kasai | (same suite) |
-| Dynamic programming | — | not started |
-| Network flow | — | not started |
-| Approximation | — | not started |
-| Randomized | — | not started |
+| String matching | Naive, KMP, Z-Algorithm, Rabin-Karp | 96 assertions |
+| Multi-pattern + suffix | Aho-Corasick, suffix array, LCP/Kasai | 75 assertions |
+| Dynamic programming | Levenshtein, Damerau-Levenshtein (+OSA), Needleman-Wunsch, Smith-Waterman | 61 assertions |
+| Network flow | Ford-Fulkerson, Edmonds-Karp, Dinic, bipartite matching | 45 assertions |
+| Approximation + randomized | Vertex cover, list/LPT scheduling, Miller-Rabin, universal hashing, reservoir sampling | 86 assertions |
+| Engine | TextHack facade, query parser, citation flow, complexity registry | 89 assertions |
 
-**The String Algorithms module is complete**: 7 of the 20 listed algorithms,
-171 assertions across two suites, zero failures, zero `-Xlint:all` warnings.
+**All 20 listed algorithms are implemented.** 452 assertions across six suites,
+zero failures, zero `-Xlint:all` warnings.
+
+```
+tests.StringAlgorithmTests             96 passed, 0 failed
+tests.SuffixAndMultiPatternTests       75 passed, 0 failed
+tests.DpTests                          61 passed, 0 failed
+tests.GraphTests                       45 passed, 0 failed
+tests.ApproximationAndRandomizedTests  86 passed, 0 failed
+tests.EngineTests                      89 passed, 0 failed
+-----------------------------------------------------------
+total                                 452 passed, 0 failed
+```
+
+## Engine and tooling
+
+```bash
+java -cp out examples.Demos        # worked demonstrations of every module
+java -cp out benchmarks.Benchmark  # timing, growth ratios, complexity table
+```
+
+The query language:
+
+```
+find "needle"                  exact search
+findall "he" "she" "hers"      all patterns in one pass
+fuzzy "recieve" ~2             within 2 edits
+similar "colour" "color"       normalised similarity
+prime 7919                     primality
+```
+
+## Not implemented, and why
+
+Two items from the original TextHack list are deliberately absent rather than
+stubbed:
+
+- **Indian-language Wikipedia corpus** — a data-acquisition and licensing task,
+  not an algorithm. It needs a dump selection, a license review and storage
+  decisions, in the same way the ML subject's FiQA corpus did.
+- **DSA frontend/API integration** — depends on the React frontend (pending) and
+  the Spring wiring deferred to phase 1.7C. The engine is a plain library with
+  no Spring dependency precisely so that integration is later wiring rather than
+  a rewrite.
 
 Aho-Corasick deliberately does **not** implement `StringMatcher`. That interface
 answers "where does this one pattern occur" and returns bare offsets, which

@@ -205,8 +205,8 @@ The architecture/scaffolding is:
 
 ### Actual algorithms
 
-**String Algorithms module — COMPLETE and VERIFIED**
-(171 assertions across two suites, 0 failures, 0 `-Xlint:all` warnings, `sh run-tests.sh`)
+**ALL 20 ALGORITHMS COMPLETE and VERIFIED**
+(452 assertions across six suites, 0 failures, 0 `-Xlint:all` warnings, `sh run-tests.sh`)
 
 * [x] Naive pattern matching — O(n·m) worst, reference implementation
 * [x] KMP — O(n+m), failure function exposed for period detection
@@ -222,35 +222,39 @@ The architecture/scaffolding is:
 * [x] LCP / Kasai — O(n) from the suffix array, repeated prefixes handled
 * [x] Cross-validation: Aho-Corasick vs per-pattern naive, suffix array vs
       brute-force sort, LCP vs pairwise comparison
-* [ ] Levenshtein Distance
-* [ ] Damerau-Levenshtein
-* [ ] Needleman-Wunsch
-* [ ] Smith-Waterman
-* [ ] Ford-Fulkerson
-* [ ] Edmonds-Karp
-* [ ] Dinic
-* [ ] Bipartite Matching
-* [ ] Vertex Cover approximation
-* [ ] Scheduling approximation
-* [ ] Miller-Rabin
-* [ ] Randomized hashing
-* [ ] Reservoir sampling
+* [x] Levenshtein Distance — O(n·m) time, O(min(n,m)) space via rolling rows
+* [x] Damerau-Levenshtein — unrestricted, plus OSA; the two differ on "CA"/"ABC"
+* [x] Needleman-Wunsch — global alignment with traceback
+* [x] Smith-Waterman — local alignment, zero-floored
+* [x] Ford-Fulkerson — DFS augmenting paths, O(E·maxflow)
+* [x] Edmonds-Karp — BFS augmenting paths, O(V·E²), plus min-cut extraction
+* [x] Dinic — level graph + blocking flow with current-arc optimisation
+* [x] Bipartite Matching — Kuhn, cross-checked against the max-flow reduction
+* [x] Vertex Cover approximation — ratio 2, verified against brute-force optima
+* [x] Scheduling approximation — list (2−1/m) and LPT (4/3−1/3m) makespan
+* [x] Miller-Rabin — exact for 64-bit; overflow-safe modular arithmetic
+* [x] Randomized hashing — Carter-Wegman integer and polynomial string families
+* [x] Reservoir sampling — Algorithm R, uniformity verified over 40k trials
+* [x] `Prng` — SplitMix64, seeded and reproducible (no `java.util.Random`)
+* [x] `FlowNetwork` — forward-star residual graph with paired reverse edges
 
 ### TextHack system
 
-* [ ] TextHack query engine
-* [ ] Query parser
-* [ ] Pattern search API
-* [ ] Fuzzy matching API
-* [ ] Similarity API
-* [ ] Citation-flow analysis
-* [ ] Scheduling demonstration
-* [ ] Primality demonstration
-* [ ] Algorithm complexity reporting
-* [ ] Benchmark framework
-* [ ] Public TextHack-style API
-* [ ] Indian-language Wikipedia corpus
-* [ ] DSA frontend/API integration
+* [x] TextHack query engine (`TextHack.execute` over a bound corpus)
+* [x] Query parser (`find`, `findall`, `fuzzy ~n`, `similar`, `prime`)
+* [x] Pattern search API (single and multi-pattern)
+* [x] Fuzzy matching API (edit-distance threshold, nearest-first ordering)
+* [x] Similarity API (normalised edit similarity, global and local alignment)
+* [x] Citation-flow analysis (max flow over a citation graph, min-cut bottleneck)
+* [x] Scheduling demonstration (`examples.Demos`)
+* [x] Primality demonstration (Miller-Rabin versus a Fermat test on Carmichael numbers)
+* [x] Algorithm complexity reporting (`ComplexityRegistry`, 22 entries)
+* [x] Benchmark framework (`benchmarks.Benchmark`, growth ratios vs documented bounds)
+* [x] Public TextHack-style API (`texthack.engine.TextHack`, no Spring dependency)
+* [ ] Indian-language Wikipedia corpus — **deferred**: data acquisition and
+      licensing task, not an algorithm; needs dump selection and a license review
+* [ ] DSA frontend/API integration — **blocked**: depends on the React frontend
+      (pending) and the Spring wiring deferred to phase 1.7C
 
 ---
 
@@ -568,8 +572,8 @@ Current state:
 
 A comprehensive **development-status view** right now:
 
-| Area                          | Status        |
-| ----------------------------- | ------------- |
+| Area                          | Status         |
+| ----------------------------- | -----------   |
 | Repository Architecture       | 🟢 Complete   |
 | PostgreSQL                    | 🟢 Verified   |
 | MongoDB                       | 🟢 Verified   |
@@ -581,12 +585,12 @@ A comprehensive **development-status view** right now:
 | Unified Search (1.7A)         | 🟢 Verified   |
 | ML 1.7B-1 Dataset/Eval        | 🟢 Verified   |
 | ML 1.7B-2 Embeddings Eval     | 🟢 Verified   |
-| Demo Corpus & Vectors (1.7B-3A)| 🟢 Verified  |
+| Demo Corpus & Vectors(1.7B-3A)| 🟢 Verified   |
 | Java ONNX Embeddings (1.7B-3C)| 🟢 Verified   |
 | Real Semantic Search (1.7B-3B)| 🟢 Verified   |
 | Core Search Integration       | 🟢 Verified   |
-| DSA-3 String Algorithms       | 🟢 Verified   |
-| DSA-3 TextHack (DP/graph/rnd) | 🔴 Pending    |
+| DSA-3 TextHack (all 20 algos) | 🟢 Verified   |
+| DSA-3 frontend/API wiring     | 🔴 Pending    |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend                      | 🔴 Pending    |
 | Deployment (Containers)       | 🟡 Partial    |
