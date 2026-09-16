@@ -5,10 +5,17 @@ The backend suite is split in two:
 | Suite | Class | Needs databases? |
 |---|---|---|
 | Unit | `SearchServiceTest` | No — fusion, ranking and permission logic run against in-process stubs. |
-| Integration | `EipApplicationTests` | Yes — all three databases, seeded. |
+| Unit | `LexicalScorerTest` | No — the TextHack keyword scorer, pure functions. |
+| Unit | `MiniLmOnnxEncoderTest` | No — but needs the ONNX model under `models/minilm/`. |
+| Integration | `EipApplicationTests` | Yes — the test stack below, seeded. |
+| Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). |
 
-Running `./mvnw test` runs both. The integration tests will fail without the
-stack below, so start it first.
+Running `./mvnw test` runs all of them. The integration tests will fail without
+their stacks, so start them first.
+
+The backend also compiles the DSA-3 TextHack engine (`subjects/DSA-3/texthack`)
+as a second source root, so the DSA-3 directory must be present. That step uses
+`build-helper-maven-plugin`; the first build needs network access to fetch it.
 
 ## 1. Start the test stack
 
@@ -133,10 +140,13 @@ is public in the repository. To run the application (not the tests), copy
 ### Expected result
 
 ```
-Tests run: 43, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
+Tests run: 48, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
+Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
+Tests run: 17, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 
-Tests run: 55, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 87, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

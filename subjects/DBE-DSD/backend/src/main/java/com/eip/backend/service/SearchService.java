@@ -22,12 +22,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Phase 1.7A -- unified search.
+ * Unified search across PostgreSQL, MongoDB and Qdrant.
  *
- * Runs the keyword (PostgreSQL) and vector (Qdrant) primitives, fuses them on
- * document id, drops what the caller may not see, ranks, and pages. Fuzzy search
- * (1.7C / TextHack) and server-side embeddings (1.7B) plug in as extra candidate
- * sources; nothing else here has to move when they do.
+ * <p>Phase 1.7A built the fusion: keyword (PostgreSQL) and vector (Qdrant)
+ * candidates fused on document id, filtered to what the caller may see, ranked
+ * and paged. Phase 1.7B added server-side query embedding. Phase 1.7C upgrades
+ * the keyword leg with the DSA-3 TextHack engine:
+ *
+ * <ul>
+ *   <li>Keyword candidates are scored by {@link LexicalScorer} -- phrase
+ *       detection, term coverage and typo tolerance -- instead of the 1.7A
+ *       placeholder.</li>
+ *   <li>A TextHack term scan recovers documents the SQL phrase match cannot see:
+ *       query terms in a different order, or with a typo.</li>
+ * </ul>
+ *
+ * <p>Both keyword paths report under the single {@code KEYWORD} source, because
+ * they are one lexical signal. Per-hit provenance says when typo tolerance was
+ * needed: such hits carry {@code FUZZY} in {@code matchedBy}.
  */
 @Service
 public class SearchService {
@@ -38,6 +50,13 @@ public class SearchService {
     private static final int CANDIDATE_LIMIT = 200;
     private static final int MAX_PAGE_SIZE = 100;
 
+    // ponytail: the TextHack scan reads every document passing the filters, up to
+    // this cap, and scores it in memory. That is milliseconds for the fixture and
+    // demo corpora, but linear in corpus size. Past this scale, move candidate
+    // generation into the database (pg_trgm similarity) or a token index, and keep
+    // LexicalScorer for ranking only.
+    private static final int SCAN_LIMIT = 5000;
+
     private static final double KEYWORD_WEIGHT = 0.4;
     private static final double VECTOR_WEIGHT = 0.6;
 
@@ -45,15 +64,18 @@ public class SearchService {
     private final QdrantService qdrantService;
     private final DocumentAccessService documentAccessService;
     private final EmbeddingService embeddingService;
+    private final LexicalScorer lexicalScorer;
 
     public SearchService(DocumentRepository documentRepository,
                          QdrantService qdrantService,
                          DocumentAccessService documentAccessService,
-                         EmbeddingService embeddingService) {
+                         EmbeddingService embeddingService,
+                         LexicalScorer lexicalScorer) {
         this.documentRepository = documentRepository;
         this.qdrantService = qdrantService;
         this.documentAccessService = documentAccessService;
         this.embeddingService = embeddingService;
+        this.lexicalScorer = lexicalScorer;
     }
 
     @Transactional(readOnly = true)
@@ -115,18 +137,51 @@ public class SearchService {
         }
     }
 
+    /**
+     * The keyword leg, in two passes feeding one signal.
+     *
+     * <ol>
+     *   <li>PostgreSQL phrase candidates ({@code ILIKE}). Not bound by the scan
+     *       cap, so phrase matches are found across the whole table. Always kept:
+     *       they contain the query and so score at least
+     *       {@value LexicalScorer#DESCRIPTION_PHRASE_SCORE}.</li>
+     *   <li>The TextHack scan, adding what the SQL phrase match cannot express --
+     *       reordered terms and near-miss spellings. Kept only above
+     *       {@value LexicalScorer#MIN_SCAN_SCORE}, so a document sharing one
+     *       incidental word with a long query does not become a hit.</li>
+     * </ol>
+     */
     private void collectKeywordHits(SearchRequest request, Map<Integer, SearchHit> hits) {
-        List<Document> matches = documentRepository.searchByKeyword(
-                request.getQuery().trim(),
-                blankIfNull(request.getCategory()),
-                blankIfNull(request.getStatus()),
-                PageRequest.of(0, CANDIDATE_LIMIT));
+        String query = request.getQuery().trim();
+        String category = blankIfNull(request.getCategory());
+        String status = blankIfNull(request.getStatus());
 
-        String needle = request.getQuery().trim().toLowerCase();
-        for (Document document : matches) {
-            SearchHit hit = hits.computeIfAbsent(document.getId(), SearchService::newHit);
-            hit.setKeywordScore(keywordScore(document, needle));
-            hit.getMatchedBy().add("KEYWORD");
+        for (Document document : documentRepository.searchByKeyword(
+                query, category, status, PageRequest.of(0, CANDIDATE_LIMIT))) {
+            addKeywordHit(hits, document,
+                          lexicalScorer.score(query, document.getTitle(), document.getDescription()));
+        }
+
+        for (Document document : documentRepository.findForLexicalScan(
+                category, status, PageRequest.of(0, SCAN_LIMIT))) {
+            if (hits.containsKey(document.getId())) {
+                continue; // already scored identically by the phrase pass
+            }
+            LexicalScorer.Match match =
+                    lexicalScorer.score(query, document.getTitle(), document.getDescription());
+            if (match.score() >= LexicalScorer.MIN_SCAN_SCORE) {
+                addKeywordHit(hits, document, match);
+            }
+        }
+    }
+
+    private static void addKeywordHit(Map<Integer, SearchHit> hits, Document document,
+                                      LexicalScorer.Match match) {
+        SearchHit hit = hits.computeIfAbsent(document.getId(), SearchService::newHit);
+        hit.setKeywordScore(match.score());
+        hit.getMatchedBy().add("KEYWORD");
+        if (match.fuzzy()) {
+            hit.getMatchedBy().add("FUZZY");
         }
     }
 
@@ -183,14 +238,6 @@ public class SearchService {
                 hit.setOwner(document.getOwner().getUsername());
             }
         }
-    }
-
-    // ponytail: substring presence, not relevance -- no term frequency, no field
-    // length normalisation, no ranking of multi-term queries. Phase 1.7C replaces
-    // this with the TextHack scorers; the shape (0..1 per document) stays.
-    private double keywordScore(Document document, String needle) {
-        String title = document.getTitle() == null ? "" : document.getTitle().toLowerCase();
-        return title.contains(needle) ? 1.0 : 0.5;
     }
 
     private double combinedScore(SearchHit hit, double activeWeight) {

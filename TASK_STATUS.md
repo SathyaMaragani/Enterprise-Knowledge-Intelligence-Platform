@@ -186,6 +186,18 @@
 
 **Phase 1.7B complete: real semantic search operational in-process via Java ONNX runtime.**
 
+### TextHack Lexical Search (Phase 1.7C) — VERIFIED
+
+* [x] DSA-3 `texthack` compiled into the backend as a second source root (no copy)
+* [x] `LexicalScorer`: KMP phrase detection, Aho-Corasick multi-term matching, Damerau-Levenshtein (OSA) typo tolerance
+* [x] Placeholder keyword score (title contains query: 1.0, else 0.5) replaced
+* [x] TextHack scan recovers reordered and misspelled queries PostgreSQL `ILIKE` misses
+* [x] `FUZZY` provenance in `matchedBy`; `sources` contract unchanged
+* [x] Scan hits permission-filtered like every other hit
+* [x] 87/87 tests passing (63 existing, unchanged, + 24 new: 14 scorer unit, 5 service unit, 5 integration)
+
+**Phase 1.7C complete: 87 passed, 0 failed, 0 skipped.**
+
 ---
 
 # 🟡 DSA-3 — TextHack
@@ -253,8 +265,8 @@ The architecture/scaffolding is:
 * [x] Public TextHack-style API (`texthack.engine.TextHack`, no Spring dependency)
 * [ ] Indian-language Wikipedia corpus — **deferred**: data acquisition and
       licensing task, not an algorithm; needs dump selection and a license review
-* [ ] DSA frontend/API integration — **blocked**: depends on the React frontend
-      (pending) and the Spring wiring deferred to phase 1.7C
+* [x] DSA Spring/API integration — delivered in phase 1.7C (`POST /api/search` keyword scoring)
+* [ ] DSA frontend integration — **blocked**: depends on the React frontend (pending)
 
 ---
 
@@ -504,11 +516,11 @@ Current state:
 * [x] MongoDB + Qdrant (Document content + chunk vector correlation)
 * [x] Spring Boot + Qdrant (Vector search client, payload filtering, cosine similarity)
 * [x] Spring Boot + ML (In-process Java ONNX runtime `all-MiniLM-L6-v2` query encoder)
-* [ ] Spring Boot + TextHack (DSA integration pending)
+* [x] Spring Boot + TextHack (`LexicalScorer` in `SearchService`, Phase 1.7C)
 * [x] Search orchestration (`SearchService` multi-backend fan-out and fusion)
 * [x] Permission-aware search (`DocumentAccessService` security filtering)
-* [x] Keyword search (PostgreSQL ILIKE search)
-* [ ] Fuzzy search (TextHack / Levenshtein / DSA pending)
+* [x] Keyword search (PostgreSQL ILIKE phrase candidates + TextHack term scan)
+* [x] Fuzzy search (TextHack Damerau-Levenshtein, length-scaled thresholds, `FUZZY` provenance)
 * [x] Semantic search (Qdrant + ONNX MiniLM vector search)
 * [x] Hybrid search (Weighted score fusion of keyword + semantic hits)
 * [x] Search ranking (Normalized 0..1 scoring with provenance tracking)

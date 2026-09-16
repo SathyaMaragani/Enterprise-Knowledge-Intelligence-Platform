@@ -220,7 +220,7 @@ Qdrant's `knowledge_chunks` collection uses cosine distance, so similarities run
 
 **Deliberately out of scope** (per the 1.7 split):
 - 1.7B — real embeddings. `SearchRequest.vector` stays caller-supplied until then.
-- 1.7C — TextHack/DSA scorers replace the placeholder keyword ranking.
+- 1.7C — TextHack/DSA scorers replace the placeholder keyword ranking (delivered; see Phase 1.7C below).
 
 ## Phase 1.7B-1 — ML Dataset, Preprocessing and Evaluation Foundation
 **Status: VERIFIED**
@@ -283,6 +283,61 @@ fixtures untouched, no request-time embedding, no API integration.
 - [x] CLI testing utility (EncodeCli.java)
 - [x] Numerical compatibility tests (Python reference vs Java output)
 - [x] Retrieval equivalence tests (100% identical top-5 retrieval results on demo corpus)
+
+## Phase 1.7C — TextHack Lexical Search Integration
+**Status: VERIFIED**
+(Full backend suite executed against the live test stack and the live demo stack.)
+
+```
+Tests run: 87, Failures: 0, Errors: 0, Skipped: 0
+  com.eip.backend.DemoSemanticSearchIntegrationTest   2 passed
+  com.eip.backend.EipApplicationTests                48 passed  (43 existing + 5 new)
+  com.eip.backend.ml.MiniLmOnnxEncoderTest            6 passed
+  com.eip.backend.service.LexicalScorerTest          14 passed  (new)
+  com.eip.backend.service.SearchServiceTest          17 passed  (12 existing + 5 new)
+BUILD SUCCESS
+```
+
+DSA-3 `run-tests.sh` still passes unchanged. All 63 pre-existing tests pass
+without any assertion being changed.
+
+- [x] Backend compiles `subjects/DSA-3/texthack` as a second source root
+      (`build-helper-maven-plugin`); the DSA-3 tests, benchmarks and examples are
+      excluded. One copy of the algorithms, verified by DSA-3 and run by Spring.
+- [x] `LexicalScorer` replaces the 1.7A placeholder (`1.0` if the title contained
+      the query, else `0.5`):
+  - KMP for whole-query phrase detection
+  - Aho-Corasick for all query terms in one pass, whole-token matches only
+  - Damerau-Levenshtein (optimal string alignment) for typo tolerance
+- [x] TextHack scan (`DocumentRepository.findForLexicalScan`) recovers reordered
+      and misspelled queries that PostgreSQL `ILIKE` cannot match
+- [x] Both keyword passes report as the single `KEYWORD` source; hits that needed
+      typo tolerance carry `FUZZY` in `matchedBy`
+- [x] Scan hits pass through the same permission filter as every other hit
+- [x] `docs/API.md` documents the scoring table and `FUZZY` provenance
+
+**Why the keyword leg was upgraded rather than a new `FUZZY` source added:** a
+separate source would have changed `sources` on every query-bearing search and
+broken the pinned `["KEYWORD"]` / `["KEYWORD","VECTOR"]` contract. Fuzzy
+matching is still lexical search, so it belongs in the lexical signal, with
+per-hit provenance saying when it was needed.
+
+**Why an exact title match still scores 1.0:** the pinned fusion scores (0.97,
+1.0) depend on it, and a reordered or fuzzy match should never tie with the
+exact phrase. Term coverage is capped at 0.9 for that reason.
+
+**Why OSA and not plain Levenshtein:** transposed letters are among the most
+common typos. Plain Levenshtein counts `recieve` → `receive` as two edits; OSA
+counts one. DSA-3 already documented this trade-off.
+
+**Why no typo tolerance for terms of 3 characters or fewer:** one edit is a third
+of the word. `nba` is one edit from `nda`, but they are not the same query.
+`testTextHackDoesNotFuzzShortTerms` pins this against the NDA fixture.
+
+**Known ceiling (marked `ponytail:` in `SearchService`):** the scan reads every
+document passing the filters, up to 5000, and scores it in memory. That is fine
+for the fixture and demo corpora. Past that scale, move candidate generation into
+PostgreSQL (`pg_trgm`) or a token index and keep `LexicalScorer` for ranking.
 
 ## DSA-3 — TextHack (all 20 algorithms)
 **Status: COMPLETE and VERIFIED**
@@ -433,6 +488,6 @@ cross-validation approach:
 
 **Not implemented, deliberately:** the Indian-language Wikipedia corpus is a data
 acquisition and licensing task rather than an algorithm, and DSA frontend/API
-integration depends on the React frontend (pending) plus the Spring wiring
-deferred to phase 1.7C. The engine is a plain library with no Spring dependency
-specifically so that integration is later wiring rather than a rewrite.
+frontend integration depends on the React frontend (pending). The Spring wiring
+was delivered in phase 1.7C, and it was wiring rather than a rewrite: the engine
+has no Spring dependency, and the backend compiles the same sources.

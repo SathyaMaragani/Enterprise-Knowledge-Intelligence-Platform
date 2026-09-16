@@ -96,8 +96,8 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
 
 | Field | Required | Notes |
 |---|---|---|
-| `query` | one of `query`/`vector` | Case-insensitive match on title and description. |
-| `vector` | one of `query`/`vector` | Must be exactly 384 floats. Phase 1.7B will derive this from `query` server-side. |
+| `query` | one of `query`/`vector` | Lexical match on title and description, tolerant of reordered terms and typos (see **Keyword scoring**). |
+| `vector` | one of `query`/`vector` | Must be exactly 384 floats. When omitted and the embedding model is enabled, the server embeds `query` itself. |
 | `category` | no | Applied to both backends. |
 | `department` | no | Qdrant payload filter; ignored by keyword search. |
 | `status` | no | PostgreSQL document status; ignored by vector search. |
@@ -140,6 +140,33 @@ one document match, the document takes its single best chunk, reported as
 maps it to 0..1 as `(vectorScore + 1) / 2` before weighting, which is monotonic
 and so never reorders vector results. `score` is therefore not reconstructible
 from `keywordScore` and `vectorScore` without applying that transform.
+
+**Keyword scoring** (Phase 1.7C) uses the DSA-3 TextHack engine. The keyword leg
+has two passes that report as one `KEYWORD` source:
+
+1. PostgreSQL finds documents containing the whole query as a phrase.
+2. A TextHack scan over the documents passing `category`/`status` finds what a
+   phrase match cannot: query terms in another order, or misspelled.
+
+Each candidate's `keywordScore` (0..1) is:
+
+| Evidence | Score |
+|---|---|
+| Whole query in the title (KMP) | 1.0 |
+| Whole query in the description | 0.75 |
+| Term coverage (Aho-Corasick, whole tokens) | up to 0.9 |
+
+Coverage averages a credit per query term: 1.0 exact, 0.7 one edit away, 0.5 two
+edits away (Damerau-Levenshtein, optimal string alignment). Terms found only in
+the description count at 0.6 of that. The result is the larger of the phrase
+score and coverage, except that a title phrase match always scores 1.0. Allowed
+edits scale with term length: none up to 3 characters, 1 for 4-7, 2 for 8 or
+more. Stopwords and single characters are ignored. Documents found only by the
+scan must score at least 0.5.
+
+**`matchedBy`** lists the signals that found a hit: `KEYWORD`, `VECTOR`, and
+`FUZZY` when the keyword score depended on a misspelled term. A query for
+`Finacial` returns "Q1 Financial Report" with `["KEYWORD", "FUZZY"]`.
 
 **`sources`** names the backends that answered. If Qdrant is unavailable but a
 keyword query was supplied, the search degrades to `["KEYWORD"]` and returns 200

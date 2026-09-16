@@ -102,10 +102,11 @@ stubbed:
 - **Indian-language Wikipedia corpus** — a data-acquisition and licensing task,
   not an algorithm. It needs a dump selection, a license review and storage
   decisions, in the same way the ML subject's FiQA corpus did.
-- **DSA frontend/API integration** — depends on the React frontend (pending) and
-  the Spring wiring deferred to phase 1.7C. The engine is a plain library with
-  no Spring dependency precisely so that integration is later wiring rather than
-  a rewrite.
+- **DSA frontend integration** — depends on the React frontend (pending). The
+  Spring/API wiring is done (phase 1.7C): the DBE-DSD backend compiles this
+  directory's `texthack` package as a second source root and scores keyword
+  search with KMP, Aho-Corasick and Damerau-Levenshtein. It stayed wiring rather
+  than a rewrite because the engine has no Spring dependency.
 
 Aho-Corasick deliberately does **not** implement `StringMatcher`. That interface
 answers "where does this one pattern occur" and returns bare offsets, which

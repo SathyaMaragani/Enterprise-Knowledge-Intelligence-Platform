@@ -33,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class SearchServiceTest {
 
     private List<Document> keywordResults = List.of();
+    /** What the Phase 1.7C TextHack scan sees; empty unless a test sets it. */
+    private List<Document> scanResults = List.of();
     private VectorSearchResponse vectorResults = new VectorSearchResponse(List.of());
     private RuntimeException qdrantFailure;
     /** Ids the current user may read; null means "all of them". */
@@ -73,7 +75,8 @@ class SearchServiceTest {
             }
         };
 
-        searchService = new SearchService(repository, qdrant, access, embeddingService);
+        searchService = new SearchService(repository, qdrant, access, embeddingService,
+                                          new LexicalScorer());
     }
 
     /**
@@ -87,6 +90,7 @@ class SearchServiceTest {
                 new Class<?>[]{DocumentRepository.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "searchByKeyword" -> keywordResults;
+                    case "findForLexicalScan" -> scanResults;
                     case "findAllById" -> {
                         Set<Integer> wanted = new LinkedHashSet<>();
                         ((Iterable<?>) args[0]).forEach(id -> wanted.add((Integer) id));
@@ -124,6 +128,10 @@ class SearchServiceTest {
 
     private void keywordReturns(Document... documents) {
         keywordResults = List.of(documents);
+    }
+
+    private void scanReturns(Document... documents) {
+        scanResults = List.of(documents);
     }
 
     private void vectorReturns(VectorSearchResultItem... items) {
@@ -309,5 +317,69 @@ class SearchServiceTest {
 
         assertThrows(QdrantUnavailableException.class,
                 () -> searchService.search(request(null, List.of(0.1f, 0.2f))));
+    }
+
+    // ------------------------------------------------------------ Phase 1.7C
+
+    @Test
+    void typoQueryIsRecoveredByTheTextHackScan() {
+        // The SQL phrase match finds nothing for a misspelling; the scan does.
+        Document policy = doc(9, "Leave Policy Update", "Changes to leave policy");
+        scanReturns(policy);
+
+        SearchResponse response = searchService.search(request("levae policy", null));
+
+        assertEquals(List.of("KEYWORD"), response.getSources());
+        assertEquals(1, response.getTotalHits());
+        SearchHit hit = response.getHits().get(0);
+        assertEquals(9, hit.getDocumentId());
+        assertEquals(Set.of("KEYWORD", "FUZZY"), hit.getMatchedBy());
+        assertTrue(hit.getKeywordScore() >= LexicalScorer.MIN_SCAN_SCORE);
+    }
+
+    @Test
+    void reorderedTermsAreRecoveredWithoutBeingMarkedFuzzy() {
+        Document policy = doc(9, "Leave Policy Update", "Changes to leave policy");
+        scanReturns(policy);
+
+        SearchResponse response = searchService.search(request("policy leave", null));
+
+        SearchHit hit = response.getHits().get(0);
+        assertEquals(Set.of("KEYWORD"), hit.getMatchedBy());
+        assertEquals(LexicalScorer.COVERAGE_CEILING, hit.getKeywordScore(), 1e-9);
+    }
+
+    @Test
+    void documentFoundByBothKeywordPathsIsCountedOnceAtItsPhraseScore() {
+        Document policy = doc(9, "Leave Policy", "x");
+        keywordReturns(policy);
+        scanReturns(policy);
+
+        SearchResponse response = searchService.search(request("leave policy", null));
+
+        assertEquals(1, response.getTotalHits());
+        assertEquals(1.0, response.getHits().get(0).getScore(), 1e-9);
+    }
+
+    @Test
+    void weakScanMatchesAreNotHits() {
+        // One of three terms is below the inclusion threshold.
+        Document notes = doc(3, "Update Notes", "general notes");
+        scanReturns(notes);
+
+        SearchResponse response = searchService.search(request("leave policy update", null));
+
+        assertEquals(0, response.getTotalHits());
+    }
+
+    @Test
+    void scanHitsAreStillPermissionFiltered() {
+        Document policy = doc(9, "Leave Policy Update", "x");
+        scanReturns(policy);
+        readable = Set.of();
+
+        SearchResponse response = searchService.search(request("levae policy", null));
+
+        assertEquals(0, response.getTotalHits());
     }
 }

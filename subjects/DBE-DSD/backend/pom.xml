@@ -131,6 +131,41 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!-- Phase 1.7C: compile the DSA-3 TextHack engine into the backend.
+			     TextHack stays a plain-javac subject with its own test runner; the
+			     backend compiles the same sources rather than a copy, so the search
+			     path runs exactly the algorithms DSA-3 verifies. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.6.0</version>
+				<executions>
+					<execution>
+						<id>add-texthack-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${project.basedir}/../../DSA-3</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<!-- The DSA-3 root also holds its own tests, benchmarks and examples
+					     packages. Only the texthack engine belongs in the application. -->
+					<includes>
+						<include>com/eip/**/*.java</include>
+						<include>texthack/**/*.java</include>
+					</includes>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>

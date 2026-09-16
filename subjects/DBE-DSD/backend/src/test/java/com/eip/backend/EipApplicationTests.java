@@ -587,4 +587,70 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.hits[0].documentId").value(7))
                 .andExpect(jsonPath("$.hits[0].owner").value("alice_mgr"));
     }
+
+    // ---------------------------------------------------------
+    // PHASE 1.7C TEXTHACK LEXICAL SEARCH TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    void testTextHackRecoversTypoInQuery() throws Exception {
+        // "Finacial" is one deletion from "Financial". PostgreSQL ILIKE cannot see
+        // it; the TextHack scan can, and marks the hit as fuzzy.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Finacial", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("KEYWORD")))
+                .andExpect(jsonPath("$.totalHits").value(1))
+                .andExpect(jsonPath("$.hits[0].documentId").value(2))
+                .andExpect(jsonPath("$.hits[0].matchedBy", hasItems("KEYWORD", "FUZZY")));
+    }
+
+    @Test
+    void testTextHackRecoversReorderedTerms() throws Exception {
+        // Document 9 is "Leave Policy Update"; the reordered phrase is not a
+        // substring of anything, so only term matching can find it.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("policy leave", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(1))
+                .andExpect(jsonPath("$.hits[0].documentId").value(9))
+                .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")));
+    }
+
+    @Test
+    void testTextHackExactTitlePhraseStillScoresOne() throws Exception {
+        // 1.7C must not demote an exact title match below the top of the range.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Leave Policy", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].documentId").value(9))
+                .andExpect(jsonPath("$.hits[0].score").value(1.0))
+                .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")));
+    }
+
+    @Test
+    void testTextHackDoesNotFuzzShortTerms() throws Exception {
+        // "nba" is one edit from "nda" (document 10), but three-letter terms get no
+        // typo tolerance, so this must not match.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("nba", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(0));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackFuzzyHitsAreStillPermissionFiltered() throws Exception {
+        // The scan sees every document; the permission filter still decides what
+        // the caller receives.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch("Finacial", null, null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(0));
+    }
 }

@@ -45,4 +45,24 @@ public interface DocumentRepository extends JpaRepository<Document, Integer> {
                                    @Param("category") String category,
                                    @Param("status") String status,
                                    Pageable pageable);
+
+    /**
+     * Candidates for the Phase 1.7C TextHack lexical scan: every document passing
+     * the category and status filters, in a stable order.
+     *
+     * <p>The category is joined explicitly with {@code left join}. Writing
+     * {@code d.category.name} in the where clause instead would be an implicit
+     * inner join, silently excluding documents that have no category at all --
+     * even when no category filter was requested.
+     */
+    @Query("""
+        select d from Document d
+        left join d.category c
+        where (:category = '' or c.name = :category)
+          and (:status = '' or d.status = :status)
+        order by d.id
+        """)
+    List<Document> findForLexicalScan(@Param("category") String category,
+                                      @Param("status") String status,
+                                      Pageable pageable);
 }
