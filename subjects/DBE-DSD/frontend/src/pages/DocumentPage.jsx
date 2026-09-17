@@ -5,7 +5,14 @@ import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
 import AccessPanel from '../components/AccessPanel.jsx';
-import { CategoryTag, FileBadge, formatDateTime, StatusPill } from '../components/DocumentBits.jsx';
+import {
+  CategoryTag,
+  FileBadge,
+  fileTypeLabel,
+  formatDateTime,
+  humanize,
+  StatusPill,
+} from '../components/DocumentBits.jsx';
 import { AlertIcon } from '../components/icons.jsx';
 import { relativeTime } from './dashboardData.js';
 
@@ -91,11 +98,11 @@ export default function DocumentPage() {
         </p>
       )}
 
-      <header className="glass-panel section doc-header">
+      <header className="doc-header">
         <FileBadge type={doc.documentType} />
         <div className="doc-header__text">
           <h1 className="page-title">{doc.title}</h1>
-          {doc.description && <p className="muted">{doc.description}</p>}
+          {doc.description && <p className="page-subtitle">{doc.description}</p>}
           <p className="doc-header__meta">
             <CategoryTag category={doc.category} />
             <StatusPill status={doc.status} />
@@ -129,7 +136,7 @@ export default function DocumentPage() {
 
           <section className="glass-panel section" aria-labelledby="chunks-title">
             <h2 id="chunks-title" className="section__title">
-              Chunks <span className="muted">({chunks.length})</span>
+              Chunks <span className="section__count">{chunks.length}</span>
             </h2>
             {chunks.length === 0 ? (
               <p className="muted">This document has not been split into chunks.</p>
@@ -156,33 +163,32 @@ export default function DocumentPage() {
             <AccessPanel documentId={doc.id} owner={doc.owner} />
           )}
           <DetailPanel
-            title="Source"
-            rows={[
-              ['File', doc.source?.filename],
-              ['Type', doc.source?.mimeType],
-              ['Storage', doc.source?.storageType],
-              ['Reference', doc.source?.storageReference],
-            ]}
-          />
-          <DetailPanel
-            title="Processing"
-            rows={[
-              ['Status', doc.processing?.status],
-              ['Processed', doc.processing?.processedAt && formatDateTime(doc.processing.processedAt)],
-              ['Extractor', doc.processing?.extractorVersion],
-              ['Chunker', doc.processing?.chunkerVersion],
-            ]}
-          />
-          <DetailPanel
-            title="Version"
-            rows={[
-              ['Number', doc.version?.number],
-              ['Change', doc.version?.changeSummary],
-              ['Created', formatDateTime(doc.createdAt)],
+            title="Details"
+            groups={[
+              [
+                ['File', doc.source?.filename],
+                ['Type', doc.source?.mimeType && <span title={doc.source.mimeType}>{fileTypeLabel(doc.source.mimeType)}</span>],
+                ['Storage', doc.source?.storageType],
+                ['Location', doc.source?.storageReference && <code className="detail-code">{doc.source.storageReference}</code>],
+              ],
+              [
+                ['Processing', humanize(doc.processing?.status)],
+                ['Processed', doc.processing?.processedAt && formatDateTime(doc.processing.processedAt)],
+                ['Extractor', doc.processing?.extractorVersion],
+                ['Chunker', doc.processing?.chunkerVersion],
+              ],
+              [
+                ['Version', doc.version?.number],
+                ['Change', doc.version?.changeSummary],
+                ['Created', formatDateTime(doc.createdAt)],
+              ],
             ]}
           />
           {metadata.length > 0 && (
-            <DetailPanel title="Metadata" rows={metadata.map(([key, value]) => [key, formatValue(value)])} />
+            <DetailPanel
+              title="Metadata"
+              groups={[metadata.map(([key, value]) => [humanize(key), formatValue(value)])]}
+            />
           )}
           {(doc.references ?? []).length > 0 && (
             <section className="glass-panel section" aria-labelledby="references-title">
@@ -257,21 +263,24 @@ function DeleteDocument({ id, title }) {
   );
 }
 
-function DetailPanel({ title, rows }) {
+/** Label and value rows, in groups separated by a rule. */
+function DetailPanel({ title, groups }) {
   const id = `detail-${title.toLowerCase()}`;
   return (
     <section className="glass-panel section" aria-labelledby={id}>
       <h2 id={id} className="section__title">
         {title}
       </h2>
-      <dl className="detail-list">
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value === null || value === undefined || value === '' ? '—' : value}</dd>
-          </div>
-        ))}
-      </dl>
+      {groups.map((rows, index) => (
+        <dl key={index} className="detail-list">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value === null || value === undefined || value === '' ? '—' : value}</dd>
+            </div>
+          ))}
+        </dl>
+      ))}
     </section>
   );
 }

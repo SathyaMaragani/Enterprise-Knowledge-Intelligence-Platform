@@ -56,7 +56,7 @@ export default function AccessPanel({ documentId, owner }) {
           {grants.error.message}
         </p>
       )}
-      {grants.data && grants.data.length === 0 && <p className="muted">No one else has been given access.</p>}
+      {grants.data && grants.data.length === 0 && <p className="muted access-empty">No one else has been given access.</p>}
       {grants.data && grants.data.length > 0 && (
         <ul className="grant-list">
           {grants.data.map((item) => (

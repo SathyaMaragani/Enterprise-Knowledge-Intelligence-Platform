@@ -86,8 +86,9 @@ describe('search page', () => {
     expect(within(item).getByText('Fuzzy')).toBeTruthy();
     expect(within(item).getByText('Indexed')).toBeTruthy();
     expect(within(item).getByText('Owner: alice_mgr')).toBeTruthy();
-    expect(within(item).getByText('Keyword: 63%')).toBeTruthy();
-    expect(within(item).getByText('Semantic: —')).toBeTruthy();
+    expect(within(item).getByText('63%')).toBeTruthy();
+    // Internal scoring detail (raw cosine, chunk ids) is not shown to users.
+    expect(within(item).queryByText(/Best chunk|Semantic: /)).toBeNull();
 
     expect(screen.getByRole('radio', { name: /^Hybrid/ }).checked).toBe(true);
     expect(screen.getByText(/Semantic search is unavailable right now/)).toBeTruthy();

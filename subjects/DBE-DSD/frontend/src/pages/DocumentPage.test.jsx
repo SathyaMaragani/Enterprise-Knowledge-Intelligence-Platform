@@ -72,7 +72,7 @@ describe('document viewer', () => {
     expect(within(items[1]).getByText('6 tokens')).toBeTruthy();
 
     expect(screen.getByText('arch_v2.md')).toBeTruthy();
-    expect(screen.getByText('COMPLETED')).toBeTruthy();
+    expect(screen.getByText('Completed')).toBeTruthy();
     expect(screen.getByText('Added DB details')).toBeTruthy();
     expect(screen.getByText('Bob Engineer')).toBeTruthy();
     expect(screen.getByText('Kafka docs')).toBeTruthy();

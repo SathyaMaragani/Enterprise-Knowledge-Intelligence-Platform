@@ -63,7 +63,10 @@ export function KeywordFallbackNotice({ mode, sources }) {
 
 const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
 
-/** Ranked hits, each linking to the document viewer. `detailed` adds per-signal scores. */
+/**
+ * Ranked hits, each linking to the document viewer: what the document is, how it
+ * matched and how relevant it is. `detailed` adds the status and owner.
+ */
 export function SearchHitList({ hits, detailed = false }) {
   return (
     <ol className="hit-list">
@@ -77,23 +80,18 @@ export function SearchHitList({ hits, detailed = false }) {
             <p className="hit__meta">
               {hit.category && <CategoryTag category={hit.category} />}
               {detailed && hit.status && <StatusPill status={hit.status} />}
-              {(hit.matchedBy ?? []).map((signal) => (
-                <span key={signal} className={`match match--${signal.toLowerCase()}`}>
-                  {MATCH_LABELS[signal] ?? signal}
-                </span>
-              ))}
+              {detailed && hit.owner && <span className="hit__owner">Owner: {hit.owner}</span>}
+              <span className="hit__signals" aria-label="Matched by">
+                {(hit.matchedBy ?? []).map((signal) => (
+                  <span key={signal} className={`signal signal--${signal.toLowerCase()}`}>
+                    {MATCH_LABELS[signal] ?? signal}
+                  </span>
+                ))}
+              </span>
             </p>
-            {detailed && (
-              <p className="hit__details">
-                {hit.owner && <span>Owner: {hit.owner}</span>}
-                <span>Keyword: {hit.keywordScore == null ? '—' : percent(hit.keywordScore)}</span>
-                <span>Semantic: {hit.vectorScore == null ? '—' : hit.vectorScore.toFixed(2)}</span>
-                {hit.chunkId && <span>Best chunk: {hit.chunkId}</span>}
-              </p>
-            )}
           </div>
           <div className="hit__score" title="Relevance">
-            <span>{percent(hit.score)}</span>
+            <span className="hit__score-value">{percent(hit.score)}</span>
             <span className="score-bar">
               <span style={{ width: percent(hit.score) }} />
             </span>
