@@ -54,13 +54,12 @@ export default function RepositoryPage() {
     <div className="page">
       <header className="page-header page-header--with-action">
         <div>
-          <p className="eyebrow eyebrow--spaced">Repository</p>
           <h1 className="page-title">Documents</h1>
-          <p className="muted">Every document you can read, newest change first.</p>
+          <p className="page-subtitle">Every document you can read, newest change first.</p>
         </div>
         {can(profile, 'DOCUMENT_CREATE') && (
-          <Link className="btn btn--primary btn--small" to="/upload">
-            <UploadIcon size={18} />
+          <Link className="btn btn--primary" to="/upload">
+            <UploadIcon size={16} />
             Upload document
           </Link>
         )}

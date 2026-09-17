@@ -66,7 +66,6 @@ export default function UploadPage() {
     return (
       <div className="page">
         <header className="page-header">
-          <p className="eyebrow eyebrow--spaced">Upload</p>
           <h1 className="page-title">Upload a document</h1>
         </header>
         <p className="form-error" role="alert">
@@ -116,9 +115,8 @@ export default function UploadPage() {
         ← Repository
       </Link>
       <header className="page-header">
-        <p className="eyebrow eyebrow--spaced">Upload</p>
         <h1 className="page-title">Upload a document</h1>
-        <p className="muted">
+        <p className="page-subtitle">
           Plain text or Markdown, up to 1 MB. The text is stored, split into chunks and, when semantic search is
           available, embedded so it can be found by meaning.
         </p>

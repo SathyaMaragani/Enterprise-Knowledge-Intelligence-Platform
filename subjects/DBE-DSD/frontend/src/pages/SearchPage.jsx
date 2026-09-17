@@ -79,9 +79,8 @@ export default function SearchPage() {
   return (
     <div className="page">
       <header className="page-header">
-        <p className="eyebrow eyebrow--spaced">Search</p>
         <h1 className="page-title">Search the knowledge base</h1>
-        <p className="muted">Keyword, fuzzy and semantic search across every document you can read.</p>
+        <p className="page-subtitle">Keyword, fuzzy and semantic search across every document you can read.</p>
       </header>
 
       <section className="search" aria-label="Search">

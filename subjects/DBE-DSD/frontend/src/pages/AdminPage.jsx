@@ -20,7 +20,6 @@ export default function AdminPage() {
     return (
       <div className="page">
         <header className="page-header">
-          <p className="eyebrow eyebrow--spaced">Administration</p>
           <h1 className="page-title">Users</h1>
         </header>
         <p className="form-error" role="alert">
@@ -44,9 +43,8 @@ function UserAdministration({ currentUsername }) {
   return (
     <div className="page">
       <header className="page-header">
-        <p className="eyebrow eyebrow--spaced">Administration</p>
         <h1 className="page-title">Users</h1>
-        <p className="muted">
+        <p className="page-subtitle">
           Create accounts, set roles, disable access and reset passwords. Disabling an account ends its sessions
           immediately.
         </p>

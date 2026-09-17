@@ -139,8 +139,9 @@ describe('dashboard', () => {
       'Repository',
       'TextHack',
     ]);
-    // Two for everyone; Administration is added only for administrators.
-    expect(within(nav).getAllByText('Soon')).toHaveLength(2);
+    // Unbuilt pages are not advertised in the navigation.
+    expect(within(nav).queryByText('Soon')).toBeNull();
+    expect(within(nav).queryByText('Analytics')).toBeNull();
     // The hero search is the dashboard's search; the top bar does not repeat it.
     expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
 

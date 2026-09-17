@@ -370,11 +370,9 @@ export default function TextHackPage() {
   return (
     <div className="page">
       <header className="page-header">
-        <p className="eyebrow eyebrow--spaced">DSA-3 · TextHack</p>
-        <h1 className="page-title">Algorithm workbench</h1>
-        <p className="muted">
-          Run the TextHack engine on your own input. The same engine scores keyword and fuzzy search. Everything here
-          is computed on the server, from scratch, without library algorithms.
+        <h1 className="page-title">TextHack workbench</h1>
+        <p className="page-subtitle">
+          Run the DSA-3 text algorithms on your own input. The same engine scores keyword and fuzzy search.
         </p>
       </header>
       <PatternDemo />
