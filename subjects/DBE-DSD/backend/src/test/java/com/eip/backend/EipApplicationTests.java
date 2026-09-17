@@ -747,6 +747,43 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // DEPLOYMENT STARTUP TESTS
+    // ---------------------------------------------------------
+
+    @Autowired
+    private io.qdrant.client.QdrantClient qdrantClient;
+
+    @Test
+    void testEnsureCollectionCreatesAMissingCollectionOnce() throws Exception {
+        // A throwaway collection name, so the seeded knowledge_chunks is untouched.
+        String name = "eip_init_test_" + System.nanoTime();
+        QdrantService fresh = new QdrantService(qdrantClient);
+        org.springframework.test.util.ReflectionTestUtils.setField(fresh, "collectionName", name);
+        org.springframework.test.util.ReflectionTestUtils.setField(fresh, "vectorDimension", 384);
+        try {
+            assertFalse(fresh.collectionExists());
+            assertTrue(fresh.ensureCollection());
+            assertTrue(fresh.collectionExists());
+            assertFalse(fresh.ensureCollection(), "a second call must not recreate the collection");
+
+            var info = fresh.getCollectionInfo();
+            assertEquals(java.util.Set.of("postgres_document_id", "category", "department", "processing_status"),
+                         info.getPayloadSchemaMap().keySet());
+            assertEquals(384, info.getConfig().getParams().getVectorsConfig().getParams().getSize());
+            assertEquals(io.qdrant.client.grpc.Collections.Distance.Cosine,
+                         info.getConfig().getParams().getVectorsConfig().getParams().getDistance());
+        } finally {
+            qdrantClient.deleteCollectionAsync(name).get();
+        }
+    }
+
+    @Test
+    void testEnsureCollectionLeavesTheSeededCollectionAlone() {
+        assertFalse(qdrantService.ensureCollection());
+        assertTrue(qdrantService.getCollectionInfo().getPointsCount() >= 30);
+    }
+
+    // ---------------------------------------------------------
     // USER ADMINISTRATION AND DOCUMENT GRANT TESTS
     // ---------------------------------------------------------
     // Tests that create users or grants remove them again. Requests that must run

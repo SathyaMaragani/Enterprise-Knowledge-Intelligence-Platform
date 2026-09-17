@@ -8,4 +8,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByEmail(String email);
     Optional<User> findByUsername(String username);
     List<User> findByIsActive(Boolean isActive);
+
+    /** Whether any account holds the named role. */
+    boolean existsByRoles_Name(String roleName);
 }

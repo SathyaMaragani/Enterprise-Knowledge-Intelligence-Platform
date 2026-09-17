@@ -1,0 +1,5 @@
+# The context is all of subjects/; send only what the Dockerfile copies.
+*
+!DSA-3/texthack
+!DBE-DSD/backend/pom.xml
+!DBE-DSD/backend/src

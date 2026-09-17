@@ -1,0 +1,125 @@
+# Full application stack: PostgreSQL, MongoDB, Qdrant, the Spring Boot backend
+# and the React frontend behind nginx. Only the frontend publishes a port; the
+# browser reaches the API through it at /api.
+#
+#   cp .env.example .env    # then fill in every secret
+#   docker compose up -d --build --wait
+#
+# The databases start empty apart from reference data (roles, permissions,
+# categories). The first administrator comes from BOOTSTRAP_ADMIN_*. See README.md.
+
+name: eip
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_DB: eip_db
+      POSTGRES_USER: eip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in docker/.env}
+    volumes:
+      - ../database/postgresql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../database/postgresql/reference-data.sql:/docker-entrypoint-initdb.d/02-reference-data.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Over TCP: the temporary server that runs the init scripts listens only on
+      # the socket, so this cannot go green before reference data is loaded.
+      test: ["CMD-SHELL", "PGPASSWORD=\"$$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U eip -d eip_db -tAc 'select count(*) from categories' | grep -qv '^0$$'"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0.14
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: eip
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD in docker/.env}
+      MONGO_INITDB_DATABASE: eip_doc_db
+    volumes:
+      - ../database/mongodb/schemas/knowledge_documents_schema.js:/docker-entrypoint-initdb.d/01-schema.js:ro
+      - ../database/mongodb/indexes/knowledge_documents_indexes.js:/docker-entrypoint-initdb.d/02-indexes.js:ro
+      - mongodb_data:/data/db
+    healthcheck:
+      # The index script is the last init step; all its indexes plus _id means done.
+      test: ["CMD-SHELL", "mongosh --quiet -u eip -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin eip_doc_db --eval 'quit(db.knowledge_documents.getIndexes().length >= 10 ? 0 : 1)'"]
+      interval: 3s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      # No curl or wget in the image; bash's /dev/tcp confirms the port accepts.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: DBE-DSD/backend/Dockerfile
+    image: eip-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: eip_db
+      DB_USERNAME: eip
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_USERNAME: eip
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6334
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in docker/.env}
+      SPRING_JPA_SHOW_SQL: "false"
+      EMBEDDING_ENABLED: ${EMBEDDING_ENABLED:-true}
+      EMBEDDING_MODELPATH: /models/minilm/onnx/model.onnx
+      EMBEDDING_TOKENIZERPATH: /models/minilm/tokenizer.json
+      EIP_BOOTSTRAPADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      EIP_BOOTSTRAPADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      EIP_BOOTSTRAPADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+    volumes:
+      # The model is not committed: onnx/model.onnx and tokenizer.json from
+      # huggingface.co/sentence-transformers/all-MiniLM-L6-v2 (see README.md).
+      - ${MODEL_DIR:-../../../models/minilm}:/models/minilm:ro
+    # The JVM sizes its heap to 75% of this. Without a limit it sizes to the host,
+    # which starves the databases on a small VM. 1 GB held under a 50-user load test.
+    mem_limit: ${BACKEND_MEMORY:-1g}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /api/health HTTP/1.0\r\n\r\n\" >&3 && head -1 <&3 | grep -q \" 200 \"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build: ../frontend
+    image: eip-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8088}:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  qdrant_data:

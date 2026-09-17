@@ -69,6 +69,42 @@ public class QdrantService {
         }
     }
 
+    /**
+     * Creates the collection, with the payload indexes that search and delete filter
+     * on, when it does not exist yet. A fresh deployment starts with no collection;
+     * an existing one is left untouched.
+     *
+     * @return whether the collection was created
+     */
+    public boolean ensureCollection() {
+        if (collectionExists()) {
+            return false;
+        }
+        try {
+            qdrantClient.createCollectionAsync(collectionName, Collections.VectorParams.newBuilder()
+                    .setSize(vectorDimension)
+                    .setDistance(Collections.Distance.Cosine)
+                    .build()).get(30, TimeUnit.SECONDS);
+            createPayloadIndex("postgres_document_id", Collections.PayloadSchemaType.Integer);
+            createPayloadIndex("category", Collections.PayloadSchemaType.Keyword);
+            createPayloadIndex("department", Collections.PayloadSchemaType.Keyword);
+            createPayloadIndex("processing_status", Collections.PayloadSchemaType.Keyword);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted creating collection", e);
+        } catch (ExecutionException | TimeoutException e) {
+            handleExecutionException("Failed creating collection " + collectionName, e);
+            return false;
+        }
+    }
+
+    private void createPayloadIndex(String field, Collections.PayloadSchemaType type)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        qdrantClient.createPayloadIndexAsync(collectionName, field, type, null, true, null, null)
+                .get(30, TimeUnit.SECONDS);
+    }
+
     public Collections.CollectionInfo getCollectionInfo() {
         try {
             return qdrantClient.getCollectionInfoAsync(collectionName).get(5, TimeUnit.SECONDS);

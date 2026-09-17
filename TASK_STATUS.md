@@ -595,11 +595,13 @@ Current state:
 * [x] Dockerize PostgreSQL (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
 * [x] Dockerize MongoDB (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
 * [x] Dockerize Qdrant (`docker-compose.yml`, `docker-compose.test.yml`, `docker-compose.demo.yml`)
-* [ ] Dockerize Spring Boot
+* [x] Dockerize Spring Boot (`backend/Dockerfile`, non-root, Temurin 21 JRE)
 * [x] Embed ML model directly in backend (Java ONNX eliminates need for separate Python ML daemon)
-* [ ] Dockerize frontend
+* [x] Dockerize frontend (`frontend/Dockerfile`, nginx serves the app and proxies `/api`)
+* [x] Full application stack (`subjects/DBE-DSD/docker/`): reference data only, bootstrap administrator, Qdrant collection created at startup
+* [x] End-to-end smoke test through nginx (`docker/smoke-test.mjs`, 28 checks)
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (146 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (153 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
 * [x] `/api/admin/users` and `/api/admin/roles`; disabling an account rejects its existing tokens
 * [x] `/api/documents/{id}/permissions`: list, grant READ, revoke
 * [x] `POST /api/documents`: upload to PostgreSQL, MongoDB (chunked) and Qdrant (embedded), with rollback
@@ -611,10 +613,11 @@ Current state:
 * [x] `GET /api/categories`
 * [x] Unified search enforces `status` on vector hits and drops hits for documents missing from PostgreSQL
 * [x] API tests (REST controllers verified)
-* [ ] Load testing
+* [x] Load testing (`docker/load-test.mjs`: 169 req/s at 50 users, 0 errors, backend capped at 1 GB)
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)
-* [ ] Performance benchmarking
-* [x] Deployment documentation (`QDRANT_INTEGRATION.md`, compose docs)
+* [x] Performance profiling under load (JWT parser rebuilt per request fixed, +19–22%; query embedding is the CPU ceiling)
+* [x] Deployment documentation (`docker/README.md`, `QDRANT_INTEGRATION.md`, compose docs)
+* [ ] Public free-tier hosting (options documented in `docker/README.md`; needs accounts)
 
 ---
 
@@ -645,10 +648,11 @@ A comprehensive **development-status view** right now:
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
 | Product UI: sign-in + dashboard | 🟢 Verified |
-| Repository/Search/Admin pages | 🔴 Pending    |
+| Repository/Search/Admin pages | 🟢 Verified   |
 | Document upload and delete    | 🟢 Verified   |
 | Administration and access     | 🟢 Verified   |
-| Deployment (Containers)       | 🟡 Partial    |
+| Deployment (Containers)       | 🟢 Verified   |
+| Public hosting                | 🔴 Pending    |
 
 ## The important thing
 
@@ -670,12 +674,14 @@ DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
 OSSP: Weeks 1–6 ShellForge (REPL, Input, Parser, Processes, Built-ins, Pipes/IPC)
 DBE: React shell + JWT authentication (Frontend 1)
 DBE: Product UI — sign-in and live-data dashboard with threeui scenes
+DBE: Repository, document viewer, search, upload/delete and administration pages
+DBE: Full-stack Docker deployment, smoke and load tested
 
 REMAINING:
-Frontend: Document repository, full search page, admin/ML/TextHack views
+Frontend: ML insights and TextHack views
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads
-Deployment: Dockerize Spring Boot and frontend, load and performance testing
+Deployment: public free-tier hosting (needs accounts)
 ```
 
-For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–6 and all 20 DSA-3 algorithms verified. The backend has no write path yet: documents cannot be uploaded, edited or deleted through the API.
+For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–6 and all 20 DSA-3 algorithms verified. Documents can be uploaded and deleted through the API and UI, and the whole stack runs from one Compose file.

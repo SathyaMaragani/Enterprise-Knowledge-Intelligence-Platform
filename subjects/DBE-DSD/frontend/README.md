@@ -43,6 +43,10 @@ $env:API_TARGET="http://localhost:8081"; npm run dev
 
 Any seeded account works, for example `admin_user` on the test stack.
 
+For production, `Dockerfile` builds the app and serves it with nginx, which also
+proxies `/api` to the backend (`BACKEND_URL`, default `http://backend:8080`).
+`../docker/README.md` runs it together with the backend and databases.
+
 ## Test and build
 
 ```bash

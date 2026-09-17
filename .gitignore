@@ -26,3 +26,6 @@ target/
 # Downloaded Models
 models/
 
+
+# Deployment secrets
+.env

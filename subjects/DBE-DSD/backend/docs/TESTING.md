@@ -8,6 +8,7 @@ The backend suite is split in two:
 | Unit | `LexicalScorerTest` | No — the TextHack keyword scorer, pure functions. |
 | Unit | `TextChunkerTest` | No — word-window chunking for uploads. |
 | Unit | `DocumentIngestionServiceTest` | No — upload rollback across the three stores, against stubs. |
+| Unit | `BootstrapAdminTest` | No — first-administrator creation rules, against stubs. |
 | Unit | `MiniLmOnnxEncoderTest` | No — but needs the ONNX model under `models/minilm/`. |
 | Integration | `EipApplicationTests` | Yes — the test stack below, seeded. |
 | Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). Uploads, embeds and deletes one document, leaving the stack as it was. |
@@ -25,6 +26,9 @@ sed -n '/^INSERT INTO permissions/,/^-- Users/p' subjects/DBE-DSD/database/demo/
 
 Running `./mvnw test` runs all of them. The integration tests will fail without
 their stacks, so start them first.
+
+The deployed stack, meaning the built images behind nginx, is verified separately by
+`docker/smoke-test.mjs` and `docker/load-test.mjs`. See `../../docker/README.md`.
 
 The backend also compiles the DSA-3 TextHack engine (`subjects/DSA-3/texthack`)
 as a second source root, so the DSA-3 directory must be present. That step uses
@@ -153,15 +157,16 @@ is public in the repository. To run the application (not the tests), copy
 ### Expected result
 
 ```
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.config.BootstrapAdminTest
 Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
-Tests run: 91, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 92, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.DocumentIngestionServiceTest
 Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
 Tests run: 19, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.TextChunkerTest
 
-Tests run: 146, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 153, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

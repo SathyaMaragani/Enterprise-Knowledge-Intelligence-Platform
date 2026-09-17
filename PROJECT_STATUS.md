@@ -476,6 +476,58 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Deployment: Containers, Smoke and Load Testing
+**Status: VERIFIED locally; public hosting not done**
+(Full stack built and run from `subjects/DBE-DSD/docker/` on fresh volumes; smoke
+test and load tests through nginx; backend suite against the test and demo stacks.)
+
+```
+Backend   Tests run: 153, Failures: 0, Errors: 0, Skipped: 0   (7 new)
+Smoke     28/28 checks passed through http://localhost:8088
+Load      50 users, 30 s: 169 req/s, 0 errors, backend capped at 1 GB
+```
+
+- [x] `backend/Dockerfile`: Maven build with a context of `subjects/`, because
+      TextHack compiles from `DSA-3`. Runs as non-root on the Temurin 21 JRE; glibc
+      is needed for ONNX Runtime.
+- [x] `frontend/Dockerfile`: Vite build served by nginx. `/api` is proxied, so
+      there is one origin and no CORS. Includes SPA fallback, immutable caching for
+      hashed assets, and gzip.
+- [x] `docker/docker-compose.yml`:
+  - Only the web port is published.
+  - Secrets are required, with no defaults.
+  - Healthchecks cannot pass before the init scripts finish.
+  - The backend memory cap defaults to 1 GB.
+- [x] `database/postgresql/reference-data.sql`: roles, permissions and categories
+      only, with no users. It is idempotent.
+- [x] `BootstrapAdmin`: creates the first administrator from configuration, only
+      while no ADMIN account exists, and refuses unusable settings.
+- [x] `QdrantCollectionInitializer`: creates the collection and payload indexes on
+      startup if they are missing. A Qdrant outage is logged, not fatal.
+- [x] `docker/smoke-test.mjs` and `docker/load-test.mjs`: Node, no dependencies.
+- [x] `docker/README.md`: configuration, verification results, operation,
+      backups, HTTPS, and free-tier options.
+- [ ] Public free-tier hosting. It needs the owner's accounts; the options are
+      documented, and the managed-database path was not run.
+
+**Found by the load test, and fixed:** `JwtService` built a new JJWT parser for
+every token check, about three per request. In the packaged jar each build's
+ServiceLoader lookup scans nested jars under one lock. Thread dumps showed
+request threads queued there. The parser is now built once at startup. Uncapped
+throughput rose from 141 to 167 req/s at 20 users and from 149 to 181 req/s at
+50. The test suite cannot see this because it does not run from the fat jar.
+
+**Remaining ceiling, recorded rather than changed:** query embedding. At 50 users
+the backend used about 14.6 of 16 cores, and most runnable request threads were
+in ONNX Runtime. Latency grows with users while throughput stays flat. The
+upgrade paths are listed in `docker/README.md`.
+
+**Also verified:**
+- A backend restart with data in place skipped the bootstrap administrator and
+  left the collection alone.
+- With a 1 GB cap, the backend peaked at 851 MiB with no OOM kill.
+- `pg_dump` and `mongodump` backups ran (60 of 60 documents dumped).
+
 ## User Administration and Document Access
 **Status: VERIFIED**
 (Backend suite against the live stacks; frontend tests and build; account
