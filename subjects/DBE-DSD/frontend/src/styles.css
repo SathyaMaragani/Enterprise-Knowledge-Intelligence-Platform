@@ -602,151 +602,56 @@ label {
   background: currentColor;
 }
 
-.login-hero .login-hero__stack {
+.login-hero .login-hero__graph {
   position: absolute;
-  top: 15%;
-  right: 5%;
-  width: min(30rem, 44%);
+  top: 14%;
+  right: 1.5%;
+  /* The space right of the 34rem text column, so nodes never sit on the copy. */
+  width: clamp(17rem, calc(100% - 39rem), 36rem);
+  pointer-events: none;
 }
 
-/* Glass slab stack */
+/* Knowledge graph */
 
-.glass-stack {
-  position: relative;
-  aspect-ratio: 420 / 600;
-  perspective: 1600px;
+.knowledge-graph {
+  margin: 0;
 }
 
-.glass-stack__orbits {
-  position: absolute;
-  inset: -4% -8%;
-  width: 116%;
-  height: 108%;
-  overflow: visible;
+.knowledge-graph__canvas,
+.knowledge-graph__still {
+  display: block;
+  width: 100%;
+  aspect-ratio: 6 / 5;
 }
 
-.orbit-dot {
-  fill: #93c5fd;
-  filter: drop-shadow(0 0 6px #60a5fa);
+.knowledge-graph__canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.slab {
-  --w: 64%;
-  --tone: 96, 130, 255;
-  position: absolute;
-  left: calc(8% + var(--i) * 6%);
-  top: calc(8% + var(--i) * 20%);
-  width: var(--w);
-  aspect-ratio: 230 / 110;
-  transform-style: preserve-3d;
-  transform: rotateX(-18deg) rotateY(-30deg) rotateZ(-6deg);
-  animation: slab-float 6s ease-in-out infinite;
-  animation-delay: calc(var(--i) * -1.2s);
-}
-
-.slab--blue {
-  --tone: 88, 132, 255;
-}
-
-.slab--cyan {
-  --tone: 56, 189, 248;
-}
-
-.slab--indigo {
-  --tone: 110, 110, 255;
-}
-
-.slab--violet {
-  --tone: 190, 110, 255;
-}
-
-.slab__face {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background: linear-gradient(135deg, rgba(var(--tone), 0.62), rgba(var(--tone), 0.2));
-  box-shadow:
-    inset 0 0 28px rgba(255, 255, 255, 0.16),
-    0 0 36px rgba(var(--tone), 0.35);
-}
-
-/* A box of the slab's width and height with depth --d: each face is centred on
-   the edge it covers, then turned 90 degrees into place. */
-.slab {
-  --d: 4.6rem;
-}
-
-.slab__face--front {
-  inset: 0;
-  transform: translateZ(calc(var(--d) / 2));
-  border-radius: 14px;
+.knowledge-graph__legend {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  color: #f1f5ff;
-  font-size: clamp(0.95rem, 1.3vw, 1.2rem);
-  font-weight: 500;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
-}
-
-.slab__face--top {
-  left: 0;
-  right: 0;
-  top: calc(var(--d) / -2);
-  height: var(--d);
-  transform: rotateX(90deg);
-  opacity: 0.8;
-}
-
-.slab__face--side {
-  top: 0;
-  bottom: 0;
-  left: calc(100% - var(--d) / 2);
-  width: var(--d);
-  transform: rotateY(90deg);
-  opacity: 0.7;
-}
-
-.orbit-label {
-  position: absolute;
+  gap: 1.4rem;
+  margin-top: 0.4rem;
   font-size: 0.72rem;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  line-height: 1.6;
-  color: #d4dcf0;
+  color: #cbd5f5;
 }
 
-.orbit-label--search {
-  top: 0;
-  left: 6%;
+.knowledge-graph__legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.orbit-label--connect {
-  top: 24%;
-  right: -4%;
-  text-align: center;
-}
-
-.orbit-label--unlock {
-  top: 56%;
-  left: -10%;
-}
-
-.orbit-label--build {
-  bottom: 0;
-  right: 4%;
-  text-align: center;
-}
-
-@keyframes slab-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -10px;
-  }
+.knowledge-graph__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
 }
 
 /* Sign-in panel */
@@ -1848,6 +1753,20 @@ label {
    Responsive
    ========================================================================== */
 
+@media (max-width: 1399px) {
+  /* No free column beside the copy: the graph becomes a dimmed backdrop behind it. */
+  .login-hero .login-hero__graph {
+    top: 30%;
+    right: -6%;
+    width: 64%;
+    opacity: 0.4;
+  }
+
+  .knowledge-graph__legend {
+    display: none;
+  }
+}
+
 @media (max-width: 1320px) {
   .dashboard {
     grid-template-columns: minmax(0, 1fr);
@@ -1973,7 +1892,6 @@ label {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slab,
   .glass-doc {
     animation: none;
   }

@@ -476,6 +476,55 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## UI Gap Closure: Search Modes, Activity, Global Search, Knowledge Graph
+**Status: VERIFIED**
+(Each step has its own commit. Backend suite against the live stacks; frontend
+tests and build; live checks against a running backend; DOM and pixel checks at
+1920, 1440, 1280 and 375px.)
+
+```
+Backend   Tests run: 179, Failures: 0, Errors: 0, Skipped: 0   (19 new)
+Frontend  Tests  149 passed (149)                                (11 new; 5 removed with searchMode)
+```
+
+1. [x] **3D kept to sign-in.** The dashboard's threeui `nebula` scene is replaced
+       by a CSS glow, so the working pages load no WebGL.
+2. [x] **Global search** in the top bar of every signed-in page except the
+       dashboard and search page, which have their own search bar.
+3. [x] **Selectable search modes.** `POST /api/search` takes `mode`:
+   - `HYBRID` (default, unchanged)
+   - `KEYWORD`: exact terms
+   - `FUZZY`: typo-tolerant keyword search
+   - `SEMANTIC`: 503 when no embedding model is loaded
+
+   In the UI, a radio picker on the search page and dashboard, with the mode in
+   the URL; a Filters toggle; and a notice when Hybrid fell back to keywords.
+4. [x] **Search activity.** First-page searches are recorded, and
+   `GET /api/search/history` returns only the caller's own searches, repeats
+   collapsed, administrators included. Migration `V2` adds `HYBRID` to
+   `search_type`. The dashboard shows a Search Activity panel. Tests delete the
+   history rows they add.
+5. [x] **Knowledge graph** on the sign-in page: a three.js scene (glow nodes,
+       links, labels, travelling pulses, pointer lean). It pauses off screen,
+       falls back to a static SVG, and replaces the CSS glass stack.
+
+**Mutation checks:**
+- Typo tolerance left on in KEYWORD mode failed the unit test.
+- The history query without its per-user filter failed the privacy test,
+  because another user's searches appeared.
+- Dropping the mode from requests failed two UI tests.
+- Leaving out the scene's failure callback failed the fallback test.
+
+**Found while verifying:**
+- The graph first overlapped the 34rem text column at 1440px. Its width is now
+  the free space beside the copy.
+- Below 1400px there is no free space, so the graph is a dimmed backdrop there.
+- The first camera placement let the rotating graph reach the frame edge. Pixel
+  sampling over 30 seconds of rotation now shows no edge contact.
+- The Browser pane runs in the background, where the scene rightly pauses. Its
+  frames were checked through a temporary harness that forced a timer-driven
+  loop.
+
 ## TextHack Workbench (DSA-3 in the Frontend)
 **Status: VERIFIED**
 (Backend suite against the live stacks; frontend tests and build; endpoints

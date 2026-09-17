@@ -69,8 +69,22 @@ with their own search bar.
 
 A two-panel page. The left panel carries the product message over a dusk
 landscape: threeui's `cloud-field` scene (animated sky and drifting cloud ridges)
-behind SVG mountains and a CSS 3D stack of glass slabs. The right panel holds the
-sign-in form.
+behind SVG mountains. Beside the copy is a knowledge graph: topics, the documents
+filed under them, and the people linking documents across topics. The right
+panel holds the sign-in form.
+
+The graph (`KnowledgeGraph.jsx`) is illustrative, since nothing can be fetched
+before sign-in, and generated the same way every visit. With WebGL and motion
+allowed, it is a three.js scene (`KnowledgeGraphScene.jsx`):
+- glowing nodes and faint links
+- topic labels
+- pulses of light travelling along links
+- a slow drift that leans toward the pointer
+
+It stops drawing while off screen or in a background tab. Otherwise, or if the
+scene fails, the same graph shows as a static SVG. Below 1400px wide there is no
+column beside the copy, so the graph becomes a dimmed backdrop behind it. The
+whole left panel is hidden below 1100px.
 
 | Element | Behaviour |
 |---|---|
@@ -228,6 +242,13 @@ its input to `/api/texthack/*` and shows what the engine computed:
 
 Only `PortalFieldCollection` (`cloud-field`, on sign-in) is imported, by subpath.
 It renders a self-contained document with no network requests.
+
+The sign-in knowledge graph follows the same rules through `canRenderScene` and
+`SceneBoundary`, with its static SVG as the fallback. It uses three.js 0.186
+directly, in its own lazy chunk of about 134 kB gzipped. threeui ships its own
+pinned three.js copies, so the two cannot share one. Both load only on the
+sign-in page, and only when a scene will run. 3D is kept to sign-in: the
+dashboard and working pages use CSS and SVG only.
 
 ## How authentication works
 

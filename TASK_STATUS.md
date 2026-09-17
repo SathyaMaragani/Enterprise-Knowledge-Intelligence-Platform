@@ -562,11 +562,13 @@ Current state:
 
 ### Product UI — Sign-in & Dashboard — VERIFIED
 
-* [x] Sign-in page to the product design: dusk hero (threeui `cloud-field`, SVG mountains, CSS 3D glass stack) and sign-in card
+* [x] Sign-in page to the product design: dusk hero (threeui `cloud-field`, SVG mountains) with a 3D knowledge graph (three.js, static SVG fallback) and sign-in card
 * [x] Password show/hide; "Forgot password?" explains admin resets; SSO shown as not configured
 * [x] Dashboard shell: sidebar (unbuilt pages marked "Soon"), account menu with sign-out
-* [x] Dashboard hero with glass documents over threeui `nebula`
-* [x] Dashboard search: `POST /api/search` with category filter, inline results, Keyword/Semantic/Fuzzy match signals, mode chips driven by `sources`
+* [x] Dashboard hero with glass documents over a static CSS glow (3D kept to sign-in so working pages stay fast)
+* [x] Dashboard search: `POST /api/search` with category filter, inline results, Keyword/Semantic/Fuzzy match signals, selectable Hybrid/Semantic/Keyword/Fuzzy modes
+* [x] Global search in the top bar on every other signed-in page
+* [x] Search Activity: each user's own recent searches (`GET /api/search/history`), shown on the dashboard
 * [x] Recent Documents, System Overview and Recent Activity from live API data only
 * [x] threeui scenes load lazily, need WebGL, respect reduced motion, and cannot break the page
 * [x] Responsive down to 375px with no horizontal scroll

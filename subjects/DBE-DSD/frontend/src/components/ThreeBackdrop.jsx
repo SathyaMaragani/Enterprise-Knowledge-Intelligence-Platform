@@ -24,8 +24,8 @@ export function canRenderScene() {
 }
 
 // A decorative scene must never take a page down with it. If WebGL setup throws,
-// the CSS fallback behind the scene simply stays visible.
-class SceneBoundary extends Component {
+// the fallback (by default nothing, leaving the CSS behind the scene) shows instead.
+export class SceneBoundary extends Component {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -33,7 +33,7 @@ class SceneBoundary extends Component {
   }
 
   render() {
-    return this.state.failed ? null : this.props.children;
+    return this.state.failed ? (this.props.fallback ?? null) : this.props.children;
   }
 }
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import BrandMark from '../components/BrandMark.jsx';
-import GlassStack from '../components/GlassStack.jsx';
+import KnowledgeGraph from '../components/KnowledgeGraph.jsx';
 import Mountains from '../components/Mountains.jsx';
 import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
 import {
@@ -116,7 +116,7 @@ export default function LoginPage() {
           </figure>
         </div>
 
-        <GlassStack className="login-hero__stack" />
+        <KnowledgeGraph className="login-hero__graph" />
       </section>
 
       <main className="login-panel">
