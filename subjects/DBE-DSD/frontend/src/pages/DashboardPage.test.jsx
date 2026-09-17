@@ -16,6 +16,7 @@ function renderDashboard(routes) {
   const fetchMock = mockApi({
     'GET /api/documents': jsonResponse(200, DOCUMENTS),
     'GET /api/search/vector/collection-info': jsonResponse(200, { pointsCount: 30 }),
+    'GET /api/search/history?limit=5': jsonResponse(200, []),
     ...routes,
   });
   render(
@@ -91,6 +92,40 @@ describe('dashboard', () => {
     renderDashboard({ 'GET /api/documents': jsonResponse(200, []) });
 
     expect(await screen.findByText(/don’t have access to any documents/)).toBeTruthy();
+  });
+
+  it('lists the user’s own recent searches, each reopening the search', async () => {
+    renderDashboard({
+      'GET /api/search/history?limit=5': jsonResponse(200, [
+        { query: 'vendor contract', mode: 'FUZZY', resultCount: 2, searchedAt: new Date(Date.now() - 5 * 60000).toISOString() },
+        { query: 'leave policy', mode: 'HYBRID', resultCount: 1, searchedAt: new Date(Date.now() - 3600000).toISOString() },
+        { query: 'NDA', mode: 'TEXTHACK', resultCount: 0, searchedAt: '2026-09-01T09:00:00Z' },
+      ]),
+    });
+
+    const list = await screen.findByRole('list', { name: 'Your recent searches' });
+    const items = within(list).getAllByRole('listitem');
+    expect(within(items[0]).getByRole('link', { name: 'vendor contract' }).getAttribute('href')).toBe(
+      '/search?q=vendor+contract&mode=fuzzy',
+    );
+    expect(within(items[0]).getByText('Fuzzy · 2 results')).toBeTruthy();
+    expect(within(items[0]).getByText('5 minutes ago')).toBeTruthy();
+    expect(within(items[1]).getByRole('link', { name: 'leave policy' }).getAttribute('href')).toBe('/search?q=leave+policy');
+    expect(within(items[1]).getByText('Hybrid · 1 result')).toBeTruthy();
+    // Older history from before search modes opens as a hybrid search.
+    expect(within(items[2]).getByRole('link', { name: 'NDA' }).getAttribute('href')).toBe('/search?q=NDA');
+    expect(within(items[2]).getByText('TextHack · 0 results')).toBeTruthy();
+  });
+
+  it('invites a first search when there is no activity', async () => {
+    renderDashboard();
+    expect(await screen.findByText('Your searches will show up here.')).toBeTruthy();
+  });
+
+  it('says when search activity cannot load without disturbing the rest', async () => {
+    renderDashboard({ 'GET /api/search/history?limit=5': jsonResponse(503, { message: 'down' }) });
+    expect(await screen.findByText('Search activity is unavailable.')).toBeTruthy();
+    expect(await screen.findByRole('table')).toBeTruthy();
   });
 
   it('marks unbuilt navigation and actions as coming soon rather than linking nowhere', async () => {
@@ -219,6 +254,10 @@ describe('dashboard search', () => {
     fireEvent.click(screen.getByRole('radio', { name: /^Keyword/ }));
     await vi.waitFor(() => expect(bodies()).toHaveLength(2));
     expect(bodies()[1]).toEqual({ query: 'finacial', mode: 'KEYWORD', page: 0, size: 10 });
+
+    // Each completed search refreshes the activity panel so it appears there straight away.
+    const historyLoads = () => fetchMock.mock.calls.filter(([path]) => path === '/api/search/history?limit=5').length;
+    await vi.waitFor(() => expect(historyLoads()).toBe(3));
   });
 
   it('does not search for a blank query', async () => {

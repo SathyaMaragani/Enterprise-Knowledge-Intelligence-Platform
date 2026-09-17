@@ -6,7 +6,7 @@ This directory contains the PostgreSQL schema definitions, seed data, and testin
 - `schema.sql`: The primary Data Definition Language (DDL) script that creates the 12 core tables.
 - `seed.sql`: Dummy data generation for development.
 - `reference-data.sql`: Roles, permissions and categories only, for a deployed environment (no users; see `../../docker/README.md`).
-- `migrations/`: Holds numbered migration scripts (e.g., `V1__initial_schema.sql`) for future tools like Flyway.
+- `migrations/`: Numbered migration scripts for future tools like Flyway. `V1__initial_schema.sql` is the original schema. `V2__search_history_hybrid.sql` adds `HYBRID` to `search_history.search_type`. `schema.sql` always holds the cumulative result, for new databases.
 - `queries/`: Contains `common_queries.sql` and `reporting_queries.sql` demonstrating the schema's queryability.
 - `tests/`: `schema_tests.sql` containing manual tests to verify referential integrity and constraints.
 - `docs/`: Includes `ERD.md` (Mermaid diagram) and `DATA_DICTIONARY.md`.

@@ -6,7 +6,14 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
 import GlassDocs from '../components/GlassDocs.jsx';
-import { KeywordFallbackNotice, modeParam, SearchHitList, SearchModePicker } from '../components/SearchBits.jsx';
+import {
+  KeywordFallbackNotice,
+  modeLabel,
+  modeParam,
+  parseSearchMode,
+  SearchHitList,
+  SearchModePicker,
+} from '../components/SearchBits.jsx';
 import Mountains from '../components/Mountains.jsx';
 import {
   AlertIcon,
@@ -32,6 +39,7 @@ import {
 export default function DashboardPage() {
   const documents = useApi('/api/documents');
   const collection = useApi('/api/search/vector/collection-info');
+  const searchActivity = useApi('/api/search/history?limit=5');
   const navigate = useNavigate();
   const { profile } = useAuth();
   const canUpload = can(profile, 'DOCUMENT_CREATE');
@@ -58,7 +66,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <SearchPanel categories={categoryNames(docs)} />
+        <SearchPanel categories={categoryNames(docs)} onSearched={searchActivity.reload} />
 
         <section className="glass-panel section" aria-labelledby="quick-actions-title">
           <h2 id="quick-actions-title" className="section__title">
@@ -98,6 +106,7 @@ export default function DashboardPage() {
         </ul>
 
         <SystemOverview documents={documents} collection={collection} />
+        <SearchActivity state={searchActivity} />
         <RecentActivity state={documents} />
 
         <figure className="scenic-card aside__card">
@@ -110,7 +119,7 @@ export default function DashboardPage() {
   );
 }
 
-function SearchPanel({ categories }) {
+function SearchPanel({ categories, onSearched }) {
   const inputRef = useRef(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
@@ -125,6 +134,7 @@ function SearchPanel({ categories }) {
         body: { query: trimmed, mode: modeParam(searchMode), category: category || undefined, page: 0, size: 10 },
       });
       setSearch({ status: 'ready', query: trimmed, mode: searchMode, data });
+      onSearched();
     } catch (error) {
       setSearch({ status: 'error', query: trimmed, mode: searchMode, error });
     }
@@ -350,6 +360,52 @@ function SystemOverview({ documents, collection }) {
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+function searchLink({ query, mode }) {
+  const params = { q: query };
+  const parsed = parseSearchMode(mode?.toLowerCase());
+  if (parsed !== 'hybrid') params.mode = parsed;
+  return `/search?${new URLSearchParams(params)}`;
+}
+
+/** The signed-in user's own recent searches; nobody else's are ever shown. */
+function SearchActivity({ state }) {
+  const entries = state.data;
+  return (
+    <section className="glass-panel section" aria-labelledby="search-activity-title">
+      <h2 id="search-activity-title" className="section__title">
+        Search Activity
+      </h2>
+      {state.status === 'loading' && !entries && <p className="muted">Loading…</p>}
+      {state.status === 'error' && (
+        <p className="muted">
+          <AlertIcon size={16} /> Search activity is unavailable.
+        </p>
+      )}
+      {entries && entries.length === 0 && <p className="muted">Your searches will show up here.</p>}
+      {entries && entries.length > 0 && (
+        <ul className="activity-list" aria-label="Your recent searches">
+          {entries.map((entry) => (
+            <li key={`${entry.mode}:${entry.query}`} className="activity">
+              <span className="activity__icon activity__icon--search">
+                <SearchIcon size={16} />
+              </span>
+              <span className="activity__text">
+                <Link className="doc-link activity__query" to={searchLink(entry)}>
+                  {entry.query}
+                </Link>
+                <span className="activity__title">
+                  {modeLabel(entry.mode)} · {entry.resultCount} {entry.resultCount === 1 ? 'result' : 'results'}
+                </span>
+              </span>
+              <span className="activity__time">{relativeTime(entry.searchedAt)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

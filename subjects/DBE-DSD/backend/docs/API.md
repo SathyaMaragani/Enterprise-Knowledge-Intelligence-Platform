@@ -386,6 +386,28 @@ rather than failing; a vector-only request against an unavailable Qdrant returns
 | 401 | No or invalid bearer token. |
 | 503 | Vector-only or `SEMANTIC` search while Qdrant is unreachable, or `SEMANTIC` search with no embedding model loaded. |
 
+### Search activity
+
+Every first-page search with a `query` is recorded for the signed-in user:
+the query (first 500 characters), mode and total hits. Paging through results
+does not count as a new search, and vector-only requests are not recorded. If
+recording fails, the failure is logged and the search still succeeds.
+
+`GET /api/search/history?limit=10` returns the caller's own latest searches,
+newest first. `limit` is 1–20 (default 10); anything else is 400. Repeats of
+the same query in the same mode appear once, at their latest time, and case is
+ignored when comparing queries. Nobody can read another user's history, not
+even an administrator.
+
+```json
+[
+  { "query": "vendor contract", "mode": "FUZZY", "resultCount": 2, "searchedAt": "2026-09-17T00:55:33.860108Z" }
+]
+```
+
+`mode` is `HYBRID`, `KEYWORD`, `FUZZY` or `SEMANTIC`. Seed data can also hold
+`TEXTHACK` entries from before search modes existed.
+
 ## 6. TextHack demonstrations
 The DSA-3 TextHack engine, run on input supplied in the request. Nothing is read
 from stored documents, so any signed-in user may call these; without a token

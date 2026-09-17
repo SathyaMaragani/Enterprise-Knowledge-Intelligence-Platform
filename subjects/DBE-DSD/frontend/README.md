@@ -89,6 +89,7 @@ sign-in form.
 | Quick Actions | Upload Document opens the upload page for roles with `DOCUMENT_CREATE` and says "Not permitted for your role" otherwise. Advanced Search opens the search page. Analytics and Categories are marked "Coming soon". |
 | Recent Documents | `GET /api/documents`, newest update first. |
 | System Overview | Documents, categories and indexed counts over the user's readable documents; vector chunks from `GET /api/search/vector/collection-info`, which is collection-wide. |
+| Search Activity | `GET /api/search/history?limit=5`: the user's own latest searches with mode, result count and time. Each one reopens the search in its mode, and the panel refreshes after a dashboard search. |
 | Recent Activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
 
 Every figure comes from the API. When a request fails, the section says so or

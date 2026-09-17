@@ -115,6 +115,6 @@ Audit trail of user searches for analytics and ML pipeline feeding.
 | id | SERIAL | No | Nextval | PK | Primary Key |
 | user_id | INTEGER | No | | FK | References `users(id) ON DELETE CASCADE` |
 | query_text | TEXT | No | | | The search string entered |
-| search_type | VARCHAR(50) | No | | CHECK | In: KEYWORD, FUZZY, SEMANTIC, TEXTHACK |
+| search_type | VARCHAR(50) | No | | CHECK | In: HYBRID, KEYWORD, FUZZY, SEMANTIC, TEXTHACK (HYBRID added in V2) |
 | result_count | INTEGER | No | 0 | | Number of results returned |
 | created_at | TIMESTAMP | No | CURRENT_TIMESTAMP | | Time of search |

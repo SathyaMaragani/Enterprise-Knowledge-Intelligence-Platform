@@ -9,6 +9,7 @@ The backend suite is split in two:
 | Unit | `TextChunkerTest` | No — word-window chunking for uploads. |
 | Unit | `DocumentIngestionServiceTest` | No — upload rollback across the three stores, against stubs. |
 | Unit | `BootstrapAdminTest` | No — first-administrator creation rules, against stubs. |
+| Unit | `SearchActivityServiceTest` | No — search activity recording and de-duplication, against stubs. |
 | Unit | `MiniLmOnnxEncoderTest` | No — but needs the ONNX model under `models/minilm/`. |
 | Integration | `EipApplicationTests` | Yes — the test stack below, seeded. |
 | Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). Uploads, embeds and deletes one document, leaving the stack as it was. |
@@ -23,6 +24,20 @@ running database:
 ```bash
 sed -n '/^INSERT INTO permissions/,/^-- Users/p' subjects/DBE-DSD/database/demo/01-demo-seed.sql | grep -v '^-- Users' | docker exec -i eip-demo-postgres psql -U eip_demo -d eip_db
 ```
+
+**Stacks created before search activity** reject `HYBRID` in `search_history`,
+so the activity test fails. Recreate the stacks, or apply the migration to both:
+
+```bash
+docker exec -i eip-test-postgres psql -U eip_dev -d eip_db < subjects/DBE-DSD/database/postgresql/migrations/V2__search_history_hybrid.sql
+```
+
+```bash
+docker exec -i eip-demo-postgres psql -U eip_demo -d eip_db < subjects/DBE-DSD/database/postgresql/migrations/V2__search_history_hybrid.sql
+```
+
+Searches in the integration tests are recorded as activity. Both classes delete
+the rows each test adds, so only the seeded history remains.
 
 Running `./mvnw test` runs all of them. The integration tests will fail without
 their stacks, so start them first.
@@ -159,14 +174,15 @@ is public in the repository. To run the application (not the tests), copy
 ```
 Tests run: 5, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.config.BootstrapAdminTest
 Tests run: 4, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
-Tests run: 101, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 104, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.DocumentIngestionServiceTest
 Tests run: 15, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchActivityServiceTest
 Tests run: 25, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.TextChunkerTest
 
-Tests run: 170, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 179, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

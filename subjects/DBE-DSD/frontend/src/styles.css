@@ -1808,6 +1808,17 @@ label {
   color: var(--amber);
 }
 
+.activity__icon--search {
+  background: rgba(167, 139, 250, 0.16);
+  color: var(--violet);
+}
+
+.activity__query {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .activity__text {
   display: flex;
   flex-direction: column;

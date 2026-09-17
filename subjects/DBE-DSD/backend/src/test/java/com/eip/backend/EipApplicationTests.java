@@ -53,6 +53,22 @@ class EipApplicationTests {
     @Autowired
     private DocumentRepository documentRepository;
 
+    // Searches are recorded as search activity. Remove what each test adds so the
+    // seeded search_history rows are all that remain.
+    private Integer searchHistoryBaseline;
+
+    @org.junit.jupiter.api.BeforeEach
+    void rememberSearchHistory() {
+        searchHistoryBaseline = new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+                .queryForObject("select coalesce(max(id), 0) from search_history", Integer.class);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void forgetTestSearches() {
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+                .update("delete from search_history where id > ?", searchHistoryBaseline);
+    }
+
     @Test
     void contextLoads() {
         assertNotNull(mockMvc);
@@ -917,6 +933,54 @@ class EipApplicationTests {
     void testTextHackRequiresSignIn() throws Exception {
         mockMvc.perform(get("/api/texthack/complexity"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------
+    // SEARCH ACTIVITY TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testSearchActivityIsRecordedAndOnlyVisibleToItsOwner() throws Exception {
+        String alice = bearer("alice_mgr");
+        for (String body : List.of(
+                "{\"query\":\"vendor contract\",\"mode\":\"FUZZY\"}",
+                "{\"query\":\"Vendor Contract\",\"mode\":\"FUZZY\"}",
+                "{\"query\":\"vendor contract\",\"mode\":\"FUZZY\",\"page\":1}",
+                "{\"query\":\"Financial\"}")) {
+            mockMvc.perform(post("/api/search").header("Authorization", alice)
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isOk());
+        }
+
+        // Newest first; the repeated fuzzy search shows once and page 2 was not a new search.
+        mockMvc.perform(get("/api/search/history").param("limit", "5").header("Authorization", alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].query", contains("Financial", "Vendor Contract", "financial report Q1")))
+                .andExpect(jsonPath("$[0].mode").value("HYBRID"))
+                .andExpect(jsonPath("$[0].resultCount").value(1))
+                .andExpect(jsonPath("$[1].mode").value("FUZZY"))
+                .andExpect(jsonPath("$[0].searchedAt").isNotEmpty());
+        assertEquals(3, new org.springframework.jdbc.core.JdbcTemplate(dataSource).queryForObject(
+                "select count(*) from search_history where id > ?", Integer.class, searchHistoryBaseline));
+
+        // Bob, and even an administrator, see only their own searches.
+        mockMvc.perform(get("/api/search/history").header("Authorization", bearer("bob_eng")))
+                .andExpect(jsonPath("$[*].query", contains("architecture diagram")));
+        mockMvc.perform(get("/api/search/history").header("Authorization", bearer("admin_user")))
+                .andExpect(jsonPath("$[*].query", contains("NDA")));
+    }
+
+    @Test
+    void testSearchActivityRejectsBadLimits() throws Exception {
+        mockMvc.perform(get("/api/search/history").param("limit", "0")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/search/history").param("limit", "21")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testSearchActivityRequiresSignIn() throws Exception {
+        mockMvc.perform(get("/api/search/history")).andExpect(status().isUnauthorized());
     }
 
     // ---------------------------------------------------------

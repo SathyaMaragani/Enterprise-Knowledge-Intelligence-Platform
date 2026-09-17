@@ -163,7 +163,7 @@ CREATE TABLE search_history (
     
     CONSTRAINT pk_search_history PRIMARY KEY (id),
     CONSTRAINT fk_search_history_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT chk_search_history_type CHECK (search_type IN ('KEYWORD', 'FUZZY', 'SEMANTIC', 'TEXTHACK'))
+    CONSTRAINT chk_search_history_type CHECK (search_type IN ('HYBRID', 'KEYWORD', 'FUZZY', 'SEMANTIC', 'TEXTHACK'))
 );
 
 -- Indexes for performance

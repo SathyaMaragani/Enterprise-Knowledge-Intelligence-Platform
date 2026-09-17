@@ -63,6 +63,25 @@ public class DemoSemanticSearchIntegrationTest {
     @Autowired
     private KnowledgeDocumentRepository knowledgeDocumentRepository;
 
+    @Autowired
+    private javax.sql.DataSource dataSource;
+
+    // Searches are recorded as search activity. Remove what each test adds so the
+    // seeded search_history rows are all that remain.
+    private Integer searchHistoryBaseline;
+
+    @org.junit.jupiter.api.BeforeEach
+    void rememberSearchHistory() {
+        searchHistoryBaseline = new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+                .queryForObject("select coalesce(max(id), 0) from search_history", Integer.class);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void forgetTestSearches() {
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+                .update("delete from search_history where id > ?", searchHistoryBaseline);
+    }
+
     @Test
     @WithUserDetails("demo_admin")
     void testRealSemanticSearchPerformanceAndResults() throws Exception {

@@ -10,6 +10,12 @@ export const SEARCH_MODES = [
   { id: 'fuzzy', title: 'Fuzzy', text: 'Tolerates typos', Icon: WavesIcon },
 ];
 
+/** Display name for a mode as the API reports it (`FUZZY`), including the legacy `TEXTHACK`. */
+export function modeLabel(apiMode) {
+  const mode = SEARCH_MODES.find(({ id }) => id === apiMode?.toLowerCase());
+  return mode ? mode.title : apiMode === 'TEXTHACK' ? 'TextHack' : apiMode;
+}
+
 /** A mode from untrusted input (the URL), falling back to hybrid. */
 export function parseSearchMode(value) {
   return SEARCH_MODES.some(({ id }) => id === value) ? value : 'hybrid';

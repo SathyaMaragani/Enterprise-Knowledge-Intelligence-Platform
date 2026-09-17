@@ -152,7 +152,11 @@ What the load test found:
   volumes keep all data.
 - **Schema changes are not automatic.** The init scripts run only when a volume
   is empty, and there is no migration tool. Never run `schema.sql` against a
-  database that holds data: it starts by dropping every table.
+  database that holds data: it starts by dropping every table. To upgrade a
+  database created earlier, apply the newer scripts from
+  `database/postgresql/migrations/` in order. For example, `V2` lets search
+  history record hybrid searches:
+  `docker compose exec -T postgres psql -U eip -d eip_db < ../database/postgresql/migrations/V2__search_history_hybrid.sql`
 - **Backup:**
   - `docker compose exec -T postgres pg_dump -U eip eip_db > eip.sql`
   - `docker compose exec -T mongodb sh -c 'mongodump -u eip -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive' > mongo.archive`
