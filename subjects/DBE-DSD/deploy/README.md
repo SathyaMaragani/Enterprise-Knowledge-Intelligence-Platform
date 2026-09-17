@@ -33,8 +33,9 @@ what can only be checked in the cloud.
 
 Do these in order. Keep every service in one region, or in nearby regions: a
 single search touches all three databases. The examples use Singapore
-(`asia-southeast1` on Google Cloud). Neon has no Mumbai region, but Singapore is
-available on every service used here.
+(`asia-southeast1` on Google Cloud), because Neon's only Asian region is
+Singapore. On Atlas and Qdrant Cloud, choose Singapore if the free tier offers
+it, otherwise the nearest region listed.
 
 ### 1. Neon (PostgreSQL)
 
