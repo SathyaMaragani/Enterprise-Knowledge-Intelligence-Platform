@@ -8,7 +8,6 @@ import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.j
 import GlassDocs from '../components/GlassDocs.jsx';
 import { SearchHitList, SearchModeChips } from '../components/SearchBits.jsx';
 import Mountains from '../components/Mountains.jsx';
-import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
 import {
   AlertIcon,
   BarChartIcon,
@@ -44,7 +43,8 @@ export default function DashboardPage() {
       <div className="dashboard__main">
         <section className="hero">
           <div className="hero__art">
-            <ThreeBackdrop scene="nebula" className="hero__three" />
+            {/* Static on purpose: the working dashboard stays fast and readable; 3D is for sign-in. */}
+            <div className="hero__glow" />
             <GlassDocs />
           </div>
           <div className="hero__copy">

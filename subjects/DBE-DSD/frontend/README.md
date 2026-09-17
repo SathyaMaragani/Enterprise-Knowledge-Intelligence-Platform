@@ -89,7 +89,8 @@ sign-in form.
 Every figure comes from the API. When a request fails, the section says so or
 shows `—`; nothing falls back to placeholder numbers.
 
-The hero glow behind the glass documents is threeui's `nebula` scene.
+The hero glow behind the glass documents is plain CSS. 3D is kept to the sign-in
+page so the working pages stay fast and readable.
 
 Recent document titles and search hits open the document viewer; "View All"
 opens the repository.
@@ -216,9 +217,8 @@ its input to `/api/texthack/*` and shows what the engine computed:
 - **Failures stay contained.** An error inside a scene removes the scene, not the
   page. Scenes ignore pointer events.
 
-Only two components are imported, by subpath: `PortalFieldCollection`
-(`cloud-field`) and `StructureFlowCollection` (`nebula`). Both render
-self-contained documents with no network requests.
+Only `PortalFieldCollection` (`cloud-field`, on sign-in) is imported, by subpath.
+It renders a self-contained document with no network requests.
 
 ## How authentication works
 
