@@ -1,0 +1,4 @@
+# Scripts that run in Linux containers and CI must keep LF line endings, even in a
+# Windows checkout (core.autocrlf would otherwise give them CRLF and break sh).
+*.sh text eol=lf
+mvnw text eol=lf

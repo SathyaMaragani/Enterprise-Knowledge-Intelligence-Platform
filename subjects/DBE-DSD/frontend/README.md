@@ -69,9 +69,15 @@ $env:API_TARGET="http://localhost:8081"; npm run dev
 
 Any seeded account works, for example `admin_user` on the test stack.
 
-For production, `Dockerfile` builds the app and serves it with nginx, which also
-proxies `/api` to the backend (`BACKEND_URL`, default `http://backend:8080`).
-`../docker/README.md` runs it together with the backend and databases.
+For production there are two paths, both keeping the browser on a single origin:
+
+- **Vercel** (the chosen hosting). `vercel.mjs` proxies `/api/*` to the Cloud Run
+  backend named by the `BACKEND_URL` project variable and serves `index.html` for
+  client-side routes. The build fails if the variable is missing. See
+  `../deploy/README.md`.
+- **Docker.** `Dockerfile` builds the app and serves it with nginx, which also
+  proxies `/api` to the backend (`BACKEND_URL`, default `http://backend:8080`).
+  `../docker/README.md` runs it together with the backend and databases.
 
 ## Test and build
 

@@ -604,7 +604,7 @@ Current state:
 * [x] Full application stack (`subjects/DBE-DSD/docker/`): reference data only, bootstrap administrator, Qdrant collection created at startup
 * [x] End-to-end smoke test through nginx (`docker/smoke-test.mjs`, 28 checks)
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (160 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (181 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
 * [x] `/api/admin/users` and `/api/admin/roles`; disabling an account rejects its existing tokens
 * [x] `/api/documents/{id}/permissions`: list, grant READ, revoke
 * [x] `POST /api/documents`: upload to PostgreSQL, MongoDB (chunked) and Qdrant (embedded), with rollback
@@ -620,7 +620,9 @@ Current state:
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)
 * [x] Performance profiling under load (JWT parser rebuilt per request fixed, +19–22%; query embedding is the CPU ceiling)
 * [x] Deployment documentation (`docker/README.md`, `QDRANT_INTEGRATION.md`, compose docs)
-* [ ] Public free-tier hosting (options documented in `docker/README.md`; needs accounts)
+* [x] Deploy-ready for Vercel + Cloud Run + Neon/Atlas/Qdrant Cloud (`vercel.mjs`, Cloud Run image with pinned model, prod profile, `deploy/README.md`)
+* [x] CI/CD workflows: frontend tests/build; backend tests against real databases, then image build and Cloud Run deploy on `main`
+* [ ] Public hosting: run the one-time account setup in `subjects/DBE-DSD/deploy/README.md`
 
 ---
 

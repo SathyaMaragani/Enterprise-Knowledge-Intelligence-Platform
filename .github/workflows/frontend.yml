@@ -1,0 +1,37 @@
+# Tests and builds the React frontend. Deployment is Vercel's Git integration:
+# Vercel builds every push itself (root directory subjects/DBE-DSD/frontend), so
+# this workflow only guards quality. See subjects/DBE-DSD/deploy/README.md.
+name: Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - subjects/DBE-DSD/frontend/**
+      - .github/workflows/frontend.yml
+  pull_request:
+    paths:
+      - subjects/DBE-DSD/frontend/**
+      - .github/workflows/frontend.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: subjects/DBE-DSD/frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: subjects/DBE-DSD/frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

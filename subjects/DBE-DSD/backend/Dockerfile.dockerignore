@@ -3,3 +3,4 @@
 !DSA-3/texthack
 !DBE-DSD/backend/pom.xml
 !DBE-DSD/backend/src
+!DBE-DSD/backend/model/fetch-model.sh

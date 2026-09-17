@@ -1,0 +1,15 @@
+# Production profile, switched on by SPRING_PROFILES_ACTIVE=prod (the cloudrun
+# image sets it). Connection details still come from the environment; see
+# subjects/DBE-DSD/deploy/README.md.
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+management:
+  endpoint:
+    health:
+      # /actuator/health is public; component details would describe the databases.
+      show-details: never

@@ -15,7 +15,9 @@ browser talks to a single origin and the backend needs no CORS configuration.
 
 The backend image build context is `subjects/`, not the backend folder, because
 the backend compiles the TextHack engine from `subjects/DSA-3`.
-`backend/Dockerfile.dockerignore` limits what gets sent to the build.
+`backend/Dockerfile.dockerignore` limits what gets sent to the build. Compose builds
+the Dockerfile's `runtime` target, which mounts the model. The default `cloudrun`
+target bakes the model in for Cloud Run; see `../deploy/README.md`.
 
 ## Requirements
 
@@ -189,22 +191,8 @@ Runtime have arm64 builds, but the DJL tokenizer jar bundles only x86-64 Linux
 natives. On arm64, DJL would have to download its library at first start. If
 that fails, run with `EMBEDDING_ENABLED=false`.
 
-**Option B: managed databases with the two containers on a host.** Use managed
-PostgreSQL (for example Neon or Supabase), MongoDB Atlas M0 and a Qdrant Cloud
-free cluster. Run only `backend` and `frontend`, overriding the connection
-settings:
-
-| Setting | Environment variable |
-|---|---|
-| PostgreSQL with TLS | `SPRING_DATASOURCE_URL=jdbc:postgresql://HOST:5432/DB?sslmode=require`, plus `DB_USERNAME`, `DB_PASSWORD` |
-| MongoDB Atlas | `SPRING_DATA_MONGODB_URI=mongodb+srv://USER:PASS@CLUSTER/eip_doc_db` |
-| Qdrant Cloud | `QDRANT_HOST`, `QDRANT_PORT=6334`, `QDRANT_APIKEY`, `QDRANT_USETLS=true` |
-| nginx → backend | `BACKEND_URL=https://your-backend-host` on the frontend container |
-
-With managed databases, load the schema yourself, once, into empty databases:
-
-- `psql -f schema.sql -f reference-data.sql`
-- run the two `mongodb/` scripts (`schemas/`, then `indexes/`) with `mongosh`
-
-The backend creates the Qdrant collection itself. Option B's variables follow
-Spring's standard binding, but that path was not run here.
+**Option B: Vercel + Cloud Run with managed databases (the chosen plan).** The
+frontend goes to Vercel, the backend image's default `cloudrun` target (model baked
+in, prod profile on) goes to Cloud Run, and the data goes to Neon, MongoDB Atlas and
+Qdrant Cloud. Step-by-step setup, CI/CD and what has been verified are in
+[`../deploy/README.md`](../deploy/README.md).

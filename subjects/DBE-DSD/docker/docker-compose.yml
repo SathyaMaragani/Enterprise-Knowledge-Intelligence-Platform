@@ -66,6 +66,8 @@ services:
     build:
       context: ../..
       dockerfile: DBE-DSD/backend/Dockerfile
+      # The model is mounted below; the default cloudrun target would bake it in.
+      target: runtime
     image: eip-backend
     depends_on:
       postgres:

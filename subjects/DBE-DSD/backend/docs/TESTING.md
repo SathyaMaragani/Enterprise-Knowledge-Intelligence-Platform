@@ -12,6 +12,7 @@ The backend suite is split in two:
 | Unit | `SearchActivityServiceTest` | No — search activity recording and de-duplication, against stubs. |
 | Unit | `MiniLmOnnxEncoderTest` | No — but needs the ONNX model under `models/minilm/`. |
 | Integration | `EipApplicationTests` | Yes — the test stack below, seeded. |
+| Integration | `ProdProfileTest` | Yes — the test stack. The `prod` profile: health hides component details, no SQL logging. |
 | Integration | `DemoSemanticSearchIntegrationTest` | Yes — the demo stack (`docker-compose.demo.yml`, 705 vectors ingested). Uploads, embeds and deletes one document, leaving the stack as it was. |
 
 Upload tests create documents and always remove them, so the 10 fixture
@@ -41,6 +42,11 @@ the rows each test adds, so only the seeded history remains.
 
 Running `./mvnw test` runs all of them. The integration tests will fail without
 their stacks, so start them first.
+
+**In CI** (`.github/workflows/backend.yml`), the same suite runs against the test
+stack started with Compose and seeded with `seed_vectors.py`. The model is fetched
+by `backend/model/fetch-model.sh`. `DemoSemanticSearchIntegrationTest` is excluded
+because it needs the demo corpus: 177 tests.
 
 The deployed stack, meaning the built images behind nginx, is verified separately by
 `docker/smoke-test.mjs` and `docker/load-test.mjs`. See `../../docker/README.md`.
@@ -173,6 +179,7 @@ is public in the repository. To run the application (not the tests), copy
 
 ```
 Tests run: 5, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.config.BootstrapAdminTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ProdProfileTest
 Tests run: 4, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
 Tests run: 104, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
@@ -182,7 +189,7 @@ Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.S
 Tests run: 25, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.TextChunkerTest
 
-Tests run: 179, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 181, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

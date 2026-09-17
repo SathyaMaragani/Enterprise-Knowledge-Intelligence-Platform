@@ -476,6 +476,59 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Deployment Plan: Vercel + Cloud Run (DEPLOY-0 and DEPLOY-1)
+**Status: DEPLOY-READY, VERIFIED LOCALLY; not yet deployed (needs accounts)**
+
+The target is:
+- the frontend on Vercel;
+- the Spring Boot + ONNX backend on Google Cloud Run;
+- PostgreSQL on Neon, MongoDB on Atlas, vectors on Qdrant Cloud;
+- CI/CD in GitHub Actions.
+
+**DEPLOY-0 (audit)** found two blockers:
+1. The frontend only called relative `/api` paths. Nothing read `VITE_API_URL`.
+2. `BrowserRouter` deep links would return 404 on Vercel.
+
+It also found five gaps:
+- The model was only a host volume.
+- The port was fixed.
+- Health details were public.
+- There was no CI.
+- `mvnw` was not executable in git.
+
+**DEPLOY-1 (changes):**
+- [x] `frontend/vercel.mjs`: `/api/*` is proxied to `BACKEND_URL`, so there is
+      one origin and no CORS. It adds the SPA fallback, no CDN caching for the
+      API, immutable `/assets`, and fails the build on a missing or invalid URL.
+- [x] `backend/model/fetch-model.sh` pins `Xenova/all-MiniLM-L6-v2` at a fixed
+      revision with SHA-256 checks. The files are byte-identical to the local
+      model the tests and demo corpus used; the lookup found the local copy came
+      from Xenova, not the sentence-transformers repository.
+- [x] `backend/Dockerfile`: default `cloudrun` target (model baked in, prod
+      profile, non-root); Compose pins the `runtime` target.
+- [x] `application-prod.yml` (health `show-details: never`, no SQL logs) and
+      `server.port: ${PORT:8080}`.
+- [x] `.github/workflows/frontend.yml` and `backend.yml`. The deploy job uses
+      Workload Identity Federation and Secret Manager, and stays skipped until
+      `GCP_PROJECT_ID` is set.
+- [x] `deploy/README.md`: account setup, IAM, secrets, variables, sizing
+      (2 GiB, 1 vCPU, concurrency 20), and verified versus unverified steps.
+
+```
+Backend   Tests run: 181, Failures: 0, Errors: 0, Skipped: 0   (2 new: ProdProfileTest)
+CI cmd    Tests run: 177 (demo corpus test excluded), DSA-3 suites passed
+Frontend  Tests  155 passed (155)                               (2 new: vercel.mjs)
+Smoke     28/28 through nginx using the cloudrun image (no model volume)
+```
+
+The rehearsed Cloud Run image:
+- loaded the baked model with matching hashes;
+- returned only `{"status":"UP"}` from health;
+- logged no SQL;
+- listened on `PORT=9090` when asked.
+
+Mutation check: turning health details back on fails `ProdProfileTest`.
+
 ## Frontend Polish: Professional Product Pass
 **Status: VERIFIED**
 Checked with headless Chrome screenshots of every page at 1920, 1440 and 1280
