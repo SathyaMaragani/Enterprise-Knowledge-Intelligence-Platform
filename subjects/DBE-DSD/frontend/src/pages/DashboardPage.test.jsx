@@ -106,6 +106,8 @@ describe('dashboard', () => {
     ]);
     // Two for everyone; Administration is added only for administrators.
     expect(within(nav).getAllByText('Soon')).toHaveLength(2);
+    // The hero search is the dashboard's search; the top bar does not repeat it.
+    expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
 
     expect(screen.getByRole('button', { name: /Upload Document/ }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: /Advanced Search/ }).disabled).toBe(false);

@@ -60,6 +60,11 @@ the live backend's.
 
 ## Pages
 
+Every signed-in page shares the sidebar and a top bar with the account menu (name
+and role). The top bar also carries a global search box that opens `/search`
+with the query. It is left out on the dashboard and the search page, which lead
+with their own search bar.
+
 ### Sign-in
 
 A two-panel page. The left panel carries the product message over a dusk

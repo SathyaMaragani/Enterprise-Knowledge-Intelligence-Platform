@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can, roleLabel } from '../auth/roles.js';
 import { initials } from '../pages/dashboardData.js';
@@ -73,6 +73,7 @@ export default function Layout() {
 
       <div className="shell__main">
         <header className="topbar">
+          {!PAGES_WITH_SEARCH.includes(pathname) && <GlobalSearch />}
           <AccountMenu
             name={profile?.fullName || session.username}
             role={roleLabel(profile) ?? 'Signed in'}
@@ -82,6 +83,40 @@ export default function Layout() {
         <Outlet />
       </div>
     </div>
+  );
+}
+
+// These pages lead with their own search bar; a second one in the top bar would compete.
+const PAGES_WITH_SEARCH = ['/', '/search'];
+
+/** Search from anywhere: submitting opens the search page with the query. */
+function GlobalSearch() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+
+  return (
+    <form
+      className="topbar-search"
+      role="search"
+      aria-label="Global search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const q = query.trim();
+        if (q) {
+          navigate(`/search?q=${encodeURIComponent(q)}`);
+          setQuery('');
+        }
+      }}
+    >
+      <SearchIcon className="topbar-search__icon" size={18} />
+      <input
+        type="search"
+        aria-label="Search enterprise knowledge"
+        placeholder="Search your enterprise knowledge…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+    </form>
   );
 }
 

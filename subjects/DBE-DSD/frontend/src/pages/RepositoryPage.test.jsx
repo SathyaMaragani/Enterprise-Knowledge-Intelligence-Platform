@@ -72,6 +72,30 @@ describe('repository page', () => {
     expect(screen.getByRole('link', { name: 'Repository' }).className).toContain('active');
   });
 
+  it('offers global search in the top bar, which opens the search page', async () => {
+    renderRepository({ 'GET /api/documents/page?page=0&size=10': pageOf([documentFixture()]) });
+    await screen.findByRole('table');
+
+    const global = screen.getByRole('search', { name: 'Global search' });
+    fireEvent.change(within(global).getByRole('searchbox', { name: 'Search enterprise knowledge' }), {
+      target: { value: '  budget plan ' },
+    });
+    fireEvent.submit(global);
+
+    await vi.waitFor(() => expect(currentLocation.pathname).toBe('/search'));
+    expect(currentLocation.search).toBe('?q=budget%20plan');
+    // The search page leads with its own search bar, so the top bar one steps aside.
+    expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
+  });
+
+  it('ignores an empty global search', async () => {
+    renderRepository({ 'GET /api/documents/page?page=0&size=10': pageOf([documentFixture()]) });
+    await screen.findByRole('table');
+
+    fireEvent.submit(screen.getByRole('search', { name: 'Global search' }));
+    expect(currentLocation.pathname).toBe('/repository');
+  });
+
   it('applies category, status and text filters through the URL', async () => {
     const empty = pageOf([], { totalPages: 0 });
     const fetchMock = renderRepository({
@@ -89,7 +113,7 @@ describe('repository page', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Filter by title or description' }), {
       target: { value: '  nda ' },
     });
-    fireEvent.submit(screen.getByRole('search'));
+    fireEvent.submit(screen.getByRole('searchbox', { name: 'Filter by title or description' }).closest('form'));
 
     await vi.waitFor(() => expect(requestedPaths(fetchMock)).toContain('/api/documents/page?page=0&size=10&category=Legal&status=INDEXED&q=nda'));
     expect(currentLocation.search).toBe('?category=Legal&status=INDEXED&q=nda');
