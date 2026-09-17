@@ -32,7 +32,9 @@ what can only be checked in the cloud.
 ## One-time setup
 
 Do these in order. Keep every service in one region, or in nearby regions: a
-single search touches all three databases. The examples use `asia-south1`.
+single search touches all three databases. The examples use Singapore
+(`asia-southeast1` on Google Cloud). Neon has no Mumbai region, but Singapore is
+available on every service used here.
 
 ### 1. Neon (PostgreSQL)
 
@@ -88,7 +90,7 @@ them before running.
 
 ```bash
 PROJECT_ID=your-project
-REGION=asia-south1
+REGION=asia-southeast1
 GITHUB_REPO=SathyaMaragani/Enterprise-Knowledge-Intelligence-Platform
 DEPLOY_SA=eip-github-deploy@$PROJECT_ID.iam.gserviceaccount.com
 RUNTIME_SA=eip-backend-runtime@$PROJECT_ID.iam.gserviceaccount.com
@@ -144,7 +146,7 @@ secrets are needed.
 | Variable | Value |
 |---|---|
 | `GCP_PROJECT_ID` | `your-project`. Setting this switches the deploy job on. |
-| `GCP_REGION` | `asia-south1` |
+| `GCP_REGION` | `asia-southeast1` |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/eip-repo` |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | `eip-github-deploy@your-project.iam.gserviceaccount.com` |
 | `CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT` | `eip-backend-runtime@your-project.iam.gserviceaccount.com` |
