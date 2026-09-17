@@ -19,7 +19,7 @@ function renderApp(path = '/') {
 function signIn(username, password) {
   fireEvent.change(screen.getByLabelText('Username'), { target: { value: username } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
-  fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 }
 
 function signOut() {
@@ -27,7 +27,7 @@ function signOut() {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 }
 
-const signInHeading = () => screen.getByRole('heading', { name: 'Welcome Back' });
+const signInHeading = () => screen.getByRole('heading', { name: 'Sign in' });
 const DASHBOARD_GREETING = /^Good (morning|afternoon|evening), /;
 const dashboardHeading = () => screen.getByRole('heading', { name: DASHBOARD_GREETING });
 
@@ -86,7 +86,7 @@ describe('authentication flow', () => {
 
     expect((await screen.findByRole('alert')).textContent).toBe('Invalid username or password');
     expect(signInHeading()).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sign In' }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: 'Sign in' }).disabled).toBe(false);
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
@@ -153,7 +153,7 @@ describe('authentication flow', () => {
     sessionStorage.setItem('eip.token', tokenFor('bob_eng'));
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { name: 'Welcome Back' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeTruthy();
     expect(sessionStorage.getItem('eip.token')).toBeNull();
   });
 
@@ -285,14 +285,5 @@ describe('sign-in page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Forgot password?' }));
 
     expect(screen.getByText(/handled by your EIP administrator/)).toBeTruthy();
-  });
-
-  it('shows single sign-on as unavailable', () => {
-    renderApp('/login');
-
-    const sso = screen.getByRole('button', { name: 'Sign in with SSO' });
-
-    expect(sso.disabled).toBe(true);
-    expect(within(sso.parentElement).getByText(/not configured/)).toBeTruthy();
   });
 });

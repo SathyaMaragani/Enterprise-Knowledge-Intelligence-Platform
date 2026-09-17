@@ -58,10 +58,13 @@ function KnowledgeGraphStill({ graph }) {
           <text
             key={node.label}
             x={points[node.id][0]}
-            y={points[node.id][1] - 0.2}
+            y={points[node.id][1] - 0.17}
             textAnchor="middle"
-            fontSize="0.2"
+            fontSize="0.15"
             fill="#e0e7ff"
+            stroke="#0b1026"
+            strokeWidth="0.04"
+            paintOrder="stroke"
           >
             {node.label}
           </text>

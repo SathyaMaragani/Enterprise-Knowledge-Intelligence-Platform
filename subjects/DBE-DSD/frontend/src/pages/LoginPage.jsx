@@ -6,43 +6,33 @@ import KnowledgeGraph from '../components/KnowledgeGraph.jsx';
 import Mountains from '../components/Mountains.jsx';
 import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
 import {
-  ArrowRightIcon,
-  BarChartIcon,
-  BuildingIcon,
   EyeIcon,
   EyeOffIcon,
   FileTextIcon,
   LockIcon,
   SearchIcon,
-  SunIcon,
+  ShieldIcon,
   UserIcon,
-  UsersIcon,
 } from '../components/icons.jsx';
 
 const FEATURES = [
   {
-    title: 'Smart Search',
-    text: 'Keyword, semantic and fuzzy search powered by advanced algorithms',
+    title: 'Hybrid search',
+    text: 'Keyword, fuzzy and semantic matching in a single query.',
     Icon: SearchIcon,
     tone: 'blue',
   },
   {
-    title: 'Unified Repository',
-    text: 'Documents, knowledge and insights in one place',
+    title: 'One repository',
+    text: 'Documents, their content and processing history together.',
     Icon: FileTextIcon,
     tone: 'teal',
   },
   {
-    title: 'Secure & Role-Based',
-    text: 'Right information to the right people',
-    Icon: UsersIcon,
+    title: 'Role-based access',
+    text: 'Everyone sees exactly the documents they are allowed to.',
+    Icon: ShieldIcon,
     tone: 'violet',
-  },
-  {
-    title: 'Intelligent Insights',
-    text: 'Transform knowledge into impact',
-    Icon: BarChartIcon,
-    tone: 'amber',
   },
 ];
 
@@ -86,54 +76,40 @@ export default function LoginPage() {
 
         <div className="login-hero__content">
           <BrandMark />
-          <p className="eyebrow eyebrow--spaced">Knowledge • People • Insights • Impact</p>
-          <h2 className="hero-title">
-            Turn Information <span className="gradient-text">into Intelligence</span>
-          </h2>
-          <p className="hero-lead">Search. Discover. Understand. Empower.</p>
-          <p className="hero-copy">
-            A unified platform that brings together your documents, people and knowledge with the
-            power of semantic search and AI-driven insights.
-          </p>
+          <div className="login-hero__intro">
+            <h2 className="hero-title">
+              Turn information <span className="gradient-text">into intelligence</span>
+            </h2>
+            <p className="hero-copy">
+              Search, explore and govern your organisation’s documents by keyword, by meaning, or both.
+            </p>
 
-          <ul className="feature-list">
-            {FEATURES.map(({ title, text, Icon, tone }) => (
-              <li key={title} className="feature">
-                <span className={`icon-tile icon-tile--${tone}`}>
-                  <Icon size={24} />
-                </span>
-                <span>
-                  <strong>{title}</strong>
-                  <span className="feature__text">{text}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <figure className="hero-quote">
-            <blockquote>“Knowledge is not just what you know, but what you can do with it.”</blockquote>
-            <figcaption>EIP</figcaption>
-          </figure>
+            <ul className="feature-list">
+              {FEATURES.map(({ title, text, Icon, tone }) => (
+                <li key={title} className="feature">
+                  <span className={`icon-tile icon-tile--${tone}`}>
+                    <Icon size={20} />
+                  </span>
+                  <span>
+                    <strong>{title}</strong>
+                    <span className="feature__text">{text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <KnowledgeGraph className="login-hero__graph" />
       </section>
 
       <main className="login-panel">
-        <p className="login-panel__tagline">
-          <SunIcon size={28} />
-          <span>
-            A smarter tomorrow
-            <br />
-            starts with knowledge.
-          </span>
-        </p>
-
         <form className="login-card glass-panel" onSubmit={handleSubmit}>
-          <BrandMark className="brand--centered" />
+          {/* The hero carries the brand on wide screens; below 1100px it is hidden, so the card does. */}
+          <BrandMark className="login-card__brand" subtitle="" />
 
-          <h1>Welcome Back</h1>
-          <p className="muted login-card__intro">Sign in to access your knowledge workspace</p>
+          <h1>Sign in</h1>
+          <p className="muted login-card__intro">Use your EIP account to continue.</p>
 
           <label htmlFor="username">Username</label>
           <div className="field">
@@ -197,28 +173,10 @@ export default function LoginPage() {
           )}
 
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
-            <span>{submitting ? 'Signing in…' : 'Sign In'}</span>
-            <ArrowRightIcon className="btn__trailing" />
+            {submitting ? 'Signing in…' : 'Sign in'}
           </button>
 
-          <div className="divider">
-            <span>or</span>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn--outline btn--block"
-            disabled
-            aria-describedby="sso-note"
-          >
-            <BuildingIcon />
-            <span>Sign in with SSO</span>
-          </button>
-          <p id="sso-note" className="hint">
-            Single sign-on is not configured for this workspace.
-          </p>
-
-          <p className="login-card__footer">New to EIP? Contact your administrator</p>
+          <p className="login-card__footer">New to EIP? Ask your administrator for an account.</p>
         </form>
 
         <footer className="login-panel__footer">© {new Date().getFullYear()} EIP. All rights reserved.</footer>
