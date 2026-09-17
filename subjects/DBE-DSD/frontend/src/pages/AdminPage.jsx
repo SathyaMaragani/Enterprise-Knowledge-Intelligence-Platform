@@ -3,7 +3,7 @@ import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
-import { formatDateTime } from '../components/DocumentBits.jsx';
+import { formatDateTime, humanize } from '../components/DocumentBits.jsx';
 
 export default function AdminPage() {
   const { profile } = useAuth();
@@ -100,7 +100,7 @@ function UserAdministration({ currentUsername }) {
       <CreateUserForm
         roleNames={roleNames}
         onCreated={(user) => {
-          setNotice(`Created ${user.username} as ${user.roles.join(', ')}.`);
+          setNotice(`Created ${user.username} as ${user.roles.map(humanize).join(', ')}.`);
           users.reload();
         }}
       />
@@ -167,12 +167,12 @@ function UserRow({ user, roleNames, self, onChanged }) {
           value={role}
           disabled={busy || self}
           title={selfNote}
-          onChange={(e) => update({ role: e.target.value }, `${user.username} is now ${e.target.value}.`)}
+          onChange={(e) => update({ role: e.target.value }, `${user.username} is now ${humanize(e.target.value)}.`)}
         >
-          {!roleNames.includes(role) && <option value={role}>{role}</option>}
+          {!roleNames.includes(role) && <option value={role}>{humanize(role)}</option>}
           {roleNames.map((name) => (
             <option key={name} value={name}>
-              {name}
+              {humanize(name)}
             </option>
           ))}
         </select>
@@ -287,7 +287,7 @@ function CreateUserForm({ roleNames, onCreated }) {
               <option value="">Choose a role</option>
               {roleNames.map((name) => (
                 <option key={name} value={name}>
-                  {name}
+                  {humanize(name)}
                 </option>
               ))}
             </select>

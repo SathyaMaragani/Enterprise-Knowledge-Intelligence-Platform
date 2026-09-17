@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 
@@ -100,7 +100,7 @@ function PatternDemo() {
       </p>
       <form className="texthack-form" onSubmit={handleSubmit}>
         <label htmlFor="pattern-text">Text</label>
-        <textarea id="pattern-text" className="text-input" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea id="pattern-text" className="text-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
         <label htmlFor="pattern-list">Patterns, one per line</label>
         <textarea
           id="pattern-list"
@@ -366,7 +366,27 @@ function ComplexityTable() {
   );
 }
 
+const TOOLS = [
+  { id: 'pattern', label: 'Pattern search', Panel: PatternDemo },
+  { id: 'similarity', label: 'Similarity', Panel: SimilarityDemo },
+  { id: 'citations', label: 'Citation flow', Panel: CitationDemo },
+  { id: 'complexity', label: 'Complexity', Panel: ComplexityTable },
+];
+
 export default function TextHackPage() {
+  const [active, setActive] = useState('pattern');
+  const tabs = useRef([]);
+
+  // Arrow keys move between tabs, as the ARIA tabs pattern expects.
+  function onKeyDown(event, index) {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const next = (index + step + TOOLS.length) % TOOLS.length;
+    setActive(TOOLS[next].id);
+    tabs.current[next]?.focus();
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -375,10 +395,35 @@ export default function TextHackPage() {
           Run the DSA-3 text algorithms on your own input. The same engine scores keyword and fuzzy search.
         </p>
       </header>
-      <PatternDemo />
-      <SimilarityDemo />
-      <CitationDemo />
-      <ComplexityTable />
+
+      <div className="tabs" role="tablist" aria-label="TextHack tools">
+        {TOOLS.map(({ id, label }, index) => (
+          <button
+            key={id}
+            ref={(element) => {
+              tabs.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            id={`tool-tab-${id}`}
+            aria-controls={`tool-panel-${id}`}
+            aria-selected={active === id}
+            tabIndex={active === id ? 0 : -1}
+            className={`tabs__tab${active === id ? ' is-active' : ''}`}
+            onClick={() => setActive(id)}
+            onKeyDown={(event) => onKeyDown(event, index)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Panels stay mounted while hidden, so inputs and results survive switching tabs. */}
+      {TOOLS.map(({ id, Panel }) => (
+        <div key={id} role="tabpanel" id={`tool-panel-${id}`} aria-labelledby={`tool-tab-${id}`} hidden={active !== id}>
+          <Panel />
+        </div>
+      ))}
     </div>
   );
 }

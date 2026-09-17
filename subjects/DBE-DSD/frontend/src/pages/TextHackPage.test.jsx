@@ -38,7 +38,12 @@ function renderWorkbench(answers = {}) {
   return sent;
 }
 
-const section = (name) => screen.getByRole('heading', { name }).closest('section');
+const TABS = { 'Pattern search': 'Pattern search', 'Similarity and alignment': 'Similarity', 'Citation flow': 'Citation flow' };
+/** Opens the tool's tab, then returns its panel section. */
+const section = (name) => {
+  fireEvent.click(screen.getByRole('tab', { name: TABS[name] }));
+  return screen.getByRole('heading', { name }).closest('section');
+};
 
 describe('highlightSegments', () => {
   it('marks matches and keeps the text between them', () => {
@@ -97,9 +102,25 @@ describe('TextHack workbench', () => {
     renderWorkbench();
 
     expect(screen.getByRole('link', { name: 'TextHack' }).className).toContain('active');
+    expect(screen.getByRole('tab', { name: 'Pattern search' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Complexity' }));
     const table = await screen.findByRole('table');
     expect(within(table).getByText('KMP')).toBeTruthy();
     expect(within(table).getByText('O(V^2*E)')).toBeTruthy();
+  });
+
+  it('shows one tool at a time and keeps each tool\u2019s input when switching', async () => {
+    renderWorkbench();
+    const patternTab = screen.getByRole('tab', { name: 'Pattern search' });
+
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'kept between tabs' } });
+    fireEvent.keyDown(patternTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Similarity' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('heading', { name: 'Pattern search' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Similarity and alignment' })).toBeTruthy();
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Similarity' }), { key: 'ArrowLeft' });
+    expect(screen.getByLabelText('Text').value).toBe('kept between tabs');
   });
 
   it('searches for the patterns and highlights the matches', async () => {

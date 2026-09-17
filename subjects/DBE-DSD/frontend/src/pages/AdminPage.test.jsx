@@ -95,7 +95,7 @@ describe('administration page', () => {
     const bob = await row('bob_eng');
 
     fireEvent.change(within(bob).getByRole('combobox', { name: 'Role for bob_eng' }), { target: { value: 'MANAGER' } });
-    expect((await screen.findByRole('status')).textContent).toBe('bob_eng is now MANAGER.');
+    expect((await screen.findByRole('status')).textContent).toBe('bob_eng is now Manager.');
     await vi.waitFor(() =>
       expect(screen.getByRole('combobox', { name: 'Role for bob_eng' }).value).toBe('MANAGER'),
     );
@@ -129,7 +129,7 @@ describe('administration page', () => {
   it('creates a user and adds them to the list', async () => {
     const calls = renderAdmin();
     const createForm = (await screen.findByRole('heading', { name: 'Add a user' })).closest('section');
-    await within(createForm).findByRole('option', { name: 'MANAGER' });
+    await within(createForm).findByRole('option', { name: 'Manager' });
 
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'carol_ops' } });
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Carol Ops' } });
@@ -138,7 +138,7 @@ describe('administration page', () => {
     fireEvent.change(screen.getByLabelText('Initial password'), { target: { value: 'carol-pass-1' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Create user' }).closest('form'));
 
-    expect((await screen.findByRole('status')).textContent).toBe('Created carol_ops as MANAGER.');
+    expect((await screen.findByRole('status')).textContent).toBe('Created carol_ops as Manager.');
     expect(await row('carol_ops')).toBeTruthy();
     expect(screen.getByLabelText('Username').value).toBe('');
     expect(calls.find((call) => call.method === 'POST').body).toEqual({
@@ -153,7 +153,7 @@ describe('administration page', () => {
   it('shows backend rejections where the action happened', async () => {
     renderAdmin({ failWith: jsonResponse(409, { message: 'Username carol_ops is already taken' }) });
     const createForm = (await screen.findByRole('heading', { name: 'Add a user' })).closest('section');
-    await within(createForm).findByRole('option', { name: 'MANAGER' });
+    await within(createForm).findByRole('option', { name: 'Manager' });
 
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'carol_ops' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Create user' }).closest('form'));
