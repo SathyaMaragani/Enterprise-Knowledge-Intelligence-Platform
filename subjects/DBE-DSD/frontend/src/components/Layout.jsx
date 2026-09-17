@@ -14,6 +14,7 @@ import {
   SearchIcon,
   ShieldIcon,
   TagIcon,
+  TypeIcon,
 } from './icons.jsx';
 
 // Pages that are not built yet are shown, marked as coming, so the navigation
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { label: 'Search', to: '/search', Icon: SearchIcon },
   // A document belongs to the repository, so its viewer keeps Repository lit.
   { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
+  { label: 'TextHack', to: '/texthack', Icon: TypeIcon },
   { label: 'Categories', Icon: TagIcon },
   { label: 'Analytics', Icon: BarChartIcon },
   { label: 'Administration', to: '/admin', Icon: ShieldIcon, requiresPermission: 'USER_MANAGE' },

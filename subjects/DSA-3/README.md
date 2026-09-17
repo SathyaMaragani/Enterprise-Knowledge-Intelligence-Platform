@@ -96,17 +96,22 @@ prime 7919                     primality
 
 ## Not implemented, and why
 
-Two items from the original TextHack list are deliberately absent rather than
+One item from the original TextHack list is deliberately absent rather than
 stubbed:
 
 - **Indian-language Wikipedia corpus** — a data-acquisition and licensing task,
   not an algorithm. It needs a dump selection, a license review and storage
   decisions, in the same way the ML subject's FiQA corpus did.
-- **DSA frontend integration** — depends on the React frontend (pending). The
-  Spring/API wiring is done (phase 1.7C): the DBE-DSD backend compiles this
-  directory's `texthack` package as a second source root and scores keyword
-  search with KMP, Aho-Corasick and Damerau-Levenshtein. It stayed wiring rather
-  than a rewrite because the engine has no Spring dependency.
+
+The platform uses this engine in two places, both wiring rather than a rewrite,
+because the engine has no Spring dependency:
+
+- **Search (phase 1.7C).** The DBE-DSD backend compiles this directory's
+  `texthack` package as a second source root. It scores keyword search with KMP,
+  Aho-Corasick and Damerau-Levenshtein.
+- **Workbench.** `/api/texthack/*` and the frontend's TextHack page run pattern
+  search, similarity and alignment, and citation flow on user input, and show
+  the complexity registry. See `subjects/DBE-DSD/backend/docs/API.md` §6.
 
 Aho-Corasick deliberately does **not** implement `StringMatcher`. That interface
 answers "where does this one pattern occur" and returns bare offsets, which

@@ -476,6 +476,40 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## TextHack Workbench (DSA-3 in the Frontend)
+**Status: VERIFIED**
+(Backend suite against the live stacks; frontend tests and build; endpoints
+exercised with curl against a running server; page checked at desktop and 375px
+widths with live-captured responses.)
+
+```
+Backend   Tests run: 160, Failures: 0, Errors: 0, Skipped: 0   (7 new)
+Frontend  Tests  138 passed (138)                                (11 new)
+```
+
+- [x] `POST /api/texthack/pattern`: KMP for one pattern, Aho-Corasick for
+      several, and the longest repeated substring from the suffix and LCP arrays.
+- [x] `POST /api/texthack/similarity`: Levenshtein and Damerau distances, plus
+      Needleman-Wunsch and Smith-Waterman alignments.
+- [x] `POST /api/texthack/citations`: Dinic influence and the Edmonds-Karp
+      minimum cut as a list of bottleneck citations.
+- [x] `GET /api/texthack/complexity`: the engine's registry of 22 algorithms.
+- [x] Input limits bound the work per request. Alignment inputs are capped at
+      1000 characters because alignment is O(n·m).
+- [x] Engine rejections return 400 with the engine's message, and every endpoint
+      requires sign-in.
+- [x] `/texthack` page with one panel per endpoint and a TextHack link in the
+      sidebar for every signed-in user.
+
+The controller only maps requests and responses; every result is computed by
+the DSA-3 engine, which keeps its own 452-assertion suite. Two mutation checks
+were run:
+- Keeping any citation that leaves the source side of the cut, instead of only
+  those crossing it, failed the new two-graph citation test. The first graph
+  alone could not tell these apart.
+- Merging only strictly overlapping highlights, not touching ones, failed the
+  merge test.
+
 ## Deployment: Containers, Smoke and Load Testing
 **Status: VERIFIED locally; public hosting not done**
 (Full stack built and run from `subjects/DBE-DSD/docker/` on fresh volumes; smoke

@@ -370,3 +370,43 @@ rather than failing; a vector-only request against an unavailable Qdrant returns
 | 400 | Neither `query` nor `vector` supplied, `page` < 0, or `size` outside 1..100. |
 | 401 | No or invalid bearer token. |
 | 503 | Vector-only search while Qdrant is unreachable. |
+
+## 6. TextHack demonstrations
+The DSA-3 TextHack engine, run on input supplied in the request. Nothing is read
+from stored documents, so any signed-in user may call these; without a token
+they return 401. Engine rejections (a self-citation, a document number out of
+range) are 400 with the engine's message.
+
+| Method and path | Algorithms |
+|---|---|
+| `POST /api/texthack/pattern` | KMP for one pattern, Aho-Corasick for several; suffix array + LCP for the longest repeated substring |
+| `POST /api/texthack/similarity` | Levenshtein, Damerau-Levenshtein, Needleman-Wunsch (global), Smith-Waterman (local) |
+| `POST /api/texthack/citations` | Dinic maximum flow; Edmonds-Karp minimum cut |
+| `GET /api/texthack/complexity` | The engine's complexity registry: `name`, `category`, `time`, `space`, `note` |
+
+**Pattern** accepts `{ "text": "ushers", "patterns": ["he", "she", "hers"] }`:
+text up to 20000 characters, and 1–20 non-empty patterns of up to 200 characters.
+It returns `algorithm`, `matches` (`pattern`, `start` inclusive, `end` exclusive,
+overlaps included) and `longestRepeated` (empty when nothing repeats). Matching
+is case-sensitive.
+
+**Similarity** accepts `{ "first": "recieve", "second": "receive" }`, each up to
+1000 characters, because alignment is O(n·m). It returns:
+- `levenshteinDistance` (2) and `damerauDistance` (1)
+- `similarity`: 1 − distance / longer length
+- `global` and `local` alignments, each with `alignedFirst`, `alignedSecond`
+  (`-` marks a gap), `score`, `identity` and the aligned offsets in both inputs
+
+Scoring is +1/−1/−2 for global and +2/−1/−2 for local.
+
+**Citations** accepts:
+```json
+{ "documents": 3, "source": 0, "sink": 2,
+  "citations": [{ "from": 0, "to": 1 }, { "from": 0, "to": 1 }, { "from": 1, "to": 2 }] }
+```
+Limits: 2–100 documents numbered from 0, at most 1000 citations, and source and
+sink must differ. Every citation has unit weight. The response is:
+- `influence` (1): the number of edge-disjoint citation chains
+- `sourceSide` (`[0, 1]`)
+- `bottleneck` (`[{ "from": 1, "to": 2 }]`): the citations crossing the minimum
+  cut. There are always as many of them as the influence.

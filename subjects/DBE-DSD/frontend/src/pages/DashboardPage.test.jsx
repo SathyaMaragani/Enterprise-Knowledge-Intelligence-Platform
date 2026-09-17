@@ -102,6 +102,7 @@ describe('dashboard', () => {
       'Dashboard',
       'Search',
       'Repository',
+      'TextHack',
     ]);
     // Two for everyone; Administration is added only for administrators.
     expect(within(nav).getAllByText('Soon')).toHaveLength(2);

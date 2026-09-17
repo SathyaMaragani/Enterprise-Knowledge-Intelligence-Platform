@@ -747,6 +747,146 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // TEXTHACK DEMONSTRATION TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackPatternUsesKmpForOnePattern() throws Exception {
+        // Overlapping occurrences are reported; any signed-in user may call it.
+        mockMvc.perform(post("/api/texthack/pattern")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"abababa\",\"patterns\":[\"aba\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm").value("KMP"))
+                .andExpect(jsonPath("$.matches[*].start", contains(0, 2, 4)))
+                .andExpect(jsonPath("$.matches[*].end", contains(3, 5, 7)))
+                .andExpect(jsonPath("$.longestRepeated").value("ababa"));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackPatternUsesAhoCorasickForSeveral() throws Exception {
+        mockMvc.perform(post("/api/texthack/pattern")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"ushers\",\"patterns\":[\"he\",\"she\",\"hers\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm").value("Aho-Corasick"))
+                .andExpect(jsonPath("$.matches", hasSize(3)))
+                .andExpect(jsonPath("$.matches[?(@.pattern == 'she')].start", contains(1)))
+                .andExpect(jsonPath("$.matches[?(@.pattern == 'he')].start", contains(2)))
+                .andExpect(jsonPath("$.matches[?(@.pattern == 'hers')].end", contains(6)));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackSimilarityReportsDistancesAndAlignments() throws Exception {
+        // A transposition costs two Levenshtein edits but one Damerau edit.
+        mockMvc.perform(post("/api/texthack/similarity")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"first\":\"recieve\",\"second\":\"receive\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.levenshteinDistance").value(2))
+                .andExpect(jsonPath("$.damerauDistance").value(1))
+                .andExpect(jsonPath("$.similarity", closeTo(1 - 2.0 / 7, 1e-9)))
+                // Global (+1/-1/-2): five matches and two mismatches beat any gapped alignment.
+                .andExpect(jsonPath("$.global.score").value(3))
+                .andExpect(jsonPath("$.global.alignedFirst").value("recieve"))
+                .andExpect(jsonPath("$.global.alignedSecond").value("receive"))
+                // Local (+2/-1/-2): the best region scores 8 whichever tie is chosen.
+                .andExpect(jsonPath("$.local.score").value(8));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackCitationFlowFindsInfluenceAndBottleneck() throws Exception {
+        // Two edge-disjoint paths 0-1-3-5 and 0-2-4-5; both citations out of 0 form the cut.
+        String graph = """
+            {"documents":6,"source":0,"sink":5,"citations":[
+              {"from":0,"to":1},{"from":0,"to":2},{"from":1,"to":3},{"from":2,"to":3},
+              {"from":2,"to":4},{"from":3,"to":5},{"from":4,"to":5}]}
+            """;
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(graph))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.influence").value(2))
+                .andExpect(jsonPath("$.sourceSide", contains(0)))
+                .andExpect(jsonPath("$.bottleneck", hasSize(2)))
+                .andExpect(jsonPath("$.bottleneck[*].to", containsInAnyOrder(1, 2)));
+
+        // Here the cut lies past the source: 1 cites 2 once, so that citation alone is
+        // the bottleneck even though document 1 is reached twice.
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"documents":3,"source":0,"sink":2,"citations":[
+                              {"from":0,"to":1},{"from":0,"to":1},{"from":1,"to":2}]}
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.influence").value(1))
+                .andExpect(jsonPath("$.sourceSide", contains(0, 1)))
+                .andExpect(jsonPath("$.bottleneck", hasSize(1)))
+                .andExpect(jsonPath("$.bottleneck[0].from").value(1));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackRejectsUnusableInput() throws Exception {
+        mockMvc.perform(post("/api/texthack/pattern")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"abc\",\"patterns\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("At least one pattern")));
+        mockMvc.perform(post("/api/texthack/pattern")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"" + "a".repeat(20001) + "\",\"patterns\":[\"a\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("at most 20000")));
+        mockMvc.perform(post("/api/texthack/similarity")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"first\":\"" + "a".repeat(1001) + "\",\"second\":\"b\"}"))
+                .andExpect(status().isBadRequest());
+
+        String citations = "{\"documents\":3,\"source\":%d,\"sink\":%d,\"citations\":[{\"from\":%d,\"to\":%d}]}";
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(citations.formatted(1, 1, 0, 1)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("different")));
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(citations.formatted(0, 3, 0, 1)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(citations.formatted(0, 2, 0, 7)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("out of range")));
+        mockMvc.perform(post("/api/texthack/citations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(citations.formatted(0, 2, 1, 1)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("cannot cite itself")));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testTextHackComplexityListsEveryAlgorithm() throws Exception {
+        mockMvc.perform(get("/api/texthack/complexity"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(22)))
+                .andExpect(jsonPath("$[?(@.name == 'KMP')].time", contains("O(n+m)")));
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testTextHackRequiresSignIn() throws Exception {
+        mockMvc.perform(get("/api/texthack/complexity"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------
     // DEPLOYMENT STARTUP TESTS
     // ---------------------------------------------------------
 

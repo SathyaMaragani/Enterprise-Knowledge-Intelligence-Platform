@@ -3,7 +3,8 @@
 React single-page app for the Enterprise Knowledge Intelligence Platform.
 
 **Current state:** sign-in, dashboard, search, document repository, document
-viewer, upload and user administration, built to the product UI design on top of
+viewer, upload, user administration and the TextHack algorithm workbench, built
+to the product UI design on top of
 Frontend 1's routing, JWT session handling, protected routes and sign-out.
 Categories and analytics are not built yet; the navigation shows them as "Soon".
 
@@ -188,6 +189,18 @@ link is hidden.
 The signed-in administrator's own role and status controls are disabled, matching
 the backend's lockout protection. After every change the list reloads and a
 notice confirms it; failures are shown next to the action.
+
+### TextHack (`/texthack`)
+
+A workbench for the DSA-3 engine, open to every signed-in user. Each panel sends
+its input to `/api/texthack/*` and shows what the engine computed:
+
+| Panel | Shows |
+|---|---|
+| Pattern search | Match count and algorithm (KMP or Aho-Corasick), the text with matches highlighted (overlapping matches merge), each match's offsets, and the longest repeated substring |
+| Similarity and alignment | Levenshtein and Damerau distances, similarity, and the global and local alignments with score and identity |
+| Citation flow | Influence (maximum flow), the bottleneck citations (minimum cut) and the source side of the cut; citations are typed one `from to` per line and checked before sending |
+| Complexity | Time and space for every algorithm in the engine |
 
 ## threeui scenes
 

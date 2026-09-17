@@ -7,6 +7,7 @@ import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RepositoryPage from './pages/RepositoryPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
+import TextHackPage from './pages/TextHackPage.jsx';
 import UploadPage from './pages/UploadPage.jsx';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="documents/:id" element={<DocumentPage />} />
         <Route path="upload" element={<UploadPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="texthack" element={<TextHackPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

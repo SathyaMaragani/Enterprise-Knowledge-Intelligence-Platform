@@ -586,7 +586,7 @@ Current state:
 * [x] Admin/user management (create, role, enable/disable, password reset)
 * [x] Document permissions (owner or administrator grants and revokes READ access)
 * [ ] ML insights
-* [ ] TextHack demonstrations
+* [x] TextHack demonstrations (`/texthack`: pattern search, similarity and alignment, citation flow, complexity)
 
 ---
 
@@ -601,7 +601,7 @@ Current state:
 * [x] Full application stack (`subjects/DBE-DSD/docker/`): reference data only, bootstrap administrator, Qdrant collection created at startup
 * [x] End-to-end smoke test through nginx (`docker/smoke-test.mjs`, 28 checks)
 * [x] Multi-container `docker-compose` stacks (Test stack and isolated Demo stack)
-* [x] Backend tests (153 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
+* [x] Backend tests (160 passed across PostgreSQL, MongoDB, Qdrant, ONNX and TextHack)
 * [x] `/api/admin/users` and `/api/admin/roles`; disabling an account rejects its existing tokens
 * [x] `/api/documents/{id}/permissions`: list, grant READ, revoke
 * [x] `POST /api/documents`: upload to PostgreSQL, MongoDB (chunked) and Qdrant (embedded), with rollback
@@ -644,7 +644,7 @@ A comprehensive **development-status view** right now:
 | Core Search Integration       | 🟢 Verified   |
 | DSA-3 TextHack (all 20 algos) | 🟢 Verified   |
 | TextHack → Search (1.7C)      | 🟢 Verified   |
-| DSA-3 frontend wiring         | 🔴 Pending    |
+| DSA-3 frontend wiring         | 🟢 Verified   |
 | OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
 | Product UI: sign-in + dashboard | 🟢 Verified |
@@ -676,9 +676,10 @@ DBE: React shell + JWT authentication (Frontend 1)
 DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 DBE: Repository, document viewer, search, upload/delete and administration pages
 DBE: Full-stack Docker deployment, smoke and load tested
+DBE/DSA: TextHack workbench API and page (pattern, similarity, citation flow)
 
 REMAINING:
-Frontend: ML insights and TextHack views
+Frontend: ML insights view
 ML: Classification, Clustering & Feature Engineering (Future COs)
 OSSP: Signals, process groups, job control, memory, file I/O, threads
 Deployment: public free-tier hosting (needs accounts)

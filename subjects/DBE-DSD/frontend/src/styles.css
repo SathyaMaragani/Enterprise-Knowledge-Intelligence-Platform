@@ -2399,3 +2399,88 @@ a.btn {
   cursor: not-allowed;
   text-decoration: none;
 }
+
+/* TextHack workbench */
+
+.texthack-intro {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.texthack-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.texthack-form > label:first-child,
+.texthack-form > .form-row:first-child label {
+  margin-top: 0;
+}
+
+.texthack-form__submit {
+  align-self: flex-start;
+  margin-top: 1.2rem;
+}
+
+.texthack-numbers {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.texthack-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.texthack-text {
+  max-height: 14rem;
+}
+
+.texthack-text mark {
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.3);
+  color: var(--text);
+}
+
+.texthack-matches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.88rem;
+}
+
+.texthack-alignment h3 {
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.texthack-alignment pre,
+.texthack-result code,
+.doc-table code {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.texthack-alignment pre {
+  margin-bottom: 0.4rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(8, 14, 28, 0.6);
+  letter-spacing: 0.08em;
+}
+
+.texthack-facts div {
+  grid-template-columns: 7rem minmax(0, 1fr);
+}
+
+@media (max-width: 640px) {
+  .texthack-numbers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
