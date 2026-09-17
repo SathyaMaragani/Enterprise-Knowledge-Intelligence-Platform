@@ -2,12 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { documentFixture } from '../test-utils.js';
 import {
   categoryNames,
+  greeting,
   initials,
   recentActivity,
   recentDocuments,
   relativeTime,
   summarize,
 } from './dashboardData.js';
+
+describe('greeting', () => {
+  it('follows the local time of day', () => {
+    expect(greeting(new Date(2026, 8, 17, 0, 0))).toBe('Good morning');
+    expect(greeting(new Date(2026, 8, 17, 11, 59))).toBe('Good morning');
+    expect(greeting(new Date(2026, 8, 17, 12, 0))).toBe('Good afternoon');
+    expect(greeting(new Date(2026, 8, 17, 17, 59))).toBe('Good afternoon');
+    expect(greeting(new Date(2026, 8, 17, 18, 0))).toBe('Good evening');
+  });
+});
 
 describe('summarize', () => {
   it('counts documents, distinct categories and indexed documents', () => {

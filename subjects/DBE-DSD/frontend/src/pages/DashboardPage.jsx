@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
-import GlassDocs from '../components/GlassDocs.jsx';
 import {
   KeywordFallbackNotice,
   modeLabel,
@@ -14,10 +13,8 @@ import {
   SearchHitList,
   SearchModePicker,
 } from '../components/SearchBits.jsx';
-import Mountains from '../components/Mountains.jsx';
 import {
   AlertIcon,
-  BarChartIcon,
   CheckCircleIcon,
   DatabaseIcon,
   FileTextIcon,
@@ -30,6 +27,7 @@ import {
 } from '../components/icons.jsx';
 import {
   categoryNames,
+  greeting,
   recentActivity,
   recentDocuments,
   relativeTime,
@@ -40,81 +38,39 @@ export default function DashboardPage() {
   const documents = useApi('/api/documents');
   const collection = useApi('/api/search/vector/collection-info');
   const searchActivity = useApi('/api/search/history?limit=5');
-  const navigate = useNavigate();
-  const { profile } = useAuth();
-  const canUpload = can(profile, 'DOCUMENT_CREATE');
+  const { session, profile } = useAuth();
+  const firstName = (profile?.fullName || session.username).split(' ')[0];
 
   const docs = documents.status === 'ready' ? documents.data ?? [] : [];
 
   return (
-    <div className="dashboard">
-      <div className="dashboard__main">
-        <section className="hero">
-          <div className="hero__art">
-            {/* Static on purpose: the working dashboard stays fast and readable; 3D is for sign-in. */}
-            <div className="hero__glow" />
-            <GlassDocs />
-          </div>
-          <div className="hero__copy">
-            <p className="eyebrow eyebrow--spaced">Enterprise Intelligence Platform</p>
-            <h1 className="hero-title hero-title--dashboard">
-              Find what <span className="gradient-text">matters</span>
-            </h1>
-            <p className="hero-lead hero-lead--muted">
-              Search across documents, knowledge and insights — powered by hybrid AI search.
-            </p>
-          </div>
-        </section>
+    <div className="page dashboard">
+      <header className="page-header page-header--with-action">
+        <div>
+          <h1 className="page-title">
+            {greeting()}, {firstName}
+          </h1>
+          <p className="page-subtitle">Search and explore the knowledge you have access to.</p>
+        </div>
+        {can(profile, 'DOCUMENT_CREATE') && (
+          <Link className="btn btn--primary" to="/upload">
+            <UploadIcon size={16} />
+            Upload document
+          </Link>
+        )}
+      </header>
 
-        <SearchPanel categories={categoryNames(docs)} onSearched={searchActivity.reload} />
+      <SearchPanel categories={categoryNames(docs)} onSearched={searchActivity.reload} />
 
-        <section className="glass-panel section" aria-labelledby="quick-actions-title">
-          <h2 id="quick-actions-title" className="section__title">
-            Quick Actions
-          </h2>
-          <div className="quick-actions">
-            <QuickAction
-              tone="blue"
-              Icon={UploadIcon}
-              title="Upload Document"
-              text="Add to repository"
-              onClick={canUpload ? () => navigate('/upload') : undefined}
-              unavailableText={profile ? 'Not permitted for your role' : undefined}
-            />
-            <QuickAction
-              tone="violet"
-              Icon={SearchIcon}
-              title="Advanced Search"
-              text="Filters, paging and scores"
-              onClick={() => navigate('/search')}
-            />
-            <QuickAction tone="green" Icon={BarChartIcon} title="View Analytics" />
-            <QuickAction tone="amber" Icon={TagIcon} title="Manage Categories" />
-          </div>
-        </section>
+      <Overview documents={documents} collection={collection} />
 
+      <div className="dashboard__grid">
         <RecentDocuments state={documents} />
+        <div className="dashboard__side">
+          <SearchActivity state={searchActivity} />
+          <RecentActivity state={documents} />
+        </div>
       </div>
-
-      <aside className="dashboard__aside">
-        <ul className="deco-words" aria-hidden="true">
-          <li>Documents</li>
-          <li>People</li>
-          <li>Knowledge</li>
-          <li>Possibilities</li>
-          <li className="deco-words__accent">Connected</li>
-        </ul>
-
-        <SystemOverview documents={documents} collection={collection} />
-        <SearchActivity state={searchActivity} />
-        <RecentActivity state={documents} />
-
-        <figure className="scenic-card aside__card">
-          <Mountains className="scenic-card__art" />
-          <blockquote>A more connected and informed tomorrow.</blockquote>
-          <figcaption>EIP</figcaption>
-        </figure>
-      </aside>
     </div>
   );
 }
@@ -158,41 +114,41 @@ function SearchPanel({ categories, onSearched }) {
     }
   }
 
-
   return (
-    <section className="search" aria-label="Search">
-      <form className="search-bar" role="search" onSubmit={handleSubmit}>
-        <SearchIcon className="search-bar__icon" />
-        <input
-          ref={inputRef}
-          type="search"
-          aria-label="Search documents"
-          placeholder="Search documents, ask a question, or enter keywords..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <select
-          aria-label="Category"
-          className="search-bar__select"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="">All Categories</option>
-          {categories.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="btn btn--primary search-bar__submit" disabled={search.status === 'loading'}>
-          {search.status === 'loading' ? 'Searching…' : 'Search'}
-        </button>
-      </form>
-
-      <SearchModePicker value={mode} onChange={changeMode} />
+    <>
+      <section className="glass-panel section search-card" aria-label="Search">
+        <form className="search-bar" role="search" onSubmit={handleSubmit}>
+          <SearchIcon className="search-bar__icon" size={18} />
+          <input
+            ref={inputRef}
+            type="search"
+            aria-label="Search documents"
+            placeholder="Search documents, ask a question, or enter keywords…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select
+            aria-label="Category"
+            className="search-bar__select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">All categories</option>
+            {categories.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="btn btn--primary search-bar__submit" disabled={search.status === 'loading'}>
+            {search.status === 'loading' ? 'Searching…' : 'Search'}
+          </button>
+        </form>
+        <SearchModePicker value={mode} onChange={changeMode} />
+      </section>
 
       <SearchResults search={search} category={category} onClear={() => setSearch({ status: 'idle' })} />
-    </section>
+    </>
   );
 }
 
@@ -217,10 +173,7 @@ function SearchResults({ search, category, onClear }) {
           )}
         </h2>
         <span className="search-results__actions">
-          <Link
-            className="view-all"
-            to={`/search?${new URLSearchParams(params)}`}
-          >
+          <Link className="view-all" to={`/search?${new URLSearchParams(params)}`}>
             Open in search →
           </Link>
           <button type="button" className="icon-button" aria-label="Clear search results" onClick={onClear}>
@@ -238,33 +191,42 @@ function SearchResults({ search, category, onClear }) {
       {search.status === 'ready' && <KeywordFallbackNotice mode={search.mode} sources={search.data.sources} />}
 
       {search.status === 'ready' && search.data.hits.length === 0 && (
-        <p className="muted">No documents you can access match this search.</p>
+        <p className="empty-state">No documents you can access match this search.</p>
       )}
 
-      {search.status === 'ready' && search.data.hits.length > 0 && (
-        <SearchHitList hits={search.data.hits} />
-      )}
+      {search.status === 'ready' && search.data.hits.length > 0 && <SearchHitList hits={search.data.hits} />}
     </div>
   );
 }
 
-function QuickAction({ tone, Icon, title, text, onClick, unavailableText = 'Coming soon' }) {
-  const available = Boolean(onClick);
+function Overview({ documents, collection }) {
+  const ready = documents.status === 'ready';
+  const summary = ready ? summarize(documents.data ?? []) : null;
+  const show = (value) => (ready ? value : '—');
+  const chunks = collection.status === 'ready' ? collection.data?.pointsCount ?? '—' : '—';
+
+  const tiles = [
+    { label: 'Documents', value: show(summary?.total), hint: 'You can access', Icon: FileTextIcon },
+    { label: 'Indexed', value: show(summary?.indexed), hint: 'Ready for semantic search', Icon: CheckCircleIcon },
+    { label: 'Categories', value: show(summary?.categories), hint: 'Across your documents', Icon: TagIcon },
+    { label: 'Vector chunks', value: chunks, hint: 'In the search index', Icon: DatabaseIcon },
+  ];
+
   return (
-    <button
-      type="button"
-      className={`quick-action quick-action--${tone}`}
-      onClick={onClick}
-      disabled={!available}
-    >
-      <span className={`icon-tile icon-tile--solid-${tone}`}>
-        <Icon size={22} />
-      </span>
-      <span>
-        <strong>{title}</strong>
-        <span className="quick-action__text">{available ? text : unavailableText}</span>
-      </span>
-    </button>
+    <section aria-label="Overview">
+      <dl className="kpi-grid">
+        {tiles.map(({ label, value, hint, Icon }) => (
+          <div key={label} className="glass-panel kpi">
+            <dt className="kpi__label">
+              <Icon size={15} />
+              {label}
+            </dt>
+            <dd className="kpi__value">{value}</dd>
+            <dd className="kpi__hint">{hint}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -273,10 +235,10 @@ function RecentDocuments({ state }) {
     <section className="glass-panel section" aria-labelledby="recent-documents-title">
       <div className="section__header">
         <h2 id="recent-documents-title" className="section__title">
-          Recent Documents
+          Recent documents
         </h2>
         <Link className="view-all" to="/repository">
-          View All →
+          View all →
         </Link>
       </div>
 
@@ -287,7 +249,7 @@ function RecentDocuments({ state }) {
         </p>
       )}
       {state.status === 'ready' && state.data.length === 0 && (
-        <p className="muted">You don’t have access to any documents yet.</p>
+        <p className="empty-state">You don’t have access to any documents yet.</p>
       )}
       {state.status === 'ready' && state.data.length > 0 && (
         <div className="table-scroll">
@@ -320,46 +282,13 @@ function RecentDocuments({ state }) {
                   <td>
                     <StatusPill status={doc.status} />
                   </td>
-                  <td className="muted">{relativeTime(doc.updatedAt)}</td>
+                  <td className="muted nowrap">{relativeTime(doc.updatedAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </section>
-  );
-}
-
-function SystemOverview({ documents, collection }) {
-  const ready = documents.status === 'ready';
-  const summary = ready ? summarize(documents.data ?? []) : null;
-  const show = (value) => (ready ? value : '—');
-  const chunks = collection.status === 'ready' ? collection.data?.pointsCount ?? '—' : '—';
-
-  const tiles = [
-    { label: 'Documents', value: show(summary?.total), Icon: FileTextIcon, tone: 'blue' },
-    { label: 'Categories', value: show(summary?.categories), Icon: TagIcon, tone: 'amber' },
-    { label: 'Indexed', value: show(summary?.indexed), Icon: CheckCircleIcon, tone: 'green' },
-    { label: 'Vector chunks', value: chunks, Icon: DatabaseIcon, tone: 'teal' },
-  ];
-
-  return (
-    <section className="glass-panel section" aria-labelledby="overview-title">
-      <h2 id="overview-title" className="section__title">
-        System Overview
-      </h2>
-      <dl className="stat-grid">
-        {tiles.map(({ label, value, Icon, tone }) => (
-          <div key={label} className="stat">
-            <span className={`stat__icon stat__icon--${tone}`}>
-              <Icon size={20} />
-            </span>
-            <dt className="stat__label">{label}</dt>
-            <dd className="stat__value">{value}</dd>
-          </div>
-        ))}
-      </dl>
     </section>
   );
 }
@@ -377,11 +306,11 @@ function SearchActivity({ state }) {
   return (
     <section className="glass-panel section" aria-labelledby="search-activity-title">
       <h2 id="search-activity-title" className="section__title">
-        Search Activity
+        Your recent searches
       </h2>
       {state.status === 'loading' && !entries && <p className="muted">Loading…</p>}
       {state.status === 'error' && (
-        <p className="muted">
+        <p className="muted activity-unavailable">
           <AlertIcon size={16} /> Search activity is unavailable.
         </p>
       )}
@@ -391,7 +320,7 @@ function SearchActivity({ state }) {
           {entries.map((entry) => (
             <li key={`${entry.mode}:${entry.query}`} className="activity">
               <span className="activity__icon activity__icon--search">
-                <SearchIcon size={16} />
+                <SearchIcon size={14} />
               </span>
               <span className="activity__text">
                 <Link className="doc-link activity__query" to={searchLink(entry)}>
@@ -414,11 +343,11 @@ function RecentActivity({ state }) {
   return (
     <section className="glass-panel section" aria-labelledby="activity-title">
       <h2 id="activity-title" className="section__title">
-        Recent Activity
+        Document activity
       </h2>
       {state.status === 'loading' && <p className="muted">Loading…</p>}
       {state.status === 'error' && (
-        <p className="muted">
+        <p className="muted activity-unavailable">
           <AlertIcon size={16} /> Activity is unavailable.
         </p>
       )}
@@ -428,11 +357,11 @@ function RecentActivity({ state }) {
           {recentActivity(state.data).map((event) => (
             <li key={`${event.id}-${event.kind}`} className="activity">
               <span className={`activity__icon activity__icon--${event.kind}`}>
-                {event.kind === 'updated' ? <PencilIcon size={16} /> : <PlusIcon size={16} />}
+                {event.kind === 'updated' ? <PencilIcon size={14} /> : <PlusIcon size={14} />}
               </span>
               <span className="activity__text">
-                <span>{event.kind === 'updated' ? 'Document updated' : 'Document added'}</span>
-                <span className="activity__title">{event.title}</span>
+                <span className="activity__query">{event.title}</span>
+                <span className="activity__title">{event.kind === 'updated' ? 'Updated' : 'Added'}</span>
               </span>
               <span className="activity__time">{relativeTime(event.at)}</span>
             </li>

@@ -6,6 +6,14 @@ function timeOf(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+/** A time-of-day greeting in the viewer's local time. */
+export function greeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 /** Headline counts over the documents the current user may read. */
 export function summarize(documents) {
   return {

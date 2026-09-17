@@ -65,7 +65,7 @@ describe('dashboard', () => {
     expect(within(rows[0]).getByText('Uploaded')).toBeTruthy();
     expect(within(rows[3]).getByText('Failed')).toBeTruthy();
     expect(within(rows[0]).getByRole('link', { name: 'Vendor Contract A' }).getAttribute('href')).toBe('/documents/5');
-    expect(screen.getByRole('link', { name: 'View All →' }).getAttribute('href')).toBe('/repository');
+    expect(screen.getByRole('link', { name: 'View all →' }).getAttribute('href')).toBe('/repository');
   });
 
   it('still shows documents when vector statistics are unavailable', async () => {
@@ -128,7 +128,7 @@ describe('dashboard', () => {
     expect(await screen.findByRole('table')).toBeTruthy();
   });
 
-  it('marks unbuilt navigation and actions as coming soon rather than linking nowhere', async () => {
+  it('offers only built pages and actions', async () => {
     renderDashboard();
     await screen.findByRole('table');
 
@@ -142,20 +142,24 @@ describe('dashboard', () => {
     // Unbuilt pages are not advertised in the navigation.
     expect(within(nav).queryByText('Soon')).toBeNull();
     expect(within(nav).queryByText('Analytics')).toBeNull();
-    // The hero search is the dashboard's search; the top bar does not repeat it.
+    // The dashboard's own search bar is its search; the top bar does not repeat it.
     expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
-
-    expect(screen.getByRole('button', { name: /Upload Document/ }).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: /Advanced Search/ }).disabled).toBe(false);
+    // Without a profile that allows uploads, no upload action is offered at all.
+    expect(screen.queryByRole('link', { name: 'Upload document' })).toBeNull();
   });
 
-  it('opens the full search page from the Advanced Search action', async () => {
-    renderDashboard({ 'GET /api/categories': jsonResponse(200, []) });
-    await screen.findByRole('table');
+  it('greets the user by first name once the profile loads', async () => {
+    renderDashboard({
+      'GET /api/auth/me': jsonResponse(200, {
+        username: 'alice_mgr',
+        fullName: 'Alice Manager',
+        roles: ['MANAGER'],
+        permissions: ['DOCUMENT_CREATE', 'DOCUMENT_READ'],
+      }),
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: /Advanced Search/ }));
-
-    expect(await screen.findByRole('heading', { name: 'Search the knowledge base' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Alice$/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Upload document' }).getAttribute('href')).toBe('/upload');
   });
 });
 

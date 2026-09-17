@@ -170,8 +170,7 @@ describe('upload entry points', () => {
   it('lets a manager start an upload from the dashboard and the repository', async () => {
     renderApp('/', { upload: () => jsonResponse(500, {}), extra: dashboardRoutes });
 
-    const action = await screen.findByRole('button', { name: /Upload Document\s*Add to repository/ });
-    expect(action.disabled).toBe(false);
+    const action = await screen.findByRole('link', { name: 'Upload document' });
     fireEvent.click(action);
     expect(await screen.findByRole('heading', { name: 'Upload a document' })).toBeTruthy();
 
@@ -187,7 +186,7 @@ describe('upload entry points', () => {
     expect(screen.queryByRole('link', { name: 'Upload document' })).toBeNull();
 
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Dashboard' }));
-    const action = await screen.findByRole('button', { name: /Upload Document\s*Not permitted for your role/ });
-    expect(action.disabled).toBe(true);
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Bob$/ });
+    expect(screen.queryByRole('link', { name: 'Upload document' })).toBeNull();
   });
 });

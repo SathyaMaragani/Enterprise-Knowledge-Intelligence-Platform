@@ -4,10 +4,10 @@ import { CategoryTag, StatusPill } from './DocumentBits.jsx';
 import { LayersIcon, SparkleIcon, TypeIcon, WavesIcon } from './icons.jsx';
 
 export const SEARCH_MODES = [
-  { id: 'hybrid', title: 'Hybrid', text: 'Meaning and keywords', Icon: LayersIcon },
-  { id: 'semantic', title: 'Semantic', text: 'AI-powered meaning', Icon: SparkleIcon },
-  { id: 'keyword', title: 'Keyword', text: 'Exact terms only', Icon: TypeIcon },
-  { id: 'fuzzy', title: 'Fuzzy', text: 'Tolerates typos', Icon: WavesIcon },
+  { id: 'hybrid', title: 'Hybrid', text: 'Matches meaning and keywords together.', Icon: LayersIcon },
+  { id: 'semantic', title: 'Semantic', text: 'Matches by meaning, even without shared words.', Icon: SparkleIcon },
+  { id: 'keyword', title: 'Keyword', text: 'Matches the exact words only.', Icon: TypeIcon },
+  { id: 'fuzzy', title: 'Fuzzy', text: 'Matches words even when they are misspelled.', Icon: WavesIcon },
 ];
 
 /** Display name for a mode as the API reports it (`FUZZY`), including the legacy `TEXTHACK`. */
@@ -26,31 +26,30 @@ export function modeParam(mode) {
   return mode === 'hybrid' ? undefined : mode.toUpperCase();
 }
 
-/** Radio chips choosing how the next search runs. */
+/** A segmented radio control choosing how the next search runs, with the chosen mode explained. */
 export function SearchModePicker({ value, onChange }) {
+  const active = SEARCH_MODES.find(({ id }) => id === value);
   return (
-    <fieldset className="mode-chips">
-      <legend className="visually-hidden">Search mode</legend>
-      {SEARCH_MODES.map(({ id, title, text, Icon }) => (
-        <label key={id} className={`mode-chip${value === id ? ' is-active' : ''}`}>
-          <input
-            type="radio"
-            className="visually-hidden"
-            name="search-mode"
-            value={id}
-            checked={value === id}
-            onChange={() => onChange(id)}
-          />
-          <span className="mode-chip__icon">
-            <Icon size={18} />
-          </span>
-          <span>
-            <strong>{title}</strong>
-            <span className="mode-chip__text">{text}</span>
-          </span>
-        </label>
-      ))}
-    </fieldset>
+    <div className="mode-picker">
+      <fieldset className="segmented">
+        <legend className="visually-hidden">Search mode</legend>
+        {SEARCH_MODES.map(({ id, title, Icon }) => (
+          <label key={id} className={`segmented__option${value === id ? ' is-active' : ''}`}>
+            <input
+              type="radio"
+              className="visually-hidden"
+              name="search-mode"
+              value={id}
+              checked={value === id}
+              onChange={() => onChange(id)}
+            />
+            <Icon size={15} />
+            {title}
+          </label>
+        ))}
+      </fieldset>
+      {active && <p className="mode-picker__hint">{active.text}</p>}
+    </div>
   );
 }
 

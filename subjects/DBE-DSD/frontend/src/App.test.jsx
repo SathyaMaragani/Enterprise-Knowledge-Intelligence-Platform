@@ -28,7 +28,8 @@ function signOut() {
 }
 
 const signInHeading = () => screen.getByRole('heading', { name: 'Welcome Back' });
-const dashboardHeading = () => screen.getByRole('heading', { name: 'Find what matters' });
+const DASHBOARD_GREETING = /^Good (morning|afternoon|evening), /;
+const dashboardHeading = () => screen.getByRole('heading', { name: DASHBOARD_GREETING });
 
 // A signed-in shell loads dashboard data straight away; these keep it quiet.
 const DASHBOARD_ROUTES = {
@@ -64,7 +65,7 @@ describe('authentication flow', () => {
 
     signIn('  alice_mgr ', 'stub-password');
 
-    expect(await screen.findByRole('heading', { name: 'Find what matters' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: DASHBOARD_GREETING })).toBeTruthy();
     expect(screen.getByText('alice_mgr')).toBeTruthy();
 
     const [path, init] = fetchMock.mock.calls[0];
@@ -123,7 +124,7 @@ describe('authentication flow', () => {
     signIn('bob_eng', 'stub-password');
 
     expect(await screen.findByRole('link', { name: '← Repository' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Find what matters' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: DASHBOARD_GREETING })).toBeNull();
   });
 
   it('keeps a signed-in user away from the sign-in page', () => {
