@@ -2,11 +2,36 @@
 
 React single-page app for the Enterprise Knowledge Intelligence Platform.
 
-**Current state:** sign-in, dashboard, search, document repository, document
-viewer, upload, user administration and the TextHack algorithm workbench, built
-to the product UI design on top of
-Frontend 1's routing, JWT session handling, protected routes and sign-out.
-Categories and analytics are not built yet; the navigation shows them as "Soon".
+**Current state:** the app has these pages:
+- sign-in
+- dashboard
+- search
+- document repository
+- document viewer
+- upload
+- user administration
+- the TextHack algorithm workbench
+
+It uses a restrained dark product style and is built on Frontend 1's routing,
+JWT session handling, protected routes and sign-out. Only built pages appear in
+the navigation; category management and analytics do not exist yet and are not
+advertised.
+
+## Design conventions
+
+`src/styles.css` holds one small design system. Follow it rather than styling
+case by case:
+
+| Piece | Rule |
+|---|---|
+| Tokens | Colours, radii, control height (`--control-height`, 2.5rem) and input background are variables on `:root`. |
+| Buttons | `.btn` with `--primary`, `--outline` or `--danger`; `--small` for dense rows. No glow, no hover movement. |
+| Inputs | `.text-input` and `.select` share the control height and radius; selects draw one consistent chevron. |
+| Badges | `.tag` (category) and `.status` (document state) share one shape. Match signals are `.signal` dots, not badges. |
+| Page header | `.page-header` with `.page-title` and one `.page-subtitle` line; actions sit to the right with `--with-action`. No eyebrow labels. |
+| Cards | `.glass-panel.section` with a `.section__title`. |
+| Hidden content | Use the `hidden` attribute; a global `[hidden]` rule keeps component display rules from overriding it. |
+| 3D | Only on the sign-in page. Working pages use CSS and SVG. |
 
 Stack: React 19, React Router 7, Vite 8, Vitest 4 with Testing Library and
 jsdom, and [ThreeUI Community](https://github.com/MengTo/threeui)
@@ -67,11 +92,16 @@ with their own search bar.
 
 ### Sign-in
 
-A two-panel page. The left panel carries the product message over a dusk
-landscape: threeui's `cloud-field` scene (animated sky and drifting cloud ridges)
-behind SVG mountains. Beside the copy is a knowledge graph: topics, the documents
-filed under them, and the people linking documents across topics. The right
-panel holds the sign-in form.
+A two-panel page.
+
+The left panel has the brand, one headline, one line of copy and three features
+over a dusk landscape. The landscape is threeui's `cloud-field` scene (animated
+sky and drifting cloud ridges) behind SVG mountains. Beside the copy is a
+knowledge graph: topics, the documents filed under them, and the people linking
+documents across topics.
+
+The right panel holds a compact "Sign in" card. The card repeats the brand only
+when the left panel is hidden.
 
 The graph (`KnowledgeGraph.jsx`) is illustrative, since nothing can be fetched
 before sign-in, and generated the same way every visit. With WebGL and motion
@@ -91,28 +121,25 @@ whole left panel is hidden below 1100px.
 | Username / Password | Signs in with `POST /api/auth/login`. The backend looks users up by username only, so the field does not offer email. |
 | Show / hide password | Toggles the password field between hidden and plain text. |
 | Forgot password? | Explains that resets go through an administrator. The backend has no self-service reset. |
-| Sign in with SSO | Shown disabled, marked "not configured". The backend has no SSO. |
+
+Single sign-on is not offered, because the backend has none.
 
 ### Dashboard
 
 | Section | Data |
 |---|---|
-| Search bar | `POST /api/search` with the query, mode and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy), plus an "Open in search" link carrying the query, category and mode to the search page. |
-| Hybrid / Semantic / Keyword / Fuzzy | Radio chips choosing the search `mode`. Changing mode while results are shown re-runs the search. If Hybrid comes back without semantic results, a notice says the results match keywords only. |
-| Category filter | Categories of the documents the user can read. |
-| Quick Actions | Upload Document opens the upload page for roles with `DOCUMENT_CREATE` and says "Not permitted for your role" otherwise. Advanced Search opens the search page. Analytics and Categories are marked "Coming soon". |
-| Recent Documents | `GET /api/documents`, newest update first. |
-| System Overview | Documents, categories and indexed counts over the user's readable documents; vector chunks from `GET /api/search/vector/collection-info`, which is collection-wide. |
-| Search Activity | `GET /api/search/history?limit=5`: the user's own latest searches with mode, result count and time. Each one reopens the search in its mode, and the panel refreshes after a dashboard search. |
-| Recent Activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
+| Header | A time-of-day greeting with the user's first name. An **Upload document** button appears for roles with `DOCUMENT_CREATE`; other roles see no upload action. |
+| Search card | `POST /api/search` with the query, mode and optional category (from the user's readable documents). Results show inline with relevance and match signals, plus an "Open in search" link carrying the query, category and mode. |
+| Mode control | A segmented Hybrid / Semantic / Keyword / Fuzzy control with a one-line explanation of the chosen mode. Changing mode while results are shown re-runs the search. If Hybrid comes back without semantic results, a notice says the results match keywords only. |
+| Overview tiles | Documents, indexed and categories over the user's readable documents. Vector chunks come from `GET /api/search/vector/collection-info`, which is collection-wide. |
+| Recent documents | `GET /api/documents`, newest update first. |
+| Your recent searches | `GET /api/search/history?limit=5`: the user's own latest searches with mode, result count and time. Each one reopens the search in its mode, and the panel refreshes after a dashboard search. |
+| Document activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
 
 Every figure comes from the API. When a request fails, the section says so or
 shows `—`; nothing falls back to placeholder numbers.
 
-The hero glow behind the glass documents is plain CSS. 3D is kept to the sign-in
-page so the working pages stay fast and readable.
-
-Recent document titles and search hits open the document viewer; "View All"
+Recent document titles and search hits open the document viewer; "View all"
 opens the repository.
 
 ### Search (`/search`)
@@ -125,11 +152,11 @@ and is left out of the URL; an unknown mode is treated as Hybrid.
 | Element | Behaviour |
 |---|---|
 | Search bar | Runs on submit. Nothing is sent until there is a query. |
-| Mode chips | Hybrid, Semantic, Keyword or Fuzzy (see `docs/API.md`). Choosing one re-runs the search from the first page. |
+| Mode control | Hybrid, Semantic, Keyword or Fuzzy (see `docs/API.md`), with the chosen mode explained. Choosing one re-runs the search from the first page. |
 | Filters | Shows or hides Category and Status, with a count of those applied. Opens by default when the URL already has filters. |
 | Category / Status | Narrow the results and return to the first page. |
 | Keyword-only notice | Shown when Hybrid ran without semantic search. |
-| Results | Title (opens the viewer), description, category, status and match signals; owner, keyword score, raw semantic score and best chunk; overall relevance bar. |
+| Results | Title (opens the viewer), description, category, status and owner. How the hit matched (Keyword, Semantic, Fuzzy) shows as labelled dots, beside an overall relevance percentage and bar. Raw per-signal scores and chunk ids are internal and not shown. |
 | Previous / Next | Shown when there is more than one page. |
 
 The previous results stay on screen while the next page or filter loads.
@@ -156,9 +183,15 @@ first page.
 ### Document viewer (`/documents/:id`)
 
 `GET /api/documents/{id}`: the PostgreSQL metadata and the MongoDB content
-together. Shows the header (type, title, description, category, status, owner,
-last update), the extracted text with word and character counts, the chunks in
-order, and panels for source, processing, version, metadata and references.
+together. It shows:
+- the header: type, title, description, category, status, owner, last update
+- the extracted text, with word and character counts
+- the chunks, in order
+- one grouped **Details** panel: source, processing and version
+- **Metadata** and **References** panels when present
+
+File types read as names ("Excel spreadsheet") with the MIME type on hover.
+Statuses and metadata keys are humanized.
 
 A 403 explains that the user lacks access; a 404 says whether the document or
 only its stored content is missing. A non-numeric id is rejected without a
@@ -170,9 +203,9 @@ with a notice; on failure the document stays open with the error.
 
 ### Upload (`/upload`)
 
-`POST /api/documents` as multipart form data. Reached from the dashboard's
-Upload Document action or the repository's Upload document button, both shown
-only to roles with `DOCUMENT_CREATE`.
+`POST /api/documents` as multipart form data. Reached from the **Upload
+document** button on the dashboard or the repository, shown only to roles with
+`DOCUMENT_CREATE`.
 
 | Field | Behaviour |
 |---|---|
@@ -205,7 +238,7 @@ link is hidden.
 | Area | Behaviour |
 |---|---|
 | Accounts | Every user with full name, username, email, role, status and creation date. |
-| Role | A select per user; a change is saved immediately. |
+| Role | A select per user showing Admin, Manager or Employee; a change is saved immediately. |
 | Status | Disable or Enable. Disabling ends the account's sessions at once. |
 | Password | Reset… opens an inline field for a new password (8–72 characters). |
 | Add a user | Username, full name, email, role and initial password. |
@@ -216,13 +249,15 @@ notice confirms it; failures are shown next to the action.
 
 ### TextHack (`/texthack`)
 
-A workbench for the DSA-3 engine, open to every signed-in user. Each panel sends
-its input to `/api/texthack/*` and shows what the engine computed:
+A workbench for the DSA-3 engine, open to every signed-in user. Four tabs show
+one tool at a time. Tabs support arrow keys, and each tool keeps its input and
+results while hidden. Each tool sends its input to `/api/texthack/*` and shows
+what the engine computed:
 
-| Panel | Shows |
+| Tab | Shows |
 |---|---|
 | Pattern search | Match count and algorithm (KMP or Aho-Corasick), the text with matches highlighted (overlapping matches merge), each match's offsets, and the longest repeated substring |
-| Similarity and alignment | Levenshtein and Damerau distances, similarity, and the global and local alignments with score and identity |
+| Similarity | Levenshtein and Damerau distances, similarity, and the global and local alignments with score and identity |
 | Citation flow | Influence (maximum flow), the bottleneck citations (minimum cut) and the source side of the cut; citations are typed one `from to` per line and checked before sending |
 | Complexity | Time and space for every algorithm in the engine |
 

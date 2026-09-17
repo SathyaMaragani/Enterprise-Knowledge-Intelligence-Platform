@@ -476,6 +476,55 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Frontend Polish: Professional Product Pass
+**Status: VERIFIED**
+Checked with headless Chrome screenshots of every page at 1920, 1440 and 1280
+pixels. Phone widths (375px) were checked through a fixed-width iframe, because
+headless Chrome will not size its window below about 500px. The API responses
+were live-captured and replayed.
+
+```
+Frontend  Tests  153 passed (153)
+```
+
+The goal was a product that looks finished, not new features.
+
+1. [x] **Design system and shell.**
+   - Buttons, inputs and selects share one height, radius and chevron.
+   - Category and status badges share one shape.
+   - The sidebar is calmer and lists only built pages; the SOON items and the
+     quote card are gone.
+   - A separated top bar.
+   - Page headers without eyebrow labels.
+2. [x] **Dashboard.**
+   - Greeting and Upload action.
+   - Search card with a segmented mode control.
+   - Four overview tiles.
+   - Recent documents beside the two activity feeds.
+   - The marketing hero, decorative word list, quote cards and Quick Actions
+     (two unbuilt) are gone.
+3. [x] **Search results and document page.**
+   - Match signals are small labelled dots.
+   - Raw cosine scores and chunk ids are hidden.
+   - One grouped Details panel.
+   - Humanized statuses, keys and file types.
+4. [x] **Sign-in.**
+   - One headline and three concrete features.
+   - Compact card.
+   - Removed: the disabled SSO button, the three taglines and the clipped quote.
+5. [x] **TextHack and Administration.**
+   - Tabbed tools with keyboard support.
+   - Roles read Admin, Manager, Employee.
+
+**Found by looking at the screenshots:** the Filters toggle on the search page
+did not hide the filters. Their panel's `display: flex` rule overrode the
+`hidden` attribute, and jsdom tests cannot see CSS. A global `[hidden]` rule
+fixes it everywhere.
+
+Tests that asserted removed elements were rewritten to the intended behaviour:
+the hero heading, the Quick Actions buttons, the SSO button, the per-signal
+score text, uppercase role names and the single-page TextHack layout.
+
 ## UI Gap Closure: Search Modes, Activity, Global Search, Knowledge Graph
 **Status: VERIFIED**
 (Each step has its own commit. Backend suite against the live stacks; frontend

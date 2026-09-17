@@ -562,10 +562,11 @@ Current state:
 
 ### Product UI — Sign-in & Dashboard — VERIFIED
 
-* [x] Sign-in page to the product design: dusk hero (threeui `cloud-field`, SVG mountains) with a 3D knowledge graph (three.js, static SVG fallback) and sign-in card
-* [x] Password show/hide; "Forgot password?" explains admin resets; SSO shown as not configured
-* [x] Dashboard shell: sidebar (unbuilt pages marked "Soon"), account menu with sign-out
-* [x] Dashboard hero with glass documents over a static CSS glow (3D kept to sign-in so working pages stay fast)
+* [x] Sign-in page: dusk hero (threeui `cloud-field`, SVG mountains), one headline, three features, a 3D knowledge graph (three.js, static SVG fallback) and a compact sign-in card
+* [x] Password show/hide; "Forgot password?" explains admin resets; no SSO is offered (the backend has none)
+* [x] App shell: sidebar with built pages only, top bar with global search and account menu
+* [x] Dashboard: greeting, search card, overview tiles, recent documents and activity (3D kept to sign-in so working pages stay fast)
+* [x] Professional polish pass: one design system (controls, badges, page headers), readable values on the document page, tabbed TextHack workbench
 * [x] Dashboard search: `POST /api/search` with category filter, inline results, Keyword/Semantic/Fuzzy match signals, selectable Hybrid/Semantic/Keyword/Fuzzy modes
 * [x] Global search in the top bar on every other signed-in page
 * [x] Search Activity: each user's own recent searches (`GET /api/search/history`), shown on the dashboard
