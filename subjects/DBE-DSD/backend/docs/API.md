@@ -24,7 +24,7 @@ server and return a generic message, never exception text.
 | 413 | Payload Too Large | An upload over 1 MB. |
 | 415 | Unsupported Media Type | A body the endpoint does not accept, such as plain text sent to a JSON endpoint. |
 | 500 | Internal Server Error | Anything unexpected; the message is always `An unexpected error occurred.` |
-| 503 | Service Unavailable | Qdrant is unreachable for a request that needs it. |
+| 503 | Service Unavailable | Qdrant or the embedding model is unavailable for a request that needs it. |
 
 ## 0. Authentication
 - **URL**: `/api/auth/login`
@@ -273,6 +273,7 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
   "category": "Legal",
   "department": null,
   "status": "INDEXED",
+  "mode": "HYBRID",
   "page": 0,
   "size": 10
 }
@@ -285,8 +286,22 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
 | `category` | no | Applied to both backends. |
 | `department` | no | Qdrant payload filter; ignored by keyword search. |
 | `status` | no | PostgreSQL document status. Applied to hits from both keyword and vector search. |
+| `mode` | no | `HYBRID` (default), `KEYWORD`, `FUZZY` or `SEMANTIC`, in uppercase. See **Search modes**. |
 | `page` | no | Zero-based, default `0`. |
 | `size` | no | Default `10`, maximum `100`. |
+
+**Search modes**:
+
+| Mode | Runs | `sources` |
+|---|---|---|
+| `HYBRID` | Typo-tolerant keyword search fused with semantic search. If semantic search cannot run (no embedding model, Qdrant down) it answers from keywords alone. | `KEYWORD`, `VECTOR`, or `KEYWORD` when degraded |
+| `KEYWORD` | Keyword search on exact whole terms: phrases and reordered words, no typo tolerance. | `KEYWORD` |
+| `FUZZY` | Keyword search that also credits terms within one or two edits. | `KEYWORD` |
+| `SEMANTIC` | Semantic search alone. With no embedding model it returns 503 rather than an empty list. | `VECTOR` |
+
+`KEYWORD` and `FUZZY` need a `query`; a supplied `vector` is ignored. In the
+integration tests, `"Finacial"` finds Q1 Financial Report under `FUZZY` and
+nothing under `KEYWORD`.
 
 **Response**:
 ```json
@@ -367,9 +382,9 @@ rather than failing; a vector-only request against an unavailable Qdrant returns
 | Code | When |
 |---|---|
 | 200 | Search ran. An empty `hits` array is a valid result. |
-| 400 | Neither `query` nor `vector` supplied, `page` < 0, or `size` outside 1..100. |
+| 400 | Neither `query` nor `vector` supplied, `KEYWORD`/`FUZZY` without a `query`, an unknown `mode`, `page` < 0, or `size` outside 1..100. |
 | 401 | No or invalid bearer token. |
-| 503 | Vector-only search while Qdrant is unreachable. |
+| 503 | Vector-only or `SEMANTIC` search while Qdrant is unreachable, or `SEMANTIC` search with no embedding model loaded. |
 
 ## 6. TextHack demonstrations
 The DSA-3 TextHack engine, run on input supplied in the request. Nothing is read

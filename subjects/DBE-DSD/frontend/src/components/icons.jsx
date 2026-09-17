@@ -196,6 +196,21 @@ export const AlertIcon = (p) => (
   </Icon>
 );
 
+export const WavesIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 9c2-2.5 4-2.5 6 0s4 2.5 6 0 4-2.5 6 0M3 15c2-2.5 4-2.5 6 0s4 2.5 6 0 4-2.5 6 0" />
+  </Icon>
+);
+
+export const SlidersIcon = (p) => (
+  <Icon {...p}>
+    <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+    <circle cx="16" cy="6" r="2" />
+    <circle cx="10" cy="12" r="2" />
+    <circle cx="18" cy="18" r="2" />
+  </Icon>
+);
+
 export const XIcon = (p) => (
   <Icon {...p}>
     <path d="M6 6l12 12M18 6 6 18" />

@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
 import { CategoryTag, FileBadge, StatusPill } from '../components/DocumentBits.jsx';
 import GlassDocs from '../components/GlassDocs.jsx';
-import { SearchHitList, SearchModeChips } from '../components/SearchBits.jsx';
+import { KeywordFallbackNotice, modeParam, SearchHitList, SearchModePicker } from '../components/SearchBits.jsx';
 import Mountains from '../components/Mountains.jsx';
 import {
   AlertIcon,
@@ -114,24 +114,37 @@ function SearchPanel({ categories }) {
   const inputRef = useRef(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [mode, setMode] = useState('hybrid');
   const [search, setSearch] = useState({ status: 'idle' });
 
-  async function handleSubmit(event) {
+  async function runSearch(trimmed, searchMode) {
+    setSearch({ status: 'loading', query: trimmed, mode: searchMode });
+    try {
+      const data = await request('/api/search', {
+        method: 'POST',
+        body: { query: trimmed, mode: modeParam(searchMode), category: category || undefined, page: 0, size: 10 },
+      });
+      setSearch({ status: 'ready', query: trimmed, mode: searchMode, data });
+    } catch (error) {
+      setSearch({ status: 'error', query: trimmed, mode: searchMode, error });
+    }
+  }
+
+  function handleSubmit(event) {
     event.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) {
       inputRef.current?.focus();
       return;
     }
-    setSearch({ status: 'loading', query: trimmed });
-    try {
-      const data = await request('/api/search', {
-        method: 'POST',
-        body: { query: trimmed, category: category || undefined, page: 0, size: 10 },
-      });
-      setSearch({ status: 'ready', query: trimmed, data });
-    } catch (error) {
-      setSearch({ status: 'error', query: trimmed, error });
+    runSearch(trimmed, mode);
+  }
+
+  function changeMode(next) {
+    setMode(next);
+    // Results on screen follow the chosen mode rather than going stale.
+    if (search.status !== 'idle') {
+      runSearch(search.query, next);
     }
   }
 
@@ -166,7 +179,7 @@ function SearchPanel({ categories }) {
         </button>
       </form>
 
-      <SearchModeChips sources={search.status === 'ready' ? search.data?.sources : null} />
+      <SearchModePicker value={mode} onChange={changeMode} />
 
       <SearchResults search={search} category={category} onClear={() => setSearch({ status: 'idle' })} />
     </section>
@@ -177,6 +190,9 @@ function SearchResults({ search, category, onClear }) {
   if (search.status === 'idle') {
     return null;
   }
+  const params = { q: search.query };
+  if (category) params.category = category;
+  if (search.mode !== 'hybrid') params.mode = search.mode;
 
   return (
     <div className="glass-panel section search-results" aria-live="polite">
@@ -193,7 +209,7 @@ function SearchResults({ search, category, onClear }) {
         <span className="search-results__actions">
           <Link
             className="view-all"
-            to={`/search?${new URLSearchParams(category ? { q: search.query, category } : { q: search.query })}`}
+            to={`/search?${new URLSearchParams(params)}`}
           >
             Open in search →
           </Link>
@@ -208,6 +224,8 @@ function SearchResults({ search, category, onClear }) {
           {search.error.message}
         </p>
       )}
+
+      {search.status === 'ready' && <KeywordFallbackNotice mode={search.mode} sources={search.data.sources} />}
 
       {search.status === 'ready' && search.data.hits.length === 0 && (
         <p className="muted">No documents you can access match this search.</p>

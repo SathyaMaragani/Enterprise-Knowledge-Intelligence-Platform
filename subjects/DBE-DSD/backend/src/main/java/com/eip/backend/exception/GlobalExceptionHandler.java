@@ -119,8 +119,8 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
     }
 
-    @ExceptionHandler(QdrantUnavailableException.class)
-    public ResponseEntity<Map<String, String>> handleQdrantUnavailable(QdrantUnavailableException ex) {
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleServiceUnavailable(ServiceUnavailableException ex) {
         return body(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", ex.getMessage());
     }
 

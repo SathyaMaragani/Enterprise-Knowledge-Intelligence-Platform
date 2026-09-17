@@ -3,10 +3,12 @@ package com.eip.backend.service;
 import com.eip.backend.dto.qdrant.VectorSearchRequest;
 import com.eip.backend.dto.qdrant.VectorSearchResultItem;
 import com.eip.backend.dto.search.SearchHit;
+import com.eip.backend.dto.search.SearchMode;
 import com.eip.backend.dto.search.SearchRequest;
 import com.eip.backend.dto.search.SearchResponse;
 import com.eip.backend.entity.Document;
 import com.eip.backend.exception.QdrantUnavailableException;
+import com.eip.backend.exception.ServiceUnavailableException;
 import com.eip.backend.repository.DocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,10 @@ import java.util.Set;
  * <p>Both keyword paths report under the single {@code KEYWORD} source, because
  * they are one lexical signal. Per-hit provenance says when typo tolerance was
  * needed: such hits carry {@code FUZZY} in {@code matchedBy}.
+ *
+ * <p>{@link SearchMode} selects the legs: HYBRID runs both (typo-tolerant),
+ * KEYWORD runs the keyword leg on exact terms, FUZZY runs the keyword leg with
+ * typo tolerance, and SEMANTIC runs the vector leg alone.
  */
 @Service
 public class SearchService {
@@ -82,27 +88,32 @@ public class SearchService {
     @Transactional(readOnly = true)
     public SearchResponse search(SearchRequest request) {
         validate(request);
+        SearchMode mode = request.getMode();
 
         Map<Integer, SearchHit> hits = new LinkedHashMap<>();
         List<String> sources = new ArrayList<>();
 
         boolean keywordRan = false;
-        if (request.hasQuery()) {
-            collectKeywordHits(request, hits);
+        if (request.hasQuery() && mode.usesKeyword()) {
+            collectKeywordHits(request, hits, mode != SearchMode.KEYWORD);
             keywordRan = true;
             sources.add("KEYWORD");
+        }
 
-            // Server-side query embedding
-            if (!request.hasVector()) {
-                List<Float> generatedVector = embeddingService.embedQuery(request.getQuery());
-                if (generatedVector != null) {
-                    request.setVector(generatedVector);
-                }
+        // Server-side query embedding
+        if (request.hasQuery() && mode.usesVector() && !request.hasVector()) {
+            List<Float> generatedVector = embeddingService.embedQuery(request.getQuery());
+            if (generatedVector != null) {
+                request.setVector(generatedVector);
             }
+        }
+        if (mode == SearchMode.SEMANTIC && !request.hasVector()) {
+            // Hybrid falls back to its keyword results; semantic alone has nothing to fall back to.
+            throw new ServiceUnavailableException("Semantic search is unavailable: the embedding model is not loaded");
         }
 
         boolean vectorRan = false;
-        if (request.hasVector()) {
+        if (request.hasVector() && mode.usesVector()) {
             vectorRan = collectVectorHits(request, hits, keywordRan);
             if (vectorRan) {
                 sources.add("VECTOR");
@@ -144,6 +155,9 @@ public class SearchService {
         if (request.getSize() < 1 || request.getSize() > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("size must be between 1 and " + MAX_PAGE_SIZE);
         }
+        if (!request.hasQuery() && !request.getMode().usesVector()) {
+            throw new IllegalArgumentException(request.getMode() + " search needs a query");
+        }
     }
 
     /**
@@ -160,7 +174,7 @@ public class SearchService {
      *       incidental word with a long query does not become a hit.</li>
      * </ol>
      */
-    private void collectKeywordHits(SearchRequest request, Map<Integer, SearchHit> hits) {
+    private void collectKeywordHits(SearchRequest request, Map<Integer, SearchHit> hits, boolean allowFuzzy) {
         String query = request.getQuery().trim();
         String category = blankIfNull(request.getCategory());
         String status = blankIfNull(request.getStatus());
@@ -168,7 +182,7 @@ public class SearchService {
         for (Document document : documentRepository.searchByKeyword(
                 query, category, status, PageRequest.of(0, CANDIDATE_LIMIT))) {
             addKeywordHit(hits, document,
-                          lexicalScorer.score(query, document.getTitle(), document.getDescription()));
+                          lexicalScorer.score(query, document.getTitle(), document.getDescription(), allowFuzzy));
         }
 
         for (Document document : documentRepository.findForLexicalScan(
@@ -177,7 +191,7 @@ public class SearchService {
                 continue; // already scored identically by the phrase pass
             }
             LexicalScorer.Match match =
-                    lexicalScorer.score(query, document.getTitle(), document.getDescription());
+                    lexicalScorer.score(query, document.getTitle(), document.getDescription(), allowFuzzy);
             if (match.score() >= LexicalScorer.MIN_SCAN_SCORE) {
                 addKeywordHit(hits, document, match);
             }

@@ -4,10 +4,12 @@ import com.eip.backend.dto.qdrant.VectorSearchRequest;
 import com.eip.backend.dto.qdrant.VectorSearchResponse;
 import com.eip.backend.dto.qdrant.VectorSearchResultItem;
 import com.eip.backend.dto.search.SearchHit;
+import com.eip.backend.dto.search.SearchMode;
 import com.eip.backend.dto.search.SearchRequest;
 import com.eip.backend.dto.search.SearchResponse;
 import com.eip.backend.entity.Document;
 import com.eip.backend.exception.QdrantUnavailableException;
+import com.eip.backend.exception.ServiceUnavailableException;
 import com.eip.backend.repository.DocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -410,5 +412,83 @@ class SearchServiceTest {
         SearchResponse response = searchService.search(request("levae policy", null));
 
         assertEquals(0, response.getTotalHits());
+    }
+
+    // ------------------------------------------------------------ search modes
+
+    private SearchRequest request(String query, List<Float> vector, SearchMode mode) {
+        SearchRequest r = request(query, vector);
+        r.setMode(mode);
+        return r;
+    }
+
+    @Test
+    void keywordModeRequiresExactTermsWhileFuzzyModeToleratesTypos() {
+        Document report = doc(2, "Q1 Financial Report", "x");
+        scanReturns(report);
+
+        assertEquals(0, searchService.search(request("finacial", null, SearchMode.KEYWORD)).getTotalHits());
+
+        SearchResponse fuzzy = searchService.search(request("finacial", null, SearchMode.FUZZY));
+        assertEquals(List.of("KEYWORD"), fuzzy.getSources());
+        assertEquals(Set.of("KEYWORD", "FUZZY"), fuzzy.getHits().get(0).getMatchedBy());
+
+        // Exact terms still match in keyword mode, reordered or not.
+        assertEquals(1, searchService.search(request("report financial", null, SearchMode.KEYWORD)).getTotalHits());
+    }
+
+    @Test
+    void keywordModesSkipTheVectorLeg() {
+        Document report = doc(1, "Leave Policy", "x");
+        doc(2, "Sabbaticals", "y");
+        keywordReturns(report);
+        vectorReturns(vectorItem(2, 0.9f, "chunk-a"));
+
+        for (SearchMode mode : List.of(SearchMode.KEYWORD, SearchMode.FUZZY)) {
+            SearchResponse response = searchService.search(request("leave policy", List.of(0.1f), mode));
+            assertEquals(List.of("KEYWORD"), response.getSources(), mode.name());
+            assertEquals(List.of(1), response.getHits().stream().map(SearchHit::getDocumentId).toList(), mode.name());
+        }
+    }
+
+    @Test
+    void semanticModeSkipsTheKeywordLeg() {
+        Document report = doc(1, "Leave Policy", "x");
+        doc(2, "Sabbaticals", "y");
+        keywordReturns(report);
+        vectorReturns(vectorItem(2, 0.9f, "chunk-a"));
+
+        SearchResponse response = searchService.search(request("leave policy", List.of(0.1f), SearchMode.SEMANTIC));
+
+        assertEquals(List.of("VECTOR"), response.getSources());
+        assertEquals(List.of(2), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+        assertEquals(Set.of("VECTOR"), response.getHits().get(0).getMatchedBy());
+    }
+
+    @Test
+    void semanticModeWithoutAnEmbeddingIsUnavailableRatherThanEmpty() {
+        // The stub embedding service loads no model, as when embedding is disabled.
+        doc(1, "Leave Policy", "x");
+        keywordReturns(known.get(0));
+
+        assertThrows(ServiceUnavailableException.class,
+                     () -> searchService.search(request("leave policy", null, SearchMode.SEMANTIC)));
+        // Hybrid, by contrast, answers from keywords alone.
+        assertEquals(List.of("KEYWORD"), searchService.search(request("leave policy", null)).getSources());
+    }
+
+    @Test
+    void keywordModesNeedAQuery() {
+        assertThrows(IllegalArgumentException.class,
+                     () -> searchService.search(request(null, List.of(0.1f), SearchMode.KEYWORD)));
+        assertThrows(IllegalArgumentException.class,
+                     () -> searchService.search(request(" ", List.of(0.1f), SearchMode.FUZZY)));
+    }
+
+    @Test
+    void missingModeMeansHybrid() {
+        SearchRequest r = request("policy", null);
+        r.setMode(null);
+        assertEquals(SearchMode.HYBRID, r.getMode());
     }
 }

@@ -607,6 +607,39 @@ class EipApplicationTests {
     }
 
     @Test
+    void testSearchModesDecideWhetherTyposMatch() throws Exception {
+        String keyword = "{\"query\":\"Finacial\",\"mode\":\"KEYWORD\"}";
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(keyword))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("KEYWORD")))
+                .andExpect(jsonPath("$.totalHits").value(0));
+
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(keyword.replace("KEYWORD", "FUZZY")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("KEYWORD")))
+                .andExpect(jsonPath("$.hits[0].documentId").value(2))
+                .andExpect(jsonPath("$.hits[0].matchedBy", hasItems("KEYWORD", "FUZZY")));
+    }
+
+    @Test
+    void testSemanticModeIsUnavailableWithoutTheEmbeddingModel() throws Exception {
+        // The integration stack runs with embedding disabled.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"financial\",\"mode\":\"SEMANTIC\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message", containsString("embedding model")));
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"financial\",\"mode\":\"EVERYTHING\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void testTextHackRecoversReorderedTerms() throws Exception {
         // Document 9 is "Leave Policy Update"; the reordered phrase is not a
         // substring of anything, so only term matching can find it.

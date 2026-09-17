@@ -142,4 +142,14 @@ class LexicalScorerTest {
     void termsDropStopwordsSingleCharactersAndDuplicates() {
         assertEquals(List.of("leave", "policy"), LexicalScorer.terms("the leave leave a policy x"));
     }
+
+    @Test
+    void exactOnlyScoringGivesTyposNoCredit() {
+        assertTrue(scorer.score("levae policy", "Leave Policy Update", "x").fuzzy());
+
+        LexicalScorer.Match exact = scorer.score("levae policy", "Leave Policy Update", "x", false);
+        assertFalse(exact.fuzzy());
+        assertEquals(1, exact.matchedTerms());
+        assertEquals(LexicalScorer.COVERAGE_CEILING / 2, exact.score(), EPS);
+    }
 }

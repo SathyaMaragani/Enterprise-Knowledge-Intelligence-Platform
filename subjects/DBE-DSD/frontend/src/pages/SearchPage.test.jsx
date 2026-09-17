@@ -89,17 +89,48 @@ describe('search page', () => {
     expect(within(item).getByText('Keyword: 63%')).toBeTruthy();
     expect(within(item).getByText('Semantic: —')).toBeTruthy();
 
-    const modes = screen.getByRole('list', { name: 'Search modes' });
-    expect(within(modes).getByText('Keyword').closest('li').className).toContain('is-active');
+    expect(screen.getByRole('radio', { name: /^Hybrid/ }).checked).toBe(true);
+    expect(screen.getByText(/Semantic search is unavailable right now/)).toBeTruthy();
+  });
+
+  it('runs the mode from the URL and switches modes through the URL', async () => {
+    const bodies = renderSearch('/search?q=finacial&mode=fuzzy');
+
+    await screen.findByRole('heading', { name: '0 results for “finacial”' });
+    expect(bodies[0]).toEqual({ query: 'finacial', mode: 'FUZZY', page: 0, size: 10 });
+    expect(screen.getByRole('radio', { name: /^Fuzzy/ }).checked).toBe(true);
+
+    fireEvent.click(screen.getByRole('radio', { name: /^Semantic/ }));
+    await vi.waitFor(() => expect(bodies.at(-1)).toEqual({ query: 'finacial', mode: 'SEMANTIC', page: 0, size: 10 }));
+    expect(currentLocation.search).toBe('?q=finacial&mode=semantic');
+
+    // Hybrid is the default, so it leaves the URL and the request.
+    fireEvent.click(screen.getByRole('radio', { name: /^Hybrid/ }));
+    await vi.waitFor(() => expect(bodies.at(-1)).toEqual({ query: 'finacial', page: 0, size: 10 }));
+    expect(currentLocation.search).toBe('?q=finacial');
+  });
+
+  it('treats an unknown mode in the URL as hybrid', async () => {
+    const bodies = renderSearch('/search?q=policy&mode=everything');
+
+    await screen.findByRole('heading', { name: '0 results for “policy”' });
+    expect(bodies[0]).toEqual({ query: 'policy', page: 0, size: 10 });
+    expect(screen.getByRole('radio', { name: /^Hybrid/ }).checked).toBe(true);
   });
 
   it('submits a new query and applies filters through the URL', async () => {
     const bodies = renderSearch('/search');
-    await screen.findByRole('option', { name: 'Finance' });
 
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search documents' }), { target: { value: ' budget ' } });
     fireEvent.submit(screen.getByRole('search'));
     await screen.findByRole('heading', { name: '0 results for “budget”' });
+
+    // Filters start folded away; the toggle opens them and counts what is applied.
+    const toggle = screen.getByRole('button', { name: 'Filters' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('combobox', { name: 'Category' })).toBeNull();
+    fireEvent.click(toggle);
+    await screen.findByRole('option', { name: 'Finance' });
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'Finance' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'INDEXED' } });
@@ -108,6 +139,7 @@ describe('search page', () => {
       expect(bodies.at(-1)).toEqual({ query: 'budget', category: 'Finance', status: 'INDEXED', page: 0, size: 10 }),
     );
     expect(currentLocation.search).toBe('?q=budget&category=Finance&status=INDEXED');
+    expect(screen.getByRole('button', { name: 'Filters (2)' }).getAttribute('aria-expanded')).toBe('true');
   });
 
   it('pages through results and resets to the first page when filters change', async () => {
@@ -127,12 +159,12 @@ describe('search page', () => {
     expect(await screen.findByRole('link', { name: 'Result on page 2' })).toBeTruthy();
     expect(currentLocation.search).toBe('?q=policy&page=1');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'FAILED' } });
     expect(await screen.findByRole('link', { name: 'Result on page 1' })).toBeTruthy();
     expect(bodies.at(-1)).toEqual({ query: 'policy', status: 'FAILED', page: 0, size: 10 });
 
-    const modes = screen.getByRole('list', { name: 'Search modes' });
-    expect(within(modes).getByText('Hybrid').closest('li').className).toContain('is-active');
+    expect(screen.queryByText(/Semantic search is unavailable/)).toBeNull();
   });
 
   it('reports a failed search', async () => {

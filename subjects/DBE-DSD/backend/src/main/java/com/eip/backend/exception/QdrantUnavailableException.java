@@ -1,6 +1,6 @@
 package com.eip.backend.exception;
 
-public class QdrantUnavailableException extends RuntimeException {
+public class QdrantUnavailableException extends ServiceUnavailableException {
     public QdrantUnavailableException(String message) {
         super(message);
     }

@@ -105,6 +105,14 @@ public class LexicalScorer {
      * with no description is ordinary data, not an error.
      */
     public Match score(String query, String title, String description) {
+        return score(query, title, description, true);
+    }
+
+    /**
+     * As {@link #score(String, String, String)}, with typo tolerance switchable:
+     * when {@code allowFuzzy} is false only exact whole-token terms earn credit.
+     */
+    public Match score(String query, String title, String description, boolean allowFuzzy) {
         if (query == null) {
             return Match.NONE;
         }
@@ -126,8 +134,8 @@ public class LexicalScorer {
             return new Match(phraseScore, false, 0, 0);
         }
 
-        TermCredits fromTitle = credit(terms, titleText);
-        TermCredits fromDescription = credit(terms, descriptionText);
+        TermCredits fromTitle = credit(terms, titleText, allowFuzzy);
+        TermCredits fromDescription = credit(terms, descriptionText, allowFuzzy);
 
         double total = 0.0;
         int matched = 0;
@@ -175,7 +183,7 @@ public class LexicalScorer {
         }
     }
 
-    private static TermCredits credit(List<String> terms, String field) {
+    private static TermCredits credit(List<String> terms, String field, boolean allowFuzzy) {
         TermCredits result = new TermCredits(terms.size());
         if (field.isEmpty()) {
             return result;
@@ -196,7 +204,7 @@ public class LexicalScorer {
                 continue;
             }
             String term = terms.get(i);
-            int threshold = fuzzyThreshold(term.length());
+            int threshold = allowFuzzy ? fuzzyThreshold(term.length()) : 0;
             if (threshold == 0) {
                 continue;
             }

@@ -6,7 +6,6 @@ import {
   recentActivity,
   recentDocuments,
   relativeTime,
-  searchMode,
   summarize,
 } from './dashboardData.js';
 
@@ -96,17 +95,5 @@ describe('initials', () => {
     ['', '?'],
   ])('%s -> %s', (username, expected) => {
     expect(initials(username)).toBe(expected);
-  });
-});
-
-describe('searchMode', () => {
-  it.each([
-    [['KEYWORD', 'VECTOR'], 'hybrid'],
-    [['KEYWORD'], 'keyword'],
-    [['VECTOR'], 'semantic'],
-    [[], null],
-    [undefined, null],
-  ])('%j -> %s', (sources, expected) => {
-    expect(searchMode(sources)).toBe(expected);
   });
 });

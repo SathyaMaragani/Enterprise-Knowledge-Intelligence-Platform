@@ -177,10 +177,9 @@ describe('dashboard search', () => {
     expect(JSON.parse(searchCall[1].body)).toEqual({ query: 'Finacial', category: 'Finance', page: 0, size: 10 });
     expect(searchCall[1].headers.Authorization).toMatch(/^Bearer /);
 
-    // Keyword-only sources light the Keyword mode, not Hybrid.
-    const modes = screen.getByRole('list', { name: 'Search modes' });
-    expect(within(modes).getByText('Keyword').closest('li').className).toContain('is-active');
-    expect(within(modes).getByText('Hybrid').closest('li').className).not.toContain('is-active');
+    // Hybrid was requested but only keywords answered, so the results say so.
+    expect(screen.getByRole('radio', { name: /^Hybrid/ }).checked).toBe(true);
+    expect(within(panel).getByText(/Semantic search is unavailable right now/)).toBeTruthy();
   });
 
   it('omits the category when searching all categories', async () => {
@@ -195,8 +194,31 @@ describe('dashboard search', () => {
     const searchCall = fetchMock.mock.calls.find(([path]) => path === '/api/search');
     expect(JSON.parse(searchCall[1].body)).toEqual({ query: 'leave policy', page: 0, size: 10 });
 
-    const modes = screen.getByRole('list', { name: 'Search modes' });
-    expect(within(modes).getByText('Hybrid').closest('li').className).toContain('is-active');
+    expect(screen.queryByText(/Semantic search is unavailable/)).toBeNull();
+  });
+
+  it('searches in the chosen mode and re-runs shown results when the mode changes', async () => {
+    const fetchMock = renderDashboard({
+      'POST /api/search': jsonResponse(200, { hits: [], page: 0, size: 10, totalHits: 0, sources: ['KEYWORD'] }),
+    });
+    await screen.findByRole('table');
+    const bodies = () =>
+      fetchMock.mock.calls.filter(([path]) => path === '/api/search').map(([, init]) => JSON.parse(init.body));
+
+    fireEvent.click(screen.getByRole('radio', { name: /^Fuzzy/ }));
+    runSearch('finacial');
+    await vi.waitFor(() => expect(bodies()).toHaveLength(1));
+    expect(bodies()[0]).toEqual({ query: 'finacial', mode: 'FUZZY', page: 0, size: 10 });
+    // Keyword sources are what a fuzzy search is expected to use: no fallback notice.
+    await screen.findByText(/No documents you can access match/);
+    expect(screen.queryByText(/Semantic search is unavailable/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Open in search →' }).getAttribute('href')).toBe(
+      '/search?q=finacial&mode=fuzzy',
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /^Keyword/ }));
+    await vi.waitFor(() => expect(bodies()).toHaveLength(2));
+    expect(bodies()[1]).toEqual({ query: 'finacial', mode: 'KEYWORD', page: 0, size: 10 });
   });
 
   it('does not search for a blank query', async () => {

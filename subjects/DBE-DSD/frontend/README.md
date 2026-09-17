@@ -83,8 +83,8 @@ sign-in form.
 
 | Section | Data |
 |---|---|
-| Search bar | `POST /api/search` with the query and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy), plus an "Open in search" link carrying the query and category to the search page. |
-| Keyword / Semantic / Hybrid | Report which mode the backend ran, from the response's `sources`. The backend chooses the mode, so these are not a selector. |
+| Search bar | `POST /api/search` with the query, mode and optional category. Results show inline with relevance and match signals (Keyword, Semantic, Fuzzy), plus an "Open in search" link carrying the query, category and mode to the search page. |
+| Hybrid / Semantic / Keyword / Fuzzy | Radio chips choosing the search `mode`. Changing mode while results are shown re-runs the search. If Hybrid comes back without semantic results, a notice says the results match keywords only. |
 | Category filter | Categories of the documents the user can read. |
 | Quick Actions | Upload Document opens the upload page for roles with `DOCUMENT_CREATE` and says "Not permitted for your role" otherwise. Advanced Search opens the search page. Analytics and Categories are marked "Coming soon". |
 | Recent Documents | `GET /api/documents`, newest update first. |
@@ -102,15 +102,18 @@ opens the repository.
 
 ### Search (`/search`)
 
-`POST /api/search`, 10 results per page. The query, category, status and page
-live in the URL (`/search?q=leave&status=INDEXED&page=1`), so searches can be
-shared, reloaded and revisited with back.
+`POST /api/search`, 10 results per page. The query, mode, category, status and
+page live in the URL (`/search?q=leave&mode=fuzzy&status=INDEXED&page=1`), so
+searches can be shared, reloaded and revisited with back. Hybrid is the default
+and is left out of the URL; an unknown mode is treated as Hybrid.
 
 | Element | Behaviour |
 |---|---|
 | Search bar | Runs on submit. Nothing is sent until there is a query. |
+| Mode chips | Hybrid, Semantic, Keyword or Fuzzy (see `docs/API.md`). Choosing one re-runs the search from the first page. |
+| Filters | Shows or hides Category and Status, with a count of those applied. Opens by default when the URL already has filters. |
 | Category / Status | Narrow the results and return to the first page. |
-| Mode chips | Light up Keyword, Semantic or Hybrid from the response's `sources`. |
+| Keyword-only notice | Shown when Hybrid ran without semantic search. |
 | Results | Title (opens the viewer), description, category, status and match signals; owner, keyword score, raw semantic score and best chunk; overall relevance bar. |
 | Previous / Next | Shown when there is more than one page. |
 

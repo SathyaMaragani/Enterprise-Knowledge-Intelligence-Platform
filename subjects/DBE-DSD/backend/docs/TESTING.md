@@ -158,15 +158,15 @@ is public in the repository. To run the application (not the tests), copy
 
 ```
 Tests run: 5, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.config.BootstrapAdminTest
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
-Tests run: 99, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.DemoSemanticSearchIntegrationTest
+Tests run: 101, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.EipApplicationTests
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.ml.MiniLmOnnxEncoderTest
 Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.DocumentIngestionServiceTest
-Tests run: 14, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
-Tests run: 19, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.LexicalScorerTest
+Tests run: 25, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.SearchServiceTest
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in com.eip.backend.service.TextChunkerTest
 
-Tests run: 160, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 170, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

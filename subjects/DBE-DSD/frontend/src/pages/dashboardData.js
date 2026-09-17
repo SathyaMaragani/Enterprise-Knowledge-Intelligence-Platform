@@ -94,16 +94,3 @@ export const MATCH_LABELS = {
   VECTOR: 'Semantic',
   FUZZY: 'Fuzzy',
 };
-
-/** Which search mode actually ran, from the backend's `sources`. */
-export function searchMode(sources = []) {
-  const keyword = sources.includes('KEYWORD');
-  const vector = sources.includes('VECTOR');
-  if (keyword && vector) {
-    return 'hybrid';
-  }
-  if (vector) {
-    return 'semantic';
-  }
-  return keyword ? 'keyword' : null;
-}

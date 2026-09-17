@@ -108,6 +108,24 @@ public class DemoSemanticSearchIntegrationTest {
     }
 
     @Test
+    @WithUserDetails("demo_admin")
+    void testSemanticModeUsesOnlyTheVectorLeg() throws Exception {
+        SearchRequest req = new SearchRequest();
+        req.setQuery("what happens when the vector store goes down");
+        req.setMode(com.eip.backend.dto.search.SearchMode.SEMANTIC);
+        req.setSize(5);
+
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources", contains("VECTOR")))
+                .andExpect(jsonPath("$.hits", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.hits[*].matchedBy[*]", everyItem(is("VECTOR"))))
+                .andExpect(jsonPath("$.hits[*].keywordScore", everyItem(nullValue())));
+    }
+
+    @Test
     @WithUserDetails("grace_it")
     void testSemanticSearchDropsUnauthorizedDocuments() throws Exception {
         // grace_it has no access to sensitive HR documents.

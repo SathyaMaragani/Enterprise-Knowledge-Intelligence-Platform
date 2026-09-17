@@ -2,23 +2,32 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
-import { SearchHitList, SearchModeChips } from '../components/SearchBits.jsx';
-import { SearchIcon } from '../components/icons.jsx';
+import {
+  KeywordFallbackNotice,
+  modeParam,
+  parseSearchMode,
+  SearchHitList,
+  SearchModePicker,
+} from '../components/SearchBits.jsx';
+import { SearchIcon, SlidersIcon } from '../components/icons.jsx';
 import { STATUS_LABELS } from './dashboardData.js';
 
 export const SEARCH_PAGE_SIZE = 10;
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  // The query, filters and page live in the URL, so a search can be shared,
-  // reloaded or reached with the back button.
+  // The query, mode, filters and page live in the URL, so a search can be
+  // shared, reloaded or reached with the back button.
   const q = (searchParams.get('q') ?? '').trim();
+  const mode = parseSearchMode(searchParams.get('mode'));
   const category = searchParams.get('category') ?? '';
   const status = searchParams.get('status') ?? '';
   const page = Math.max(0, Number.parseInt(searchParams.get('page') ?? '0', 10) || 0);
 
   const [draft, setDraft] = useState(q);
   useEffect(() => setDraft(q), [q]);
+  const activeFilters = [category, status].filter(Boolean).length;
+  const [filtersOpen, setFiltersOpen] = useState(activeFilters > 0);
 
   const categories = useApi('/api/categories');
   const [result, setResult] = useState({ status: 'idle', data: null, error: null });
@@ -35,6 +44,7 @@ export default function SearchPage() {
       method: 'POST',
       body: {
         query: q,
+        mode: modeParam(mode),
         category: category || undefined,
         status: status || undefined,
         page,
@@ -47,10 +57,13 @@ export default function SearchPage() {
     return () => {
       active = false;
     };
-  }, [q, category, status, page]);
+  }, [q, mode, category, status, page]);
 
   function update(changes) {
-    const next = { q, category, status, page: 0, ...changes };
+    const next = { q, category, status, mode, page: 0, ...changes };
+    if (next.mode === 'hybrid') {
+      next.mode = '';
+    }
     const params = {};
     for (const [key, value] of Object.entries(next)) {
       if (value !== '' && !(key === 'page' && value === 0)) {
@@ -93,7 +106,21 @@ export default function SearchPage() {
           </button>
         </form>
 
-        <div className="filter-bar filter-bar--compact">
+        <div className="search-toolbar">
+          <SearchModePicker value={mode} onChange={(next) => update({ mode: next })} />
+          <button
+            type="button"
+            className="btn btn--outline btn--small"
+            aria-expanded={filtersOpen}
+            aria-controls="search-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <SlidersIcon size={16} />
+            Filters{activeFilters > 0 && ` (${activeFilters})`}
+          </button>
+        </div>
+
+        <div id="search-filters" className="filter-bar filter-bar--compact" hidden={!filtersOpen}>
           <select
             aria-label="Category"
             className="select"
@@ -121,8 +148,6 @@ export default function SearchPage() {
             ))}
           </select>
         </div>
-
-        <SearchModeChips sources={result.status === 'ready' ? data.sources : null} />
       </section>
 
       {!q && (
@@ -151,6 +176,8 @@ export default function SearchPage() {
               {result.error.message}
             </p>
           )}
+
+          {data && <KeywordFallbackNotice mode={mode} sources={data.sources} />}
 
           {data && data.hits.length === 0 && (
             <p className="empty-state">

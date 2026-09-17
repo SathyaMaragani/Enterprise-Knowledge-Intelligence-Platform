@@ -1,25 +1,40 @@
 import { Link } from 'react-router';
-import { MATCH_LABELS, searchMode } from '../pages/dashboardData.js';
+import { MATCH_LABELS } from '../pages/dashboardData.js';
 import { CategoryTag, StatusPill } from './DocumentBits.jsx';
-import { LayersIcon, SparkleIcon, TypeIcon } from './icons.jsx';
+import { LayersIcon, SparkleIcon, TypeIcon, WavesIcon } from './icons.jsx';
 
-const SEARCH_MODES = [
-  { id: 'keyword', title: 'Keyword', text: 'Exact & fuzzy match', Icon: TypeIcon },
+export const SEARCH_MODES = [
+  { id: 'hybrid', title: 'Hybrid', text: 'Meaning and keywords', Icon: LayersIcon },
   { id: 'semantic', title: 'Semantic', text: 'AI-powered meaning', Icon: SparkleIcon },
-  { id: 'hybrid', title: 'Hybrid', text: 'Best of both worlds', Icon: LayersIcon },
+  { id: 'keyword', title: 'Keyword', text: 'Exact terms only', Icon: TypeIcon },
+  { id: 'fuzzy', title: 'Fuzzy', text: 'Tolerates typos', Icon: WavesIcon },
 ];
 
-/**
- * The backend chooses the mode from what it can run (a query always runs
- * keyword search; semantic runs when embedding is available). These chips report
- * which mode the last search used; they are not a selector.
- */
-export function SearchModeChips({ sources }) {
-  const active = sources ? searchMode(sources) : null;
+/** A mode from untrusted input (the URL), falling back to hybrid. */
+export function parseSearchMode(value) {
+  return SEARCH_MODES.some(({ id }) => id === value) ? value : 'hybrid';
+}
+
+/** The API's `mode` value. Hybrid is the backend default, so it is left out. */
+export function modeParam(mode) {
+  return mode === 'hybrid' ? undefined : mode.toUpperCase();
+}
+
+/** Radio chips choosing how the next search runs. */
+export function SearchModePicker({ value, onChange }) {
   return (
-    <ul className="mode-chips" aria-label="Search modes">
+    <fieldset className="mode-chips">
+      <legend className="visually-hidden">Search mode</legend>
       {SEARCH_MODES.map(({ id, title, text, Icon }) => (
-        <li key={id} className={`mode-chip${active === id ? ' is-active' : ''}`}>
+        <label key={id} className={`mode-chip${value === id ? ' is-active' : ''}`}>
+          <input
+            type="radio"
+            className="visually-hidden"
+            name="search-mode"
+            value={id}
+            checked={value === id}
+            onChange={() => onChange(id)}
+          />
           <span className="mode-chip__icon">
             <Icon size={18} />
           </span>
@@ -27,10 +42,18 @@ export function SearchModeChips({ sources }) {
             <strong>{title}</strong>
             <span className="mode-chip__text">{text}</span>
           </span>
-        </li>
+        </label>
       ))}
-    </ul>
+    </fieldset>
   );
+}
+
+/** Hybrid quietly degrades to keywords when semantic search cannot run; say so. */
+export function KeywordFallbackNotice({ mode, sources }) {
+  if (mode !== 'hybrid' || !sources || sources.includes('VECTOR')) {
+    return null;
+  }
+  return <p className="notice">Semantic search is unavailable right now, so these results match keywords only.</p>;
 }
 
 const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
