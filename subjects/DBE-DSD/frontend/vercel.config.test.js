@@ -10,10 +10,10 @@ describe('vercel.mjs', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it('proxies the API to the backend before falling back to the app shell', async () => {
-    const config = await loadConfig('https://eip-backend-123.asia-south1.run.app/');
+    const config = await loadConfig('https://eip-backend.onrender.com/');
 
     expect(config.rewrites).toEqual([
-      { source: '/api/:path*', destination: 'https://eip-backend-123.asia-south1.run.app/api/:path*' },
+      { source: '/api/:path*', destination: 'https://eip-backend.onrender.com/api/:path*' },
       { source: '/(.*)', destination: '/index.html' },
     ]);
     const apiHeaders = config.headers.find((rule) => rule.source === '/api/(.*)').headers;
@@ -22,7 +22,7 @@ describe('vercel.mjs', () => {
 
   it('fails the build rather than deploying a frontend with no backend', async () => {
     await expect(loadConfig('')).rejects.toThrow(/Set BACKEND_URL/);
-    await expect(loadConfig('http://eip-backend.run.app')).rejects.toThrow(/bare https origin/);
-    await expect(loadConfig('https://eip-backend.run.app/api')).rejects.toThrow(/bare https origin/);
+    await expect(loadConfig('http://eip-backend.onrender.com')).rejects.toThrow(/bare https origin/);
+    await expect(loadConfig('https://eip-backend.onrender.com/api')).rejects.toThrow(/bare https origin/);
   });
 });

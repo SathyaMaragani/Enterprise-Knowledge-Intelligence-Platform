@@ -1,4 +1,4 @@
-# Production profile, switched on by SPRING_PROFILES_ACTIVE=prod (the cloudrun
+# Production profile, switched on by SPRING_PROFILES_ACTIVE=prod (the render
 # image sets it). Connection details still come from the environment; see
 # subjects/DBE-DSD/deploy/README.md.
 spring:
@@ -7,6 +7,16 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  datasource:
+    hikari:
+      # 0.1 CPU cannot use more; each idle connection still costs memory.
+      maximum-pool-size: 4
+
+server:
+  tomcat:
+    threads:
+      # Every request thread can hold an ONNX encode; 200 of them would not fit in 512 MB.
+      max: 16
 
 management:
   endpoint:

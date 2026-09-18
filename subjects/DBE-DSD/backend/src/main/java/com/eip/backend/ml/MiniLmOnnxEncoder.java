@@ -38,6 +38,14 @@ public class MiniLmOnnxEncoder implements AutoCloseable {
         OrtSession.SessionOptions sessionOptions = new OrtSession.SessionOptions();
         // Optimize for CPU execution in production
         sessionOptions.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+        // One thread per encode. ONNX Runtime otherwise starts a spinning thread per host
+        // core, ignoring the container's CPU quota: at 0.1 CPU that turned a 70 ms query
+        // into 6-9 s. Concurrent requests still run in parallel on their own threads.
+        sessionOptions.setIntraOpNumThreads(1);
+        // Every query has a different token count, so cached arena blocks and memory
+        // patterns only grow resident memory; this keeps the model inside 512 MB.
+        sessionOptions.setCPUArenaAllocator(false);
+        sessionOptions.setMemoryPatternOptimization(false);
         this.session = env.createSession(modelPath.toString(), sessionOptions);
     }
 

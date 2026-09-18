@@ -1,0 +1,39 @@
+# Render Blueprint: the backend on Render's free web service (512 MB, 0.1 CPU).
+# The frontend is on Vercel and the data on Neon, MongoDB Atlas and Qdrant Cloud.
+# Setup and limits: subjects/DBE-DSD/deploy/README.md.
+services:
+  - type: web
+    name: eip-backend
+    runtime: docker
+    plan: free
+    # Next to Neon's Singapore region, which every request reads.
+    region: singapore
+    dockerContext: ./subjects
+    dockerfilePath: ./subjects/DBE-DSD/backend/Dockerfile
+    healthCheckPath: /api/health
+    # Deploy only commits whose GitHub checks (the Backend workflow's test suite) pass.
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - subjects/DBE-DSD/backend/**
+        - subjects/DSA-3/texthack/**
+        - render.yaml
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: SPRING_DATA_MONGODB_URI
+        sync: false
+      - key: QDRANT_HOST
+        sync: false
+      - key: QDRANT_APIKEY
+        sync: false
+      - key: QDRANT_PORT
+        value: "6334"
+      - key: QDRANT_USETLS
+        value: "true"

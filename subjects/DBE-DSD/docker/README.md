@@ -16,8 +16,9 @@ browser talks to a single origin and the backend needs no CORS configuration.
 The backend image build context is `subjects/`, not the backend folder, because
 the backend compiles the TextHack engine from `subjects/DSA-3`.
 `backend/Dockerfile.dockerignore` limits what gets sent to the build. Compose builds
-the Dockerfile's `runtime` target, which mounts the model. The default `cloudrun`
-target bakes the model in for Cloud Run; see `../deploy/README.md`.
+the Dockerfile's `runtime` target, which mounts the model. The default `render`
+target bakes the model in and is tuned for Render's free instance (512 MB, 0.1 CPU);
+see `../deploy/README.md`.
 
 ## Requirements
 
@@ -146,6 +147,9 @@ What the load test found:
   volume needs more, the options are: cap ONNX intra-op threads so concurrent
   queries stop competing for the same cores, cache embeddings for repeated
   queries, or add CPU. None of these was needed for this project's scale.
+  **Since then** the encoder runs one ONNX thread per call, which the Render free
+  instance needed (`../deploy/RENDER-FREE-COMPATIBILITY.md`). The table above was
+  measured before that change and has not been re-run.
 
 ## Operate
 
@@ -176,9 +180,9 @@ Tunnel, or the platform's own HTTPS.
 ## Free-tier hosting
 
 Nothing has been deployed. Every option below needs your own accounts, and free
-tiers change, so check the current limits. The backend needs about 1 GB of
-memory for Spring Boot plus the embedding model. Container platforms whose free
-plan gives 512 MB will not run it with embeddings on.
+tiers change, so check the current limits. This Compose file caps the backend at
+1 GB. The Dockerfile's default `render` target is tuned to run in 512 MB with the
+embedding model on; see `../deploy/RENDER-FREE-COMPATIBILITY.md`.
 
 **Option A: one free VM running this Compose file (closest to what was
 verified).** Use an always-free or free-credit VM with at least 2 GB of RAM,
@@ -191,8 +195,8 @@ Runtime have arm64 builds, but the DJL tokenizer jar bundles only x86-64 Linux
 natives. On arm64, DJL would have to download its library at first start. If
 that fails, run with `EMBEDDING_ENABLED=false`.
 
-**Option B: Vercel + Cloud Run with managed databases (the chosen plan).** The
-frontend goes to Vercel, the backend image's default `cloudrun` target (model baked
-in, prod profile on) goes to Cloud Run, and the data goes to Neon, MongoDB Atlas and
-Qdrant Cloud. Step-by-step setup, CI/CD and what has been verified are in
+**Option B: Vercel + Render Free with managed databases (the chosen plan, no
+payment needed).** The frontend goes to Vercel, the backend image's default `render`
+target goes to a Render free web service, and the data goes to Neon, MongoDB Atlas
+and Qdrant Cloud. Step-by-step setup and what has been verified are in
 [`../deploy/README.md`](../deploy/README.md).

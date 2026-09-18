@@ -118,11 +118,6 @@
 			<artifactId>tokenizers</artifactId>
 			<version>0.26.0</version>
 		</dependency>
-		<dependency>
-			<groupId>ai.djl.onnxruntime</groupId>
-			<artifactId>onnxruntime-engine</artifactId>
-			<version>0.26.0</version>
-		</dependency>
 	</dependencies>
 
 	<build>

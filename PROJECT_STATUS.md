@@ -476,8 +476,46 @@ whether an account is disabled before it checks the password. A distinct
 "disabled" answer would confirm an account exists to someone who does not know
 its password.
 
+## Free Hosting: Render Free Backend (DEPLOY-RENDER-0 and DEPLOY-RENDER-1)
+**Status: FITS RENDER FREE, VERIFIED LOCALLY AT ITS LIMITS; not yet deployed (needs accounts)**
+
+Google Cloud needs a billing account, so the backend moves to Render's free web
+service: 512 MB of memory and 0.1 CPU. The frontend stays on Vercel, and the data
+stays on Neon, MongoDB Atlas and Qdrant Cloud, all on free plans.
+
+**DEPLOY-RENDER-0 (audit):** the unchanged image was OOM-killed while loading
+MiniLM at 512 MB, with or without the CPU cap. At 1 GB and 0.1 CPU it worked but
+took 305 s to start, and semantic search took 6–9 s.
+
+**DEPLOY-RENDER-1 (changes), keeping MiniLM, ONNX Runtime and semantic search:**
+- [x] `MiniLmOnnxEncoder`: one intra-op thread, no CPU arena, no memory patterns.
+      ONNX Runtime had started a spinning thread per host core and used up the
+      CPU quota.
+- [x] `backend/Dockerfile`: the default target is now `render`: 128 MB heap, C1
+      only, `MALLOC_ARENA_MAX=2`, extracted jar, and a class-data-sharing archive
+      trained at build time without databases. The `cloudrun` target is gone.
+- [x] `application-prod.yml`: at most 16 request threads, 4 database connections.
+- [x] `pom.xml`: removed the unused `ai.djl.onnxruntime:onnxruntime-engine`.
+- [x] `render.yaml` Blueprint (Singapore, health check, generated `JWT_SECRET`,
+      deploys only after checks pass). The Cloud Run deploy job is removed from
+      `backend.yml`.
+- [x] Frontend `ServerGate`: a "Starting the server" screen until `/api/health`
+      answers.
+- [x] `deploy/README.md` rewritten for Render; results in
+      `deploy/RENDER-FREE-COMPATIBILITY.md`.
+
+```
+Render image at 512 MB / 0.1 CPU:
+  healthy after 101 s; smoke test 28/28; every search mode correct
+  semantic search 0.4-0.9 s (was 6.5-9.4 s at 1 GB), hybrid 0.5-0.6 s
+  memory levels off at 446 MiB anon (peak 485 MiB) after soak, 16 concurrent
+  searches and a 950 KB upload; no OOM
+Backend   Tests run: 181, Failures: 0, Errors: 0, Skipped: 0
+Frontend  Tests  157 passed (157)                               (2 new: ServerGate)
+```
+
 ## Deployment Plan: Vercel + Cloud Run (DEPLOY-0 and DEPLOY-1)
-**Status: DEPLOY-READY, VERIFIED LOCALLY; not yet deployed (needs accounts)**
+**Status: SUPERSEDED by the Render Free plan above (Cloud Run needs billing)**
 
 The target is:
 - the frontend on Vercel;

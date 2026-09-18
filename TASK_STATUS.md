@@ -620,8 +620,10 @@ Current state:
 * [x] Security testing (JWT, RBAC, document permission enforcement tests)
 * [x] Performance profiling under load (JWT parser rebuilt per request fixed, +19–22%; query embedding is the CPU ceiling)
 * [x] Deployment documentation (`docker/README.md`, `QDRANT_INTEGRATION.md`, compose docs)
-* [x] Deploy-ready for Vercel + Cloud Run + Neon/Atlas/Qdrant Cloud (`vercel.mjs`, Cloud Run image with pinned model, prod profile, `deploy/README.md`)
-* [x] CI/CD workflows: frontend tests/build; backend tests against real databases, then image build and Cloud Run deploy on `main`
+* [x] Deploy-ready on free plans only: Vercel + Render Free + Neon/Atlas/Qdrant Cloud (`vercel.mjs`, `render.yaml`, `deploy/README.md`)
+* [x] Backend fits Render Free (512 MB, 0.1 CPU) with MiniLM and semantic search kept: one-thread ONNX Runtime, tuned JVM, class-data-sharing archive; verified locally at those limits (`deploy/RENDER-FREE-COMPATIBILITY.md`)
+* [x] "Starting the server" screen while the free backend wakes up (`ServerGate`)
+* [x] CI/CD: frontend tests/build and backend tests against real databases in GitHub Actions; Render deploys only commits whose checks pass
 * [ ] Public hosting: run the one-time account setup in `subjects/DBE-DSD/deploy/README.md`
 
 ---

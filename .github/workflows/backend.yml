@@ -1,6 +1,6 @@
-# Tests the backend against real PostgreSQL, MongoDB and Qdrant, then, on main,
-# builds the Cloud Run image and deploys it. The deploy job stays skipped until the
-# repository variables in subjects/DBE-DSD/deploy/README.md are set.
+# Tests the backend against real PostgreSQL, MongoDB and Qdrant. Deployment is
+# Render's: render.yaml deploys a commit only after these checks pass
+# (subjects/DBE-DSD/deploy/README.md).
 name: Backend
 
 on:
@@ -69,74 +69,3 @@ jobs:
       - name: Backend tests
         working-directory: subjects/DBE-DSD/backend
         run: ./mvnw -B test -Duser.timezone=UTC "-Dtest=!DemoSemanticSearchIntegrationTest" -Dsurefire.failIfNoSpecifiedTests=false
-
-  deploy:
-    needs: test
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.GCP_PROJECT_ID != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # Workload Identity Federation: no service account keys
-    environment: production
-    env:
-      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPOSITORY || 'eip' }}/backend:${{ github.sha }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: google-github-actions/auth@v3
-        with:
-          project_id: ${{ vars.GCP_PROJECT_ID }}
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
-
-      - uses: google-github-actions/setup-gcloud@v3
-
-      - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
-
-      - uses: docker/setup-buildx-action@v4
-
-      # BuildKit honours Dockerfile.dockerignore, so only the backend sources, the
-      # TextHack engine and the model script leave the runner.
-      - name: Build and push the Cloud Run image
-        uses: docker/build-push-action@v7
-        with:
-          context: subjects
-          file: subjects/DBE-DSD/backend/Dockerfile
-          target: cloudrun
-          push: true
-          tags: ${{ env.IMAGE }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to Cloud Run
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v3
-        with:
-          service: ${{ vars.CLOUD_RUN_SERVICE || 'eip-backend' }}
-          region: ${{ vars.GCP_REGION }}
-          image: ${{ env.IMAGE }}
-          # 2 GiB: the in-memory filesystem also holds ONNX's unpacked native libraries.
-          flags: >-
-            --memory=2Gi --cpu=1 --concurrency=20 --cpu-boost --port=8080
-            --allow-unauthenticated
-            --service-account=${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}
-          env_vars: |
-            QDRANT_HOST=${{ vars.QDRANT_HOST }}
-            QDRANT_PORT=6334
-            QDRANT_USETLS=true
-          secrets: |
-            JWT_SECRET=eip-jwt-secret:latest
-            SPRING_DATASOURCE_URL=eip-datasource-url:latest
-            DB_USERNAME=eip-db-username:latest
-            DB_PASSWORD=eip-db-password:latest
-            SPRING_DATA_MONGODB_URI=eip-mongodb-uri:latest
-            QDRANT_APIKEY=eip-qdrant-api-key:latest
-
-      - name: Check the deployed health endpoint
-        run: |
-          for attempt in 1 2 3 4 5 6; do
-            if curl -fsS "${{ steps.deploy.outputs.url }}/api/health"; then exit 0; fi
-            sleep 10
-          done
-          exit 1

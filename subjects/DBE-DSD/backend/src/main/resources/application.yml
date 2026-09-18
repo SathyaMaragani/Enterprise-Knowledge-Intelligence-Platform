@@ -41,7 +41,7 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours
 
 server:
-  # Cloud Run and similar platforms say which port to listen on through PORT.
+  # Render and similar platforms say which port to listen on through PORT.
   port: ${PORT:8080}
 
 management:

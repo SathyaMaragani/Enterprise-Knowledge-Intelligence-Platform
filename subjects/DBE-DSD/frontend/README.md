@@ -71,10 +71,11 @@ Any seeded account works, for example `admin_user` on the test stack.
 
 For production there are two paths, both keeping the browser on a single origin:
 
-- **Vercel** (the chosen hosting). `vercel.mjs` proxies `/api/*` to the Cloud Run
+- **Vercel** (the chosen hosting). `vercel.mjs` proxies `/api/*` to the Render
   backend named by the `BACKEND_URL` project variable and serves `index.html` for
-  client-side routes. The build fails if the variable is missing. See
-  `../deploy/README.md`.
+  client-side routes. The build fails if the variable is missing. The free backend
+  sleeps when idle, so `ServerGate` holds the app on a "Starting the server" screen
+  until `/api/health` answers. See `../deploy/README.md`.
 - **Docker.** `Dockerfile` builds the app and serves it with nginx, which also
   proxies `/api` to the backend (`BACKEND_URL`, default `http://backend:8080`).
   `../docker/README.md` runs it together with the backend and databases.

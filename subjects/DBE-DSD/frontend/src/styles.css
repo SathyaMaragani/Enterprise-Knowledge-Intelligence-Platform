@@ -628,6 +628,13 @@ label {
   padding: 2rem;
 }
 
+/* Shown while a sleeping backend wakes up (components/ServerGate.jsx). */
+.server-gate {
+  display: grid;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
 /* The hero shows the brand beside the card; the card repeats it only when the hero is hidden. */
 .login-card__brand {
   display: none;
