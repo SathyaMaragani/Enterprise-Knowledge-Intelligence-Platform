@@ -1,5 +1,13 @@
 # Enterprise Knowledge Intelligence Platform
 
+> **Current documentation:** [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) describes the whole
+> project as it stands. Each subject has its own document: [DBE-DSD](docs/database/DBE-DSD.md),
+> [DSA-3](docs/algorithms/DSA-3.md), [ML](docs/ml/ML.md) and [OSSP](docs/ossp/OSSP.md). Parts of this
+> README predate the implementation; for example, Qdrant now holds real MiniLM embeddings.
+> Review decks and the DB final report are in [docs/presentations/](docs/presentations/)
+> ([index](docs/PROJECT_OVERVIEW.md#review-presentations-and-reports)).
+> Live: https://ekipsearch.vercel.app
+
 ## Project Vision
 The Enterprise Knowledge Intelligence Platform is a comprehensive system designed to allow users to upload, organize, search, classify, analyze, and retrieve organizational knowledge. It is being developed as a single integrated project across four university courses, combining database management, algorithms, operating systems, and machine learning into a unified architecture.
 
