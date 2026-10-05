@@ -179,8 +179,8 @@ Tunnel, or the platform's own HTTPS.
 
 ## Free-tier hosting
 
-Nothing has been deployed. Every option below needs your own accounts, and free
-tiers change, so check the current limits. This Compose file caps the backend at
+Option B below is deployed and live at https://ekipsearch.vercel.app. Every
+option needs your own accounts, and free tiers change, so check the current limits. This Compose file caps the backend at
 1 GB. The Dockerfile's default `render` target is tuned to run in 512 MB with the
 embedding model on; see `../deploy/RENDER-FREE-COMPATIBILITY.md`.
 

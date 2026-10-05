@@ -15,9 +15,12 @@ The browser only talks to the Vercel domain. `frontend/vercel.mjs` proxies
 is never compiled into the JavaScript. Every other path that isn't a built file
 serves the app shell, so client-side routes survive a reload.
 
-Nothing here has been deployed yet: it needs your accounts. The
-[verification](#what-was-verified) section lists what was checked locally and
-what can only be checked in the cloud.
+**Live since 2026-10-05:**
+- site: https://ekipsearch.vercel.app
+- backend: https://enterprise-knowledge-intelligence-0hg2.onrender.com
+
+The [verification](#what-was-verified) section lists what was checked locally
+and what was checked on the live services.
 
 ## What is in the repository
 
@@ -70,7 +73,17 @@ Neon's free compute scales to zero, so the first query after an idle period is s
    ```
 4. Note `SPRING_DATA_MONGODB_URI`:
    `mongodb+srv://USER:PASSWORD@CLUSTER/eip_doc_db?retryWrites=true&w=majority`.
-   URL-encode the password.
+   URL-encode the password. Atlas's **Connect** dialog gives a different string,
+   `…mongodb.net/?appName=…` with a `<db_password>` placeholder. Both differences
+   break the backend:
+   - **Placeholder left in:** Atlas rejects the login, and MongoDB shows DOWN.
+   - **No `/eip_doc_db`:** the backend stops at startup with
+     `Database name must not be empty`.
+
+   Check the exact string before using it. This must print `eip_doc_db`:
+   ```bash
+   mongosh "THE-URI" --quiet --eval "db.getName()"
+   ```
 
 ### 3. Qdrant Cloud
 
@@ -91,9 +104,21 @@ so an idle demo will lose its vectors.
    `QDRANT_APIKEY`. `JWT_SECRET` is generated for you.
 4. Create it. The first build takes several minutes: Maven, the model download and
    the class-data-sharing training run.
+
+   If you create the service with **New → Web Service** instead, Render ignores
+   `render.yaml` and looks for `./Dockerfile`. The build then fails with
+   `open Dockerfile: no such file or directory`. Set these in its settings:
+   - **Dockerfile Path:** `./subjects/DBE-DSD/backend/Dockerfile`
+   - **Docker Build Context Directory:** `./subjects`
+   - **Root Directory:** empty
+   - **Health Check Path:** `/api/health`
+
+   Then add `QDRANT_PORT=6334`, `QDRANT_USETLS=true` and a random `JWT_SECRET`
+   (`openssl rand -base64 48`) next to the six values above.
 5. **The first administrator.** In the service's **Environment** page add
    `EIP_BOOTSTRAPADMIN_USERNAME` (for example `admin`) and
-   `EIP_BOOTSTRAPADMIN_PASSWORD` (12 to 72 characters), and save, which redeploys.
+   `EIP_BOOTSTRAPADMIN_PASSWORD` (12 to 72 characters; anything else stops the
+   backend at startup), and save, which redeploys.
    The account is created only while no administrator exists. After you have signed
    in, delete both variables.
 6. Note the service URL, `https://eip-backend….onrender.com`. Opening
@@ -116,8 +141,8 @@ The Hobby plan is for personal, non-commercial use, which fits this academic pro
 |---|---|---|
 | 512 MB memory | The untuned image was OOM-killed while loading the model. | 391 MiB after startup, levelling off at 446 MiB after repeated searches, 16 concurrent searches and a 950 KB upload. No OOM. |
 | 0.1 CPU | Everything is slow compared with a laptop. | Semantic search 0.4–0.9 s, hybrid 0.5–0.6 s, keyword 0.2–0.4 s, sign-in about 0.8 s. |
-| Sleeps after 15 minutes without traffic | The next visit starts the JVM and loads the model again. | The app was healthy after 101 s on a laptop on AC power and 158–167 s on battery, plus Render's own start-up; Render's CPU speed is unknown. `ServerGate` shows "Starting the server" and continues by itself. |
-| Vercel's proxy waits at most 120 s | A request that takes longer gets a 504, although the backend finishes it. | A 50 KB text upload (45 chunks) took 13.4 s, so uploads above roughly 400 KB can show an error and still appear in the repository. |
+| Sleeps after 15 minutes without traffic | The next visit starts the JVM and loads the model again. | Locally: healthy after 101 s on AC power and 158–167 s on battery. **On Render:** Spring started in 85–90 s, and the first request to a sleeping service answered after 103–104 s. `ServerGate` shows "Starting the server" and continues by itself. |
+| Vercel's proxy waits at most 120 s | A request that takes longer gets a 504, although the backend finishes it. While Render is waking, Vercel answers `/api/*` with a 502 within about a second; `ServerGate` treats that as "not ready yet" and retries. | A 50 KB text upload (45 chunks) took 13.4 s locally, so uploads above roughly 400 KB can show an error and still appear in the repository. |
 | 750 free instance hours a month | Enough for this one service running all month. | — |
 | Qdrant Cloud free cluster | Suspended after a week without use. | — |
 
@@ -146,15 +171,24 @@ Also:
 - the frontend: 157 tests, including `ServerGate`, and the production build;
 - `ProdProfileTest` fails if health details are switched back on.
 
-Can only be checked with the accounts:
-- Render building the Dockerfile (BuildKit bind mounts and the training run) and
-  its real CPU, memory accounting and wake-up time;
-- `autoDeployTrigger: checksPass` waiting for the Backend workflow;
-- Vercel proxying to `*.onrender.com`, including during a wake-up;
-- Neon's pooled endpoint, Atlas and Qdrant Cloud from Render.
+Checked on the live services (2026-10-05):
+- **Build and start:** Render built the Dockerfile, including the bind mount and
+  the training run; Spring started in 85–90 s.
+- **Health:** every component reported UP (PostgreSQL on Neon's pooled endpoint,
+  MongoDB on Atlas, disk, SSL, liveness, readiness), and the backend reached
+  Qdrant Cloud.
+- **Vercel proxy:** `/api/*` reaches Render. A sleeping service answered after
+  103–104 s; while it woke, Vercel returned 502s.
+- **By hand, through the site:** sign-in as the bootstrap administrator, uploads
+  reaching INDEXED, and keyword, fuzzy, semantic and hybrid search.
 
-After both deploys, run the smoke test through Vercel. It creates two throwaway
-users and disables them again, and uploads one document and deletes it.
+Not yet checked live:
+- the scripted 28-check smoke test below;
+- `autoDeployTrigger: checksPass`, which applies only to a service created from
+  the Blueprint.
+
+To run the smoke test through Vercel: it creates two throwaway users and disables
+them again, and uploads one document and deletes it.
 
 ```bash
 BASE_URL=https://your-project.vercel.app ADMIN_USERNAME=admin ADMIN_PASSWORD='…' \
