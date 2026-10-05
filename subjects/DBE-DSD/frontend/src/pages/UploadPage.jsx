@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
@@ -36,7 +36,9 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const categories = useApi('/api/categories');
 
-  const [file, setFile] = useState(null);
+  // A file dropped on the dashboard's upload button arrives already chosen.
+  const location = useLocation();
+  const [file, setFile] = useState(location.state?.file ?? null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');

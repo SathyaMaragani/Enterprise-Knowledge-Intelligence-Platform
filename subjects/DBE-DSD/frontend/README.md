@@ -12,7 +12,8 @@ React single-page app for the Enterprise Knowledge Intelligence Platform.
 - user administration
 - the TextHack algorithm workbench
 
-It uses a restrained dark product style and is built on Frontend 1's routing,
+It uses a light product style, white cards on a faintly green page with a deep
+green accent, and is built on Frontend 1's routing,
 JWT session handling, protected routes and sign-out. Only built pages appear in
 the navigation; category management and analytics do not exist yet and are not
 advertised.
@@ -24,19 +25,20 @@ case by case:
 
 | Piece | Rule |
 |---|---|
-| Tokens | Colours, radii, control height (`--control-height`, 2.5rem) and input background are variables on `:root`. |
+| Tokens | Colours, radii, control height (`--control-height`, 2.5rem) and input background are variables on `:root`. The accent is `--accent` (deep green); links use `--accent-text`. |
+| Tones | `.tone--green`, `--blue`, `--amber`, `--coral` set a card's accent, soft tile, wash, wave and border. Dashboard cards and the insights tiles use them. |
 | Buttons | `.btn` with `--primary`, `--outline` or `--danger`; `--small` for dense rows. No glow, no hover movement. |
 | Inputs | `.text-input` and `.select` share the control height and radius; selects draw one consistent chevron. |
 | Badges | `.tag` (category) and `.status` (document state) share one shape. Match signals are `.signal` dots, not badges. |
 | Page header | `.page-header` with `.page-title` and one `.page-subtitle` line; actions sit to the right with `--with-action`. No eyebrow labels. |
-| Cards | `.glass-panel.section` with a `.section__title`. |
+| Cards | `.glass-panel.section` with a `.section__title`; dashboard panels use `.panel` with a `.panel__header` (icon, title, View all). |
 | Hidden content | Use the `hidden` attribute; a global `[hidden]` rule keeps component display rules from overriding it. |
-| 3D | Only on the sign-in page. Working pages use CSS and SVG. |
+| Illustrations | Inline SVG in `components/DashboardArt.jsx`; no images, no WebGL. |
+| Type | Plus Jakarta Sans from Google Fonts (Caveat for the dashboard's handwritten note), falling back to the system UI font. |
 
 Stack: React 19, React Router 7, Vite 8, Vitest 4 with Testing Library and
-jsdom, and [ThreeUI Community](https://github.com/MengTo/threeui)
-(`@designcodeio/threeui`, MIT) with three.js for the animated backgrounds.
-Plain JavaScript and plain CSS; no UI kit, icon library or state library.
+and jsdom. Plain JavaScript and plain CSS; no UI kit, icon library, chart
+library or state library.
 
 ## Requirements
 
@@ -92,36 +94,29 @@ the live backend's.
 
 ## Pages
 
-Every signed-in page shares the sidebar and a top bar with the account menu (name
-and role). The top bar also carries a global search box that opens `/search`
-with the query. It is left out on the dashboard and the search page, which lead
-with their own search bar.
+Every signed-in page shares the sidebar and a top bar. The top bar holds:
+
+- a global search box with a category picker, which opens `/search` with the
+  query and category;
+- a filters button that opens the search page;
+- a notifications bell, which says there is nothing new (the backend sends no
+  notifications, so it shows no unread marker);
+- the account menu (name and role).
+
+The search box is left out only on the search page, which leads with its own,
+fuller form.
 
 ### Sign-in
 
 A two-panel page.
 
 The left panel has the brand, one headline, one line of copy and three features
-over a dusk landscape. The landscape is threeui's `cloud-field` scene (animated
-sky and drifting cloud ridges) behind SVG mountains. Beside the copy is a
-knowledge graph: topics, the documents filed under them, and the people linking
-documents across topics.
+on a soft green gradient, with the same document-and-search illustration as the
+dashboard beside the copy. Below 1250px wide there is no column beside the copy,
+so the illustration fades behind it; the whole left panel is hidden below 1100px.
 
 The right panel holds a compact "Sign in" card. The card repeats the brand only
 when the left panel is hidden.
-
-The graph (`KnowledgeGraph.jsx`) is illustrative, since nothing can be fetched
-before sign-in, and generated the same way every visit. With WebGL and motion
-allowed, it is a three.js scene (`KnowledgeGraphScene.jsx`):
-- glowing nodes and faint links
-- topic labels
-- pulses of light travelling along links
-- a slow drift that leans toward the pointer
-
-It stops drawing while off screen or in a background tab. Otherwise, or if the
-scene fails, the same graph shows as a static SVG. Below 1400px wide there is no
-column beside the copy, so the graph becomes a dimmed backdrop behind it. The
-whole left panel is hidden below 1100px.
 
 | Element | Behaviour |
 |---|---|
@@ -135,19 +130,18 @@ Single sign-on is not offered, because the backend has none.
 
 | Section | Data |
 |---|---|
-| Header | A time-of-day greeting with the user's first name. An **Upload document** button appears for roles with `DOCUMENT_CREATE`; other roles see no upload action. |
-| Search card | `POST /api/search` with the query, mode and optional category (from the user's readable documents). Results show inline with relevance and match signals, plus an "Open in search" link carrying the query, category and mode. |
-| Mode control | A segmented Hybrid / Semantic / Keyword / Fuzzy control with a one-line explanation of the chosen mode. Changing mode while results are shown re-runs the search. If Hybrid comes back without semantic results, a notice says the results match keywords only. |
-| Overview tiles | Documents, indexed and categories over the user's readable documents. Vector chunks come from `GET /api/search/vector/collection-info`, which is collection-wide. |
-| Recent documents | `GET /api/documents`, newest update first. |
-| Your recent searches | `GET /api/search/history?limit=5`: the user's own latest searches with mode, result count and time. Each one reopens the search in its mode, and the panel refreshes after a dashboard search. |
+| Hero | A time-of-day greeting with the user's first name, and the search mode chips (Hybrid, Semantic, Keyword, Fuzzy). The chosen mode is kept in the URL (`/?mode=fuzzy`) and applied by the top bar search. An **Upload document** button appears for roles with `DOCUMENT_CREATE`; a file dropped on it opens the upload form with that file chosen. Other roles see no upload action. |
+| Overview cards | Documents, indexed and categories over the user's readable documents. Vector chunks come from `GET /api/search/vector/collection-info`, which is collection-wide. Each card's arrow opens the matching repository or search view. |
+| Recent documents | `GET /api/documents`, newest update first. When there are none, an illustrated empty state invites an upload (or, without upload rights, says there is nothing to show). |
+| Your recent searches | `GET /api/search/history?limit=5`: the user's own latest searches with mode, result count and time. Each one reopens the search in its mode. |
 | Document activity | Derived from document `createdAt` / `updatedAt`. The backend keeps no audit trail, so this shows additions and edits only. |
+| Explore features | Links to Search, Repository, TextHack and, for `USER_MANAGE`, Administration. |
 
 Every figure comes from the API. When a request fails, the section says so or
 shows `—`; nothing falls back to placeholder numbers.
 
-Recent document titles and search hits open the document viewer; "View all"
-opens the repository.
+Recent document titles open the document viewer; "View all" opens the
+repository or the search page.
 
 ### Search (`/search`)
 
@@ -268,30 +262,6 @@ what the engine computed:
 | Citation flow | Influence (maximum flow), the bottleneck citations (minimum cut) and the source side of the cut; citations are typed one `from to` per line and checked before sending |
 | Complexity | Time and space for every algorithm in the engine |
 
-## threeui scenes
-
-`src/components/ThreeBackdrop.jsx` renders a scene only when it is appropriate:
-
-- **WebGL must be available.** Without it the page keeps its CSS gradient.
-- **Reduced motion is respected.** If the operating system asks for reduced
-  motion, no scene renders. On Windows this follows *Settings → Accessibility →
-  Visual effects → Animation effects*; with it off, the pages show their static
-  gradients and SVG art instead of the animated scenes.
-- **Loaded lazily.** threeui and three.js (about 1.5 MB before compression) are
-  a separate chunk, fetched only when a scene will render. The pages paint first.
-- **Failures stay contained.** An error inside a scene removes the scene, not the
-  page. Scenes ignore pointer events.
-
-Only `PortalFieldCollection` (`cloud-field`, on sign-in) is imported, by subpath.
-It renders a self-contained document with no network requests.
-
-The sign-in knowledge graph follows the same rules through `canRenderScene` and
-`SceneBoundary`, with its static SVG as the fallback. It uses three.js 0.186
-directly, in its own lazy chunk of about 134 kB gzipped. threeui ships its own
-pinned three.js copies, so the two cannot share one. Both load only on the
-sign-in page, and only when a scene will run. 3D is kept to sign-in: the
-dashboard and working pages use CSS and SVG only.
-
 ## How authentication works
 
 | Concern | Behaviour |
@@ -318,7 +288,7 @@ reads the token to display the username and time the sign-out.
   menu shows the name and most senior role, and Administration appears only for
   users with `USER_MANAGE`. If the profile cannot load, the menu falls back to the username
   and role-gated items stay hidden. The backend enforces every rule regardless.
-- **Dark theme only.** The design has no light variant, so there is no theme toggle.
+- **Light theme only.** The design has no dark variant, so there is no theme toggle.
 - **Production serving is not set up.** `npm run build` produces `dist/`, but
   serving it from the same origin as `/api` is part of the Dockerization
   milestone. Until then, the Vite proxy only covers development.

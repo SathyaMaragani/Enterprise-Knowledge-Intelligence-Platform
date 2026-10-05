@@ -74,7 +74,7 @@ describe('upload page', () => {
       upload: () => jsonResponse(201, { id: 31, title: 'Budget notes', status: 'INDEXED', chunkCount: 3, vectorsStored: true }),
       extra: { 'GET /api/documents/31': uploaded(31, 'Budget notes') },
     });
-    await screen.findByRole('option', { name: 'Finance' });
+    await within(await screen.findByRole('combobox', { name: 'Category' })).findByRole('option', { name: 'Finance' });
 
     fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('budget-notes.md')] } });
     expect(screen.getByText(/budget-notes\.md · 11 B/)).toBeTruthy();
@@ -98,7 +98,7 @@ describe('upload page', () => {
       upload: () => jsonResponse(201, { id: 32, title: 'n', status: 'UPLOADED', chunkCount: 1, vectorsStored: false }),
       extra: { 'GET /api/documents/32': uploaded(32, 'n') },
     });
-    await screen.findByRole('option', { name: 'HR' });
+    await within(await screen.findByRole('combobox', { name: 'Category' })).findByRole('option', { name: 'HR' });
 
     fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('n.txt')] } });
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'HR' } });
@@ -109,7 +109,7 @@ describe('upload page', () => {
 
   it('catches mistakes before sending anything', async () => {
     const forms = renderApp('/upload', { upload: () => jsonResponse(500, {}) });
-    await screen.findByRole('option', { name: 'HR' });
+    await within(await screen.findByRole('combobox', { name: 'Category' })).findByRole('option', { name: 'HR' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Upload document' }));
     expect(screen.getByRole('alert').textContent).toBe('Choose a file to upload.');
@@ -126,7 +126,7 @@ describe('upload page', () => {
 
   it('shows the backend rejection and lets the user try again', async () => {
     renderApp('/upload', { upload: () => jsonResponse(400, { message: 'The file must be UTF-8 text' }) });
-    await screen.findByRole('option', { name: 'HR' });
+    await within(await screen.findByRole('combobox', { name: 'Category' })).findByRole('option', { name: 'HR' });
 
     fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('latin.txt')] } });
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'HR' } });
@@ -170,7 +170,8 @@ describe('upload entry points', () => {
   it('lets a manager start an upload from the dashboard and the repository', async () => {
     renderApp('/', { upload: () => jsonResponse(500, {}), extra: dashboardRoutes });
 
-    const action = await screen.findByRole('link', { name: 'Upload document' });
+    // The hero's upload button; the empty dashboard offers a second one.
+    const [action] = await screen.findAllByRole('link', { name: 'Upload document' });
     fireEvent.click(action);
     expect(await screen.findByRole('heading', { name: 'Upload a document' })).toBeTruthy();
 

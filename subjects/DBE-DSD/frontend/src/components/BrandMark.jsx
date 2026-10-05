@@ -9,8 +9,8 @@ export default function BrandMark({ subtitle = 'Enterprise Knowledge Intelligenc
       <svg className="brand__mark" viewBox="0 0 48 50" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#60a5fa" />
-            <stop offset="1" stopColor="#1d4ed8" />
+            <stop offset="0" stopColor="#3fcf8e" />
+            <stop offset="1" stopColor="#0b7a4b" />
           </linearGradient>
         </defs>
         <path d="M24 3 44 13.5 24 24 4 13.5z" fill={`url(#${gradientId})`} />

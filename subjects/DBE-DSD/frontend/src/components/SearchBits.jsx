@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
 import { MATCH_LABELS } from '../pages/dashboardData.js';
 import { CategoryTag, StatusPill } from './DocumentBits.jsx';
-import { LayersIcon, SparkleIcon, TypeIcon, WavesIcon } from './icons.jsx';
+import { BrainIcon, LayersIcon, TypeIcon, WavesIcon } from './icons.jsx';
 
 export const SEARCH_MODES = [
   { id: 'hybrid', title: 'Hybrid', text: 'Matches meaning and keywords together.', Icon: LayersIcon },
-  { id: 'semantic', title: 'Semantic', text: 'Matches by meaning, even without shared words.', Icon: SparkleIcon },
+  { id: 'semantic', title: 'Semantic', text: 'Matches by meaning, even without shared words.', Icon: BrainIcon },
   { id: 'keyword', title: 'Keyword', text: 'Matches the exact words only.', Icon: TypeIcon },
   { id: 'fuzzy', title: 'Fuzzy', text: 'Matches words even when they are misspelled.', Icon: WavesIcon },
 ];
@@ -27,14 +27,14 @@ export function modeParam(mode) {
 }
 
 /** A segmented radio control choosing how the next search runs, with the chosen mode explained. */
-export function SearchModePicker({ value, onChange }) {
+export function SearchModePicker({ value, onChange, showHint = true }) {
   const active = SEARCH_MODES.find(({ id }) => id === value);
   return (
     <div className="mode-picker">
       <fieldset className="segmented">
         <legend className="visually-hidden">Search mode</legend>
-        {SEARCH_MODES.map(({ id, title, Icon }) => (
-          <label key={id} className={`segmented__option${value === id ? ' is-active' : ''}`}>
+        {SEARCH_MODES.map(({ id, title, text, Icon }) => (
+          <label key={id} title={text} className={`segmented__option${value === id ? ' is-active' : ''}`}>
             <input
               type="radio"
               className="visually-hidden"
@@ -48,7 +48,7 @@ export function SearchModePicker({ value, onChange }) {
           </label>
         ))}
       </fieldset>
-      {active && <p className="mode-picker__hint">{active.text}</p>}
+      {showHint && active && <p className="mode-picker__hint">{active.text}</p>}
     </div>
   );
 }

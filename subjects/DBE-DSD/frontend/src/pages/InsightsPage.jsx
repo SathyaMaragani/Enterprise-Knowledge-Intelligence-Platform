@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { BarList, ConfusionMatrix, LineChart, MapMultiples, SERIES } from '../components/InsightCharts.jsx';
+import { Wave } from '../components/DashboardArt.jsx';
 import data from '../data/mlInsights.json';
 
 // The numbers on this page are produced by `python -m src.insights` in subjects/ML
@@ -48,6 +49,8 @@ function Section({ id, title, children, intro }) {
   );
 }
 
+const TILE_TONES = ['green', 'blue', 'amber', 'coral'];
+
 function Headline() {
   const loto = cls.leaveOneTopicOut;
   const tiles = [
@@ -57,15 +60,18 @@ function Headline() {
     { label: 'Category agreement, unsupervised', value: num(bestCategoryRun.category.ari), hint: `adjusted Rand index · ${bestCategoryRun.algorithm}, k = 6` },
   ];
   return (
-    <dl className="kpi-grid">
-      {tiles.map(({ label, value, hint }) => (
-        <div key={label} className="glass-panel kpi">
-          <dt className="kpi__label">{label}</dt>
-          <dd className="kpi__value">{value}</dd>
-          <dd className="kpi__hint">{hint}</dd>
+    <section className="kpi-grid" aria-label="Headline results">
+      {tiles.map(({ label, value, hint }, i) => (
+        <div key={label} className={`kpi tone--${TILE_TONES[i]}`}>
+          <dl className="kpi__body">
+            <dt className="kpi__label">{label}</dt>
+            <dd className="kpi__value">{value}</dd>
+            <dd className="kpi__hint">{hint}</dd>
+          </dl>
+          <Wave />
         </div>
       ))}
-    </dl>
+    </section>
   );
 }
 

@@ -83,7 +83,7 @@ describe('repository page', () => {
     fireEvent.submit(global);
 
     await vi.waitFor(() => expect(currentLocation.pathname).toBe('/search'));
-    expect(currentLocation.search).toBe('?q=budget%20plan');
+    expect(currentLocation.search).toBe('?q=budget+plan');
     // The search page leads with its own search bar, so the top bar one steps aside.
     expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
   });
@@ -105,7 +105,7 @@ describe('repository page', () => {
       'GET /api/documents/page?page=0&size=10&category=Legal&status=INDEXED&q=nda': empty,
     });
     await screen.findByRole('table');
-    await screen.findByRole('option', { name: 'Legal' });
+    await within(screen.getByRole('combobox', { name: 'Category' })).findByRole('option', { name: 'Legal' });
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'Legal' } });
     await screen.findByText('No documents match these filters.');

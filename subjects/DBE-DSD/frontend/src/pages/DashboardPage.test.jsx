@@ -65,7 +65,7 @@ describe('dashboard', () => {
     expect(within(rows[0]).getByText('Uploaded')).toBeTruthy();
     expect(within(rows[3]).getByText('Failed')).toBeTruthy();
     expect(within(rows[0]).getByRole('link', { name: 'Vendor Contract A' }).getAttribute('href')).toBe('/documents/5');
-    expect(screen.getByRole('link', { name: 'View all →' }).getAttribute('href')).toBe('/repository');
+    expect(screen.getByRole('link', { name: 'View all documents' }).getAttribute('href')).toBe('/repository');
   });
 
   it('still shows documents when vector statistics are unavailable', async () => {
@@ -92,6 +92,26 @@ describe('dashboard', () => {
     renderDashboard({ 'GET /api/documents': jsonResponse(200, []) });
 
     expect(await screen.findByText(/don’t have access to any documents/)).toBeTruthy();
+    expect(screen.getByText('No documents yet')).toBeTruthy();
+    // Without upload permission the empty state does not invite an upload.
+    expect(screen.queryByRole('link', { name: 'Upload document' })).toBeNull();
+  });
+
+  it('invites an uploader to add the first document', async () => {
+    renderDashboard({
+      'GET /api/documents': jsonResponse(200, []),
+      'GET /api/auth/me': jsonResponse(200, {
+        username: 'alice_mgr',
+        fullName: 'Alice Manager',
+        roles: ['MANAGER'],
+        permissions: ['DOCUMENT_CREATE', 'DOCUMENT_READ'],
+      }),
+    });
+
+    expect(await screen.findByText(/Upload your first document/)).toBeTruthy();
+    // One in the hero, one in the empty state.
+    expect(screen.getAllByRole('link', { name: 'Upload document' })).toHaveLength(2);
+    expect(screen.getByText('No activity yet')).toBeTruthy();
   });
 
   it('lists the user’s own recent searches, each reopening the search', async () => {
@@ -119,7 +139,8 @@ describe('dashboard', () => {
 
   it('invites a first search when there is no activity', async () => {
     renderDashboard();
-    expect(await screen.findByText('Your searches will show up here.')).toBeTruthy();
+    expect(await screen.findByText('No recent searches')).toBeTruthy();
+    expect(screen.getByText(/Your search history will appear here/)).toBeTruthy();
   });
 
   it('says when search activity cannot load without disturbing the rest', async () => {
@@ -143,8 +164,8 @@ describe('dashboard', () => {
     // Unbuilt pages are not advertised in the navigation.
     expect(within(nav).queryByText('Soon')).toBeNull();
     expect(within(nav).queryByText('Analytics')).toBeNull();
-    // The dashboard's own search bar is its search; the top bar does not repeat it.
-    expect(screen.queryByRole('search', { name: 'Global search' })).toBeNull();
+    // The dashboard searches through the top bar.
+    expect(screen.getByRole('search', { name: 'Global search' })).toBeTruthy();
     // Without a profile that allows uploads, no upload action is offered at all.
     expect(screen.queryByRole('link', { name: 'Upload document' })).toBeNull();
   });
@@ -162,9 +183,41 @@ describe('dashboard', () => {
     expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Alice$/ })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Upload document' }).getAttribute('href')).toBe('/upload');
   });
+
+  it('links each overview card and feature to its page', async () => {
+    renderDashboard();
+    await screen.findByRole('table');
+
+    expect(screen.getByRole('link', { name: 'Open indexed' }).getAttribute('href')).toBe('/repository?status=INDEXED');
+    expect(screen.getByRole('link', { name: 'Open vector chunks' }).getAttribute('href')).toBe('/search?mode=semantic');
+    const features = screen.getByRole('region', { name: 'Explore features' });
+    expect(within(features).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/search',
+      '/repository',
+      '/texthack',
+    ]);
+  });
+
+  it('opens the upload form with a file dropped on the upload button', async () => {
+    renderDashboard({
+      'GET /api/auth/me': jsonResponse(200, {
+        username: 'alice_mgr',
+        roles: ['MANAGER'],
+        permissions: ['DOCUMENT_CREATE', 'DOCUMENT_READ'],
+      }),
+      'GET /api/categories': jsonResponse(200, []),
+    });
+    const upload = await screen.findByRole('link', { name: 'Upload document' });
+
+    const file = new File(['hello'], 'notes.md', { type: 'text/markdown' });
+    fireEvent.drop(upload.parentElement, { dataTransfer: { files: [file] } });
+
+    expect(await screen.findByRole('heading', { name: 'Upload a document' })).toBeTruthy();
+    expect(screen.getByText('notes.md · 5 B')).toBeTruthy();
+  });
 });
 
-describe('dashboard search', () => {
+describe('top bar search from the dashboard', () => {
   beforeEach(() => {
     sessionStorage.clear();
     sessionStorage.setItem('eip.token', tokenFor('alice_mgr'));
@@ -172,98 +225,46 @@ describe('dashboard search', () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
+  const EMPTY_RESULT = jsonResponse(200, { hits: [], page: 0, size: 10, totalHits: 0, sources: ['KEYWORD', 'VECTOR'] });
+
   function runSearch(query, category) {
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search documents' }), { target: { value: query } });
+    const form = screen.getByRole('search', { name: 'Global search' });
+    fireEvent.change(within(form).getByRole('searchbox'), { target: { value: query } });
     if (category) {
-      fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: category } });
+      fireEvent.change(within(form).getByRole('combobox', { name: 'Search in category' }), { target: { value: category } });
     }
-    fireEvent.submit(screen.getByRole('search'));
+    fireEvent.submit(form);
   }
 
-  it('posts the query and category, then shows hits with their match signals', async () => {
+  const searchBodies = (fetchMock) =>
+    fetchMock.mock.calls.filter(([path]) => path === '/api/search').map(([, init]) => JSON.parse(init.body));
+
+  it('opens the search page with the query and category', async () => {
     const fetchMock = renderDashboard({
-      'POST /api/search': jsonResponse(200, {
-        hits: [
-          {
-            documentId: 2,
-            title: 'Q1 Financial Report',
-            description: 'Q1 results',
-            category: 'Finance',
-            score: 0.63,
-            matchedBy: ['KEYWORD', 'FUZZY'],
-          },
-        ],
-        page: 0,
-        size: 10,
-        totalHits: 1,
-        sources: ['KEYWORD'],
-      }),
+      'GET /api/categories': jsonResponse(200, [{ id: 1, name: 'Finance' }]),
+      'POST /api/search': EMPTY_RESULT,
     });
     await screen.findByRole('table');
+    await screen.findByRole('option', { name: 'Finance' });
 
     runSearch('  Finacial ', 'Finance');
 
-    const results = await screen.findByText('1 result for “Finacial”');
-    const panel = results.closest('.search-results');
-    expect(within(panel).getByRole('link', { name: 'Q1 Financial Report' }).getAttribute('href')).toBe('/documents/2');
-    expect(within(panel).getByText('Keyword')).toBeTruthy();
-    expect(within(panel).getByText('Fuzzy')).toBeTruthy();
-    expect(within(panel).getByText('63%')).toBeTruthy();
+    await vi.waitFor(() => expect(searchBodies(fetchMock)).toHaveLength(1));
+    expect(searchBodies(fetchMock)[0]).toEqual({ query: 'Finacial', category: 'Finance', page: 0, size: 10 });
+    expect(screen.getByRole('heading', { level: 1 }).textContent).not.toMatch(/^Good/);
+  });
 
-    expect(within(panel).getByRole('link', { name: 'Open in search →' }).getAttribute('href')).toBe(
-      '/search?q=Finacial&category=Finance',
-    );
+  it('searches in the mode chosen in the hero', async () => {
+    const fetchMock = renderDashboard({ 'POST /api/search': EMPTY_RESULT });
+    await screen.findByRole('table');
 
-    const searchCall = fetchMock.mock.calls.find(([path]) => path === '/api/search');
-    expect(JSON.parse(searchCall[1].body)).toEqual({ query: 'Finacial', category: 'Finance', page: 0, size: 10 });
-    expect(searchCall[1].headers.Authorization).toMatch(/^Bearer /);
-
-    // Hybrid was requested but only keywords answered, so the results say so.
     expect(screen.getByRole('radio', { name: /^Hybrid/ }).checked).toBe(true);
-    expect(within(panel).getByText(/Semantic search is unavailable right now/)).toBeTruthy();
-  });
-
-  it('omits the category when searching all categories', async () => {
-    const fetchMock = renderDashboard({
-      'POST /api/search': jsonResponse(200, { hits: [], page: 0, size: 10, totalHits: 0, sources: ['KEYWORD', 'VECTOR'] }),
-    });
-    await screen.findByRole('table');
-
-    runSearch('leave policy');
-
-    expect(await screen.findByText(/No documents you can access match/)).toBeTruthy();
-    const searchCall = fetchMock.mock.calls.find(([path]) => path === '/api/search');
-    expect(JSON.parse(searchCall[1].body)).toEqual({ query: 'leave policy', page: 0, size: 10 });
-
-    expect(screen.queryByText(/Semantic search is unavailable/)).toBeNull();
-  });
-
-  it('searches in the chosen mode and re-runs shown results when the mode changes', async () => {
-    const fetchMock = renderDashboard({
-      'POST /api/search': jsonResponse(200, { hits: [], page: 0, size: 10, totalHits: 0, sources: ['KEYWORD'] }),
-    });
-    await screen.findByRole('table');
-    const bodies = () =>
-      fetchMock.mock.calls.filter(([path]) => path === '/api/search').map(([, init]) => JSON.parse(init.body));
-
     fireEvent.click(screen.getByRole('radio', { name: /^Fuzzy/ }));
+    expect(screen.getByRole('radio', { name: /^Fuzzy/ }).checked).toBe(true);
     runSearch('finacial');
-    await vi.waitFor(() => expect(bodies()).toHaveLength(1));
-    expect(bodies()[0]).toEqual({ query: 'finacial', mode: 'FUZZY', page: 0, size: 10 });
-    // Keyword sources are what a fuzzy search is expected to use: no fallback notice.
-    await screen.findByText(/No documents you can access match/);
-    expect(screen.queryByText(/Semantic search is unavailable/)).toBeNull();
-    expect(screen.getByRole('link', { name: 'Open in search →' }).getAttribute('href')).toBe(
-      '/search?q=finacial&mode=fuzzy',
-    );
 
-    fireEvent.click(screen.getByRole('radio', { name: /^Keyword/ }));
-    await vi.waitFor(() => expect(bodies()).toHaveLength(2));
-    expect(bodies()[1]).toEqual({ query: 'finacial', mode: 'KEYWORD', page: 0, size: 10 });
-
-    // Each completed search refreshes the activity panel so it appears there straight away.
-    const historyLoads = () => fetchMock.mock.calls.filter(([path]) => path === '/api/search/history?limit=5').length;
-    await vi.waitFor(() => expect(historyLoads()).toBe(3));
+    await vi.waitFor(() => expect(searchBodies(fetchMock)).toHaveLength(1));
+    expect(searchBodies(fetchMock)[0]).toEqual({ query: 'finacial', mode: 'FUZZY', page: 0, size: 10 });
   });
 
   it('does not search for a blank query', async () => {
@@ -272,19 +273,7 @@ describe('dashboard search', () => {
 
     runSearch('   ');
 
-    expect(fetchMock.mock.calls.some(([path]) => path === '/api/search')).toBe(false);
-  });
-
-  it('shows a search failure and clears the results panel', async () => {
-    renderDashboard({ 'POST /api/search': jsonResponse(400, { message: 'size must be between 1 and 100' }) });
-    await screen.findByRole('table');
-
-    runSearch('budget');
-
-    expect((await screen.findByText('size must be between 1 and 100')).getAttribute('role')).toBe('alert');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Clear search results' }));
-
-    expect(screen.queryByText('Search failed')).toBeNull();
+    expect(searchBodies(fetchMock)).toHaveLength(0);
+    expect(screen.getByRole('heading', { name: /^Good/ })).toBeTruthy();
   });
 });

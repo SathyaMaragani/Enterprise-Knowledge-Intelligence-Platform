@@ -66,7 +66,7 @@ describe('authentication flow', () => {
     signIn('  alice_mgr ', 'stub-password');
 
     expect(await screen.findByRole('heading', { name: DASHBOARD_GREETING })).toBeTruthy();
-    expect(screen.getByText('alice_mgr')).toBeTruthy();
+    expect(screen.getByText('alice_mgr', { selector: '.account__name' })).toBeTruthy();
 
     const [path, init] = fetchMock.mock.calls[0];
     expect(path).toBe('/api/auth/login');
@@ -232,7 +232,7 @@ describe('signed-in profile', () => {
     sessionStorage.setItem('eip.token', tokenFor('admin_user'));
     renderApp('/');
     await screen.findByRole('button', { name: 'Account menu for Admin Istrator' });
-    expect(screen.getByText('Administration')).toBeTruthy();
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByText('Administration')).toBeTruthy();
     expect(screen.getByText('Administrator')).toBeTruthy();
   });
 

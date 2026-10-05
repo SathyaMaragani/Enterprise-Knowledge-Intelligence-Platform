@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import BrandMark from '../components/BrandMark.jsx';
-import KnowledgeGraph from '../components/KnowledgeGraph.jsx';
-import Mountains from '../components/Mountains.jsx';
-import ThreeBackdrop from '../components/ThreeBackdrop.jsx';
+import { HeroArt } from '../components/DashboardArt.jsx';
 import {
   EyeIcon,
   EyeOffIcon,
@@ -20,19 +18,19 @@ const FEATURES = [
     title: 'Hybrid search',
     text: 'Keyword, fuzzy and semantic matching in a single query.',
     Icon: SearchIcon,
-    tone: 'blue',
+    tone: 'green',
   },
   {
     title: 'One repository',
     text: 'Documents, their content and processing history together.',
     Icon: FileTextIcon,
-    tone: 'teal',
+    tone: 'blue',
   },
   {
     title: 'Role-based access',
     text: 'Everyone sees exactly the documents they are allowed to.',
     Icon: ShieldIcon,
-    tone: 'violet',
+    tone: 'amber',
   },
 ];
 
@@ -67,13 +65,6 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <section className="login-hero" aria-label="About EIP">
-        <div className="login-hero__scene" aria-hidden="true">
-          <ThreeBackdrop scene="cloud-field" className="login-hero__three" />
-          <div className="login-hero__glow" />
-          <Mountains className="login-hero__mountains" />
-          <div className="login-hero__shade" />
-        </div>
-
         <div className="login-hero__content">
           <BrandMark />
           <div className="login-hero__intro">
@@ -100,7 +91,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <KnowledgeGraph className="login-hero__graph" />
+        <HeroArt className="login-hero__art" />
       </section>
 
       <main className="login-panel">

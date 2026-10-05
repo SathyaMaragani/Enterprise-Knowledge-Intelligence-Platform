@@ -510,7 +510,7 @@ This is where the four subjects become **one project**.
 Current state:
 
 ```text
-          React UI (sign-in + dashboard, threeui scenes)
+          React UI (light green theme, SVG illustrations)
                                  │
                                  ▼
                      Spring Boot API (Verified)

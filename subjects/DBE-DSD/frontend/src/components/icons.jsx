@@ -216,3 +216,63 @@ export const XIcon = (p) => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Icon>
 );
+
+export const BellIcon = (p) => (
+  <Icon {...p}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
+  </Icon>
+);
+
+export const ClockIcon = (p) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </Icon>
+);
+
+export const ActivityIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </Icon>
+);
+
+export const ZapIcon = (p) => (
+  <Icon {...p}>
+    <path d="M13 3 5 13.5h6L10 21l8-10.5h-6z" />
+  </Icon>
+);
+
+export const FolderIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M3 10.5h18" />
+  </Icon>
+);
+
+export const BrainIcon = (p) => (
+  <Icon {...p}>
+    <path d="M9.5 4.5a2.5 2.5 0 0 0-4.6 1.4A3 3 0 0 0 3.5 11a3 3 0 0 0 1.4 4.6A2.8 2.8 0 0 0 9.5 19.5zM14.5 4.5a2.5 2.5 0 0 1 4.6 1.4 3 3 0 0 1 1.4 5.1 3 3 0 0 1-1.4 4.6 2.8 2.8 0 0 1-4.6 3.9z" />
+    <path d="M12 4v16M9.5 9H7.5M14.5 9h2M9.5 14H8M14.5 14H16" />
+  </Icon>
+);
+
+export const ChevronRightIcon = (p) => (
+  <Icon {...p}>
+    <path d="m9 6 6 6-6 6" />
+  </Icon>
+);
+
+export const LightbulbIcon = (p) => (
+  <Icon {...p}>
+    <path d="M9 18h6M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" />
+  </Icon>
+);
+
+export const ShieldCheckIcon = (p) => (
+  <Icon {...p}>
+    <path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5 7.5-9.5V6z" />
+    <path d="m8.8 12.2 2.3 2.3 4.2-4.4" />
+  </Icon>
+);

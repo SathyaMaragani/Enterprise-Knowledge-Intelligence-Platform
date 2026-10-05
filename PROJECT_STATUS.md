@@ -643,6 +643,36 @@ The rehearsed Cloud Run image:
 
 Mutation check: turning health details back on fails `ProdProfileTest`.
 
+## Frontend Redesign: Light Green Theme
+**Status: VERIFIED**
+
+```
+Frontend   Tests 148 passed (16 files); vite build clean, app 341 kB (104 kB gzip)
+Checked    every page at 1305px and the main pages at 390px: no console errors, no horizontal overflow
+```
+
+- [x] Whole site moved from the dark style to a light theme:
+  - white cards on a faintly green page, with a deep green accent;
+  - Plus Jakarta Sans as the typeface;
+  - tokens rewritten, and every dark-only colour in `styles.css` replaced.
+- [x] Dashboard rebuilt to the supplied design:
+  - a greeting hero with search-mode chips, an illustration and an upload drop
+    target (a dropped file opens the upload form with that file chosen);
+  - four toned overview cards;
+  - Recent documents with an illustrated empty state;
+  - Your recent searches and Document activity panels, plus Explore features.
+- [x] Shell:
+  - new sidebar with a tagline card;
+  - the top bar search gains a category picker and a filters button, and now
+    also appears on the dashboard, carrying the hero's mode;
+  - a notifications bell honestly reports nothing new, since the backend sends
+    no notifications.
+- [x] Sign-in: the dusk sky, threeui clouds and three.js knowledge graph are
+  replaced by a light hero with the same SVG illustration.
+  - `three` and `@designcodeio/threeui` removed from the dependencies.
+- [x] The ML insights headline tiles use the same toned cards.
+  - The chart palette was revalidated against white: all checks pass.
+
 ## Frontend Polish: Professional Product Pass
 **Status: VERIFIED**
 Checked with headless Chrome screenshots of every page at 1920, 1440 and 1280
