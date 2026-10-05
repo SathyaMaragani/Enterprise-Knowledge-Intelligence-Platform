@@ -55,6 +55,16 @@ ShellForge is a Unix-like shell developed as part of the OSSP project.
 
 ## Week 6 Features
 
+- Signal handling with `sigaction()` (`include/signals.h`, `src/signals.c`)
+- SIGINT support: the shell survives Ctrl+C, the running command is interrupted
+- SIGCHLD support: zombie cleanup with `waitpid(-1, NULL, WNOHANG)`
+- SIGCHLD blocked around each foreground command, so its exit status is never lost
+- SIGTSTP (Ctrl+Z) ignored until job control exists
+- Children start with default signal handling and an empty signal mask
+- Automated test suite (`tests/test_week6.sh`)
+
+## Week 7 Features
+
 - Inter-Process Communication (IPC) via `pipe()`
 - Parent → Child unidirectional communication
 - Child → Parent unidirectional communication
@@ -64,11 +74,32 @@ ShellForge is a Unix-like shell developed as part of the OSSP project.
 - Rigorous file-descriptor cleanup in parent and child to prevent deadlocks
 - Verified EOF detection behavior (`read() == 0`)
 - `--demo-ipc` CLI flag and interactive `demo-ipc` shell command
-- Automated test suite (`tests/test_week6.sh`)
+- Pipe code in its own module (`include/pipes.h`, `src/pipes.c`)
+- Automated test suite (`tests/test_week7.sh`)
+
+## Week 8 Features
+
+- Memory leak detection using Valgrind: 0 leaks, 0 errors over a full session
+- Debugging using GDB
+- AddressSanitizer support (`make asan`); Valgrind target (`make valgrind`)
+- Defensive programming practices: every allocation and system call checked
+- Improved error handling (saved `errno`, checked `waitpid()`, one `exec_child()` path)
+- Automated test suite (`tests/test_week8.sh`)
+
+## Week 9 Features
+
+- File descriptor management (`include/redirect.h`, `src/redirect.c`)
+- Output redirection (`>`)
+- Input redirection (`<`)
+- Append redirection (`>>`)
+- Error redirection (`2>`)
+- File handling using `open()`, `close()` and `dup2()`
+- Works with built-ins, inside pipelines, and without spaces (`ls>out`)
+- Automated test suite (`tests/test_week9.sh`)
 
 ## Current Version
 
-ShellForge Version 6.0
+ShellForge Version 9.0
 
 ## Build
 

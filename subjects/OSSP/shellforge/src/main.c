@@ -6,6 +6,9 @@
 #include "parser.h"
 #include "executor.h"
 #include "builtin.h"
+#include "pipes.h"
+#include "redirect.h"
+#include "signals.h"
 
 int main(int argc, char **argv) {
     char *line;
@@ -20,6 +23,9 @@ int main(int argc, char **argv) {
             return run_ipc_demo();
         }
     }
+
+    /* Before the first prompt, so Ctrl+C can never kill the shell itself. */
+    initialize_signals();
 
     printf("=====================================\n");
     printf(" Welcome to %s Version %s\n", SHELL_NAME, VERSION);
@@ -83,18 +89,27 @@ int main(int argc, char **argv) {
              * forked into a child could not change the shell's own state --
              * `cd` would move the child's directory and then the child would
              * exit, leaving the shell exactly where it started.
+             *
+             * Redirections are applied here, in the shell, so they cover
+             * built-ins too (`pwd > file`); a forked command inherits them,
+             * and end_redirection() puts the terminal back afterwards.
              */
-            int builtin_status = execute_builtin(tokens);
+            int saved[3];
+            int builtin_status = BUILTIN_HANDLED;
+
+            if (begin_redirection(tokens, saved) == 0) {
+                builtin_status = execute_builtin(tokens);
+                if (builtin_status == BUILTIN_NOT_FOUND) {
+                    execute_command(tokens);
+                }
+                end_redirection(saved);
+            }
 
             if (builtin_status == BUILTIN_EXIT) {
                 printf("Exiting %s...\n", SHELL_NAME);
                 free_tokens(tokens);
                 free(line);
                 break;
-            }
-
-            if (builtin_status == BUILTIN_NOT_FOUND) {
-                execute_command(tokens);
             }
         } else if (pipe_count == 1) {
             if (pipe_idx == 0 || tokens[pipe_idx + 1] == NULL) {
@@ -106,7 +121,7 @@ int main(int argc, char **argv) {
                 execute_pipeline(args1, args2);
             }
         } else {
-            fprintf(stderr, "ShellForge: multi-stage pipelines are not supported in Week 6 (two-stage pipeline only)\n");
+            fprintf(stderr, "ShellForge: multi-stage pipelines are not supported (two-stage pipeline only)\n");
         }
 
         free_tokens(tokens);

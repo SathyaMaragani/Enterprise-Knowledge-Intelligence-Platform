@@ -68,7 +68,7 @@
 - [x] Docker-based environment validation
 
 
-## OSSP — Weeks 1-6 (ShellForge)
+## OSSP — Weeks 1-9 (ShellForge)
 **Status: VERIFIED**
 (This Windows host has no gcc/make, which is why Weeks 1-2 previously stood
 unverified. Built and executed in a `gcc:13` container instead, which compiles
@@ -113,15 +113,22 @@ has no prerequisites so it never rebuilds. This repository keeps its existing
 - [x] Non-built-ins fall through to the Week 4 fork/exec path
 - [x] 32 assertions passing; ASan + LeakSanitizer + UBSan clean
 
-### Week 6 — Pipes and IPC
+### Week 6 — Signals and process control
+- [x] `include/signals.h`, `src/signals.c` with `sigaction()` and `SA_RESTART`
+- [x] Ctrl+C ends the running command, never the shell; Ctrl+Z ignored until job control exists
+- [x] SIGCHLD handler reaps zombies; SIGCHLD blocked around foreground waits so exit statuses are not lost
+- [x] Children reset to default signal handling before `execvp()`
+- [x] 21 assertions passing, including a zombie check (`tests/sigchld_check.c`)
+
+### Week 7 — Pipes and IPC
 - [x] `pipe()`, `dup2()`, two-process pipelines, parent/child IPC demos
 - [x] File-descriptor lifecycle handled so the reader receives EOF
-- [x] 23 assertions passing
+- [x] 23 assertions passing; code moved to its own module, `src/pipes.c`
 
 **Chapter-label correction:** the pipes/IPC work was previously recorded as
 Week 5 and marked verified against the wrong handbook chapter. Week 5 is built-in
-commands and environment variables; pipes and IPC are Week 6. The code was
-correct and was relabelled, not rewritten.
+commands and environment variables, and Week 6 is signals; pipes and IPC are
+Week 7. The code was correct and was relabelled, not rewritten.
 
 **Three deviations from the Week 5 listing**, each documented in `WEEK5.md`:
 `getenv()` results are NULL-checked (the listing passes a possible `NULL` to
@@ -130,6 +137,33 @@ unset); `clear` writes the ANSI escape instead of `system("clear")`, which would
 fork a shell to run a binary absent from many images; and `exit` returns a
 sentinel instead of calling `exit()`, so `main()` frees the line buffer and token
 vector first and the leak checker stays clean.
+
+### Week 8 — Memory management, Valgrind and GDB
+- [x] Valgrind over a full session: 58 allocs, 58 frees, 0 errors; a deliberate leak is caught
+- [x] GDB session: breakpoint in `parse_line`, backtrace, inspecting the token vector
+- [x] `make asan` and `make valgrind`; ASan catches a deliberate heap-buffer-overflow
+- [x] Review fixes: `errno` saved before `fprintf()`, pipeline `waitpid()` checked, one `exec_child()` path
+- [x] 22 assertions passing (Valgrind and GDB run in a gcc:13 image that adds them)
+
+### Week 9 — File descriptors and I/O redirection
+- [x] `include/redirect.h`, `src/redirect.c`: `>`, `>>`, `<`, `2>` with `open()`, `dup2()`, `close()`
+- [x] Operators work without spaces, on built-ins, and inside pipelines
+- [x] No descriptor leaks: saved fds are close-on-exec, confirmed by a mutation check
+- [x] 29 assertions passing
+
+**Deviations from the Week 6 and 9 listings**, documented in `WEEK6.md` and `WEEK9.md`:
+- **Week 6 signal handlers:** the listing's handlers call `printf()`, which is
+  not async-signal-safe; ShellForge's use `write()`.
+- **Week 6 SIGCHLD reaper:** the listing's reaper can take the foreground
+  child's exit status before `waitpid()` does; ShellForge blocks SIGCHLD around
+  foreground waits.
+- **Week 9 redirection:** the listing implements only `>` and `>>`, and skips
+  built-ins; ShellForge implements all four operators and covers built-ins.
+
+```
+make test (gcc:13 + valgrind + gdb):
+  week4 21 · week5 32 · week6 21 · week7 23 · week8 22 · week9 29  = 148 passed, 0 failed
+```
 
 ## Phase 1.4.3 — Qdrant Vector Integration
 **Status: VERIFIED**
@@ -178,6 +212,48 @@ vector first and the leak checker stays clean.
 - [x] `seed.sql` bcrypt hashes labelled as dev seed data
 - [x] `qdrant.collection` renamed to `qdrant.collection-name` to match what `QdrantService` reads
 - [x] Confirmed no secrets, `target/`, or `.venv/` are tracked by git
+
+## Phase 1.7D — Document Classification and Clustering, ML Insights Page
+**Status: VERIFIED**
+
+```
+ML self-check   6/6 passed (tests/test_document_insights.py); 15/15 test_pipeline.py
+Frontend        Tests 160 passed (3 new: InsightsPage)
+Encoder parity  Python ONNX vs Java MiniLmOnnxEncoder: cosine 1.0, max diff 3e-8
+```
+
+- [x] Feature engineering on the demo corpus:
+  - normalization (version marker dropped, numbers mapped to 0);
+  - word and character TF-IDF, MiniLM embeddings, and character LSA joined with MiniLM;
+  - vectorizers fitted inside each training fold, so no held-out words leak.
+- [x] Classification of the 6 categories:
+  - one topic per category locked away as the test set;
+  - 18 feature x model pairs tuned on the other 15 topics with leave-one-topic-out
+    validation (grid search, randomized for the forest);
+  - grid against random search compared on the winner.
+- [x] Results:
+  - **locked test 0.83 accuracy** (char TF-IDF + Naive Bayes);
+  - all 21 topics held out in turn: 0.57;
+  - an ordinary random split scores 1.00 by memorising near-copies (95-99% word
+    overlap within a topic), which is why every split is by topic.
+- [x] Calibration of four model types out of fold, with reliability bins, ECE and Brier.
+- [x] Clustering:
+  - elbow (k = 17) and silhouette (k = 24);
+  - random against k-means++ starts (topic ARI 0.79 against 0.98 at k = 24);
+  - mini-batch k-means, agglomerative clustering with 4 linkages, and k-means on PCA
+    and on LSA;
+  - DBSCAN with eps from the k-distance knee found **21 clusters, one per topic,
+    unaided**;
+  - best category match at k = 6: ARI 0.60.
+- [x] `/insights` page with three tabs (Classification, Clustering, Data & method):
+  - charts drawn in plain SVG, no chart library;
+  - loaded lazily with its 95 KB of results.
+- [x] `subjects/ML/docs/DOCUMENT_CLASSIFICATION_AND_CLUSTERING.md`
+
+**Limitations:**
+- 21 topics are few independent examples;
+- the corpus is synthetic;
+- UMAP was not used (not installed).
 
 ## Phase 1.7A — Unified Search Infrastructure
 **Status: VERIFIED**
@@ -477,7 +553,7 @@ whether an account is disabled before it checks the password. A distinct
 its password.
 
 ## Free Hosting: Render Free Backend (DEPLOY-RENDER-0 and DEPLOY-RENDER-1)
-**Status: FITS RENDER FREE, VERIFIED LOCALLY AT ITS LIMITS; not yet deployed (needs accounts)**
+**Status: LIVE since 2026-10-05: https://ekipsearch.vercel.app, backend on Render Free. Also verified locally at Render Free's limits.**
 
 Google Cloud needs a billing account, so the backend moves to Render's free web
 service: 512 MB of memory and 0.1 CPU. The frontend stays on Vercel, and the data

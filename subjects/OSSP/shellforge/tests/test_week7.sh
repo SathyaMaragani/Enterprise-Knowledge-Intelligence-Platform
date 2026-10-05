@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================="
-echo " Running ShellForge Week 6 Test Suite     "
+echo " Running ShellForge Week 7 Test Suite     "
 echo "=========================================="
 
 PASSED=0
@@ -53,7 +53,7 @@ fi
 # 2. Banner test
 echo "--- 2. Banner & Version Test ---"
 OUT=$(printf "exit\n" | ./bin/shellforge)
-assert_contains "Startup banner Version 6.0" "Welcome to ShellForge Version 6.0" "$OUT"
+assert_contains "Startup banner Version 9.0" "Welcome to ShellForge Version 9.0" "$OUT"
 assert_contains "Clean exit message" "Exiting ShellForge..." "$OUT"
 
 # 3. Direct IPC Demonstrations (--demo-ipc)
@@ -97,7 +97,7 @@ assert_contains "Trailing pipe syntax error" "ShellForge: syntax error near unex
 # 9. Boundary enforcement: Reject multi-stage pipelines
 echo "--- 9. Multi-stage Pipeline Boundary Check ---"
 OUT=$(printf "echo 1 | echo 2 | echo 3\nexit\n" | ./bin/shellforge 2>&1)
-assert_contains "Multi-stage pipeline boundary rejection" "multi-stage pipelines are not supported in Week 6" "$OUT"
+assert_contains "Multi-stage pipeline boundary rejection" "multi-stage pipelines are not supported" "$OUT"
 
 # 10. Pipeline error handling: Left command failure
 echo "--- 10. Pipeline Error Handling ---"

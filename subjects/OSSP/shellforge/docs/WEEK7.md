@@ -1,4 +1,8 @@
-# OSSP Week 6 — Pipes & IPC Foundation (CO-3)
+# OSSP Week 7 — Pipes & IPC Foundation (CO-3)
+
+> This work was first filed as Week 5, then Week 6. The handbook's Week 6 is
+> signals (see `WEEK6.md`) and pipes are Week 7, so it is labelled Week 7 now.
+> As the handbook asks, the pipe code lives in its own module, `src/pipes.c`.
 
 ## 1. Concepts & Architecture
 
@@ -103,12 +107,16 @@ Typing `cmd1 | cmd2` (e.g. `echo Hello World | grep Hello` or `seq 1 5 | wc -l`)
 1. **Parser (`parser.c`)**: Recognizes `|` as a distinct token even without spaces (e.g. `cmd1|cmd2`).
 2. **Validator (`main.c`)**:
    - Ensures `|` is neither the first nor last argument.
-   - Enforces the Week 5 scope boundary: multi-stage pipelines (3+ commands) are rejected with a clear educational message.
-3. **Executor (`executor.c`)**:
+   - Enforces the two-stage scope boundary: multi-stage pipelines (3+ commands) are rejected with a clear educational message.
+3. **Pipes module (`pipes.c`)**:
    - Creates anonymous pipe.
    - Forks Child 1 and Child 2.
    - Closes pipe descriptors in parent.
-   - Waits for both children via `waitpid()`.
+   - Each child runs `exec_child()` from `executor.c`: default signal handling
+     restored (Week 6), any redirections applied after the pipe ends (Week 9),
+     then `execvp()`.
+   - Waits for both children via `waitpid()`, with SIGCHLD blocked so the Week 6
+     reaper cannot take their exit status first.
 
 ---
 
@@ -116,6 +124,6 @@ Typing `cmd1 | cmd2` (e.g. `echo Hello World | grep Hello` or `seq 1 5 | wc -l`)
 
 Executed inside the `gcc:13` Docker container:
 - **Build**: Compiles cleanly with `-Wall -Wextra -g`.
-- **Automated Tests**: 23/23 assertions passed in `tests/test_week5.sh`.
+- **Automated Tests**: 23/23 assertions passed in `tests/test_week7.sh`.
 - **Regression Tests**: 21/21 assertions passed in `tests/test_week4.sh`.
 - **Memory Safety**: Clean under `-fsanitize=address,undefined` (ASan/UBSan) with zero leaks and zero errors.

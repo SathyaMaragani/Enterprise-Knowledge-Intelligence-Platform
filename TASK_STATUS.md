@@ -267,13 +267,13 @@ The architecture/scaffolding is:
 * [ ] Indian-language Wikipedia corpus — **deferred**: data acquisition and
       licensing task, not an algorithm; needs dump selection and a license review
 * [x] DSA Spring/API integration — delivered in phase 1.7C (`POST /api/search` keyword scoring)
-* [ ] DSA frontend integration — **blocked**: depends on the React frontend (pending)
+* [x] DSA frontend integration — TextHack workbench page (`/texthack`) and `/api/texthack/*`
 
 ---
 
-# 🟢 OSSP — ShellForge (Weeks 1-6)
+# 🟢 OSSP — ShellForge (Weeks 1-9)
 
-Weeks 1-6 are implemented, compiled, and verified. The host has
+Weeks 1-9 are implemented, compiled, and verified. The host has
 no gcc/make, so the build runs in a `gcc:13` container.
 
 ### Week 1 — VERIFIED
@@ -345,7 +345,7 @@ no gcc/make, so the build runs in a `gcc:13` container.
 * [x] ASan + LeakSanitizer + UBSan clean across every built-in path
 * [x] Week 5 documentation (`WEEK5.md`, updated `OSSP_MAPPING.md`, `TESTS.md`, `README.md`)
 
-### Week 6 — VERIFIED (Pipes & IPC)
+### Week 7 — VERIFIED (Pipes & IPC)
 
 * [x] Anonymous pipes via `pipe()`
 * [x] File descriptor redirection via `dup2()`
@@ -362,9 +362,34 @@ no gcc/make, so the build runs in a `gcc:13` container.
 verified against the wrong chapter. The Week 5 handbook specifies built-in
 commands and environment variables; pipes and IPC are Week 6. The implementation
 was correct — only its chapter label was wrong — so it was relabelled rather
-than rewritten.
-* [x] Memory validation (ASan + UBSan clean, 0 leaks, 0 errors)
-* [x] Week 5 documentation (`WEEK5.md`, updated `OSSP_MAPPING.md`, `TESTS.md`, `README.md`)
+than rewritten. The handbook's Week 6 turned out to be signals, so it moved
+once more, to Week 7, and into its own module (`pipes.c`) as that chapter asks.
+
+### Week 6 — VERIFIED (Signals and Process Control)
+
+* [x] `signals.h`, `signals.c` with `sigaction()` and `SA_RESTART`
+* [x] SIGINT: shell survives Ctrl+C; the foreground child is interrupted
+* [x] SIGCHLD: zombie reaping with `waitpid(-1, NULL, WNOHANG)`
+* [x] SIGCHLD blocked around foreground waits, so the reaper cannot steal an exit status
+* [x] SIGTSTP ignored until job control exists
+* [x] Children reset to default signal handling before `execvp()`
+* [x] Automated test suite (`test_week6.sh`, 21 assertions) and zombie check (`sigchld_check.c`)
+
+### Week 8 — VERIFIED (Memory Management, Valgrind, GDB)
+
+* [x] Valgrind: full session 58 allocs / 58 frees, 0 errors; leak control detected
+* [x] GDB session: breakpoint, backtrace, variable inspection
+* [x] `make asan` and `make valgrind` targets; overflow control detected
+* [x] Review fixes: saved `errno`, checked `waitpid()` in pipelines, single `exec_child()`
+* [x] Automated test suite (`test_week8.sh`, 22 assertions)
+
+### Week 9 — VERIFIED (File Descriptors and I/O Redirection)
+
+* [x] `redirect.h`, `redirect.c`: `>`, `>>`, `<`, `2>` via `open()`, `dup2()`, `close()`
+* [x] Operators tokenised with or without spaces
+* [x] Built-ins redirected in the shell, terminal restored; redirection inside pipelines
+* [x] No descriptor leaks (`F_DUPFD_CLOEXEC`), confirmed by a mutation check
+* [x] Automated test suite (`test_week9.sh`, 29 assertions)
 
 ### Future OSSP
 
@@ -379,15 +404,15 @@ than rewritten.
 * [x] `exec()` / `execvp()`
 * [x] `wait()` / `waitpid()`
 * [x] Process lifecycle
-* [ ] Process control (advanced / signals)
+* [x] Process control (signals)
 * [ ] Job management (background `&` / jobs)
 
 #### CO-3 — IPC
 
 * [x] Anonymous pipes
 * [ ] Named pipes/FIFOs
-* [ ] Signals
-* [ ] Signal handlers
+* [x] Signals
+* [x] Signal handlers
 * [ ] Process groups
 * [ ] Sessions
 * [ ] Job control
@@ -399,15 +424,15 @@ than rewritten.
 * [ ] Page faults
 * [ ] `mmap()`
 * [ ] Copy-on-write
-* [ ] Memory debugging
+* [x] Memory debugging (Valgrind, GDB, ASan)
 
 #### CO-5 — File Systems
 
-* [ ] File descriptors
-* [ ] `open()`
+* [x] File descriptors
+* [x] `open()`
 * [ ] `read()`
 * [ ] `write()`
-* [ ] `close()`
+* [x] `close()`
 * [ ] Directory operations
 * [ ] Buffered/unbuffered I/O
 * [ ] Memory-mapped I/O
@@ -456,11 +481,11 @@ than rewritten.
 * [x] Dense vs Sparse comparison (`src/evaluation/compare.py` — dense decisively beats TF-IDF by +0.2531 nDCG@10, p < 0.0001)
 * [x] Model evaluation: `all-MiniLM-L6-v2` vs `bge-small-en-v1.5` evaluated on bounded FiQA subset
 * [x] Decision record documented (`subjects/ML/docs/PHASE_1_7B_2_EVALUATION.md`)
-* [ ] Feature engineering (tabular / classification features)
-* [ ] Document classification (future CO)
-* [ ] Classification evaluation (future CO)
-* [ ] Document clustering (future CO)
-* [ ] Clustering evaluation (future CO)
+* [x] Feature engineering: normalization, word and character TF-IDF, MiniLM (ONNX, identical to the backend), LSA (`src/features/documents.py`)
+* [x] Document classification: 5 models x 4 feature sets, tuned by grid and randomized search (`src/classification/categories.py`)
+* [x] Classification evaluation: locked test topics (0.83 accuracy), leave-one-topic-out (0.57), leakage check (random split 1.00), calibration (ECE, Brier)
+* [x] Document clustering: k-means (random vs k-means++), mini-batch, agglomerative (4 linkages), DBSCAN, PCA, t-SNE (`src/clustering/documents.py`)
+* [x] Clustering evaluation: elbow and silhouette, ARI/NMI against categories and topics; DBSCAN finds the 21 topics unaided
 * [x] Semantic/ranking model selection (`all-MiniLM-L6-v2`)
 * [x] Ranking evaluation (1.7B-1 baseline + 1.7B-2 dense evaluation: +0.2531 nDCG@10 over TF-IDF)
 * [x] Model persistence (ONNX model `model.onnx` + `tokenizer.json` in backend resources)
@@ -588,7 +613,7 @@ Current state:
 * [x] Search results
 * [x] Admin/user management (create, role, enable/disable, password reset)
 * [x] Document permissions (owner or administrator grants and revokes READ access)
-* [ ] ML insights
+* [x] ML insights (`/insights`: classification, clustering, data and method)
 * [x] TextHack demonstrations (`/texthack`: pattern search, similarity and alignment, citation flow, complexity)
 
 ---
@@ -624,7 +649,8 @@ Current state:
 * [x] Backend fits Render Free (512 MB, 0.1 CPU) with MiniLM and semantic search kept: one-thread ONNX Runtime, tuned JVM, class-data-sharing archive; verified locally at those limits (`deploy/RENDER-FREE-COMPATIBILITY.md`)
 * [x] "Starting the server" screen while the free backend wakes up (`ServerGate`)
 * [x] CI/CD: frontend tests/build and backend tests against real databases in GitHub Actions; Render deploys only commits whose checks pass
-* [ ] Public hosting: run the one-time account setup in `subjects/DBE-DSD/deploy/README.md`
+* [x] Public hosting, live since 2026-10-05: https://ekipsearch.vercel.app (Vercel) with the backend on Render Free and data on Neon, MongoDB Atlas and Qdrant Cloud; all health components UP; uploads and all four search modes checked by hand
+* [ ] Scripted smoke test (`docker/smoke-test.mjs`, 28 checks) against the live site
 
 ---
 
@@ -645,6 +671,7 @@ A comprehensive **development-status view** right now:
 | Unified Search (1.7A)         | 🟢 Verified   |
 | ML 1.7B-1 Dataset/Eval        | 🟢 Verified   |
 | ML 1.7B-2 Embeddings Eval     | 🟢 Verified   |
+| ML 1.7D Classify + cluster    | 🟢 Verified   |
 | Demo Corpus & Vectors(1.7B-3A)| 🟢 Verified   |
 | Java ONNX Embeddings (1.7B-3C)| 🟢 Verified   |
 | Real Semantic Search (1.7B-3B)| 🟢 Verified   |
@@ -652,14 +679,14 @@ A comprehensive **development-status view** right now:
 | DSA-3 TextHack (all 20 algos) | 🟢 Verified   |
 | TextHack → Search (1.7C)      | 🟢 Verified   |
 | DSA-3 frontend wiring         | 🟢 Verified   |
-| OSSP ShellForge (Wk 1-6)      | 🟢 Verified   |
+| OSSP ShellForge (Wk 1-9)      | 🟢 Verified   |
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
 | Product UI: sign-in + dashboard | 🟢 Verified |
 | Repository/Search/Admin pages | 🟢 Verified   |
 | Document upload and delete    | 🟢 Verified   |
 | Administration and access     | 🟢 Verified   |
 | Deployment (Containers)       | 🟢 Verified   |
-| Public hosting                | 🔴 Pending    |
+| Public hosting                | 🟢 Live       |
 
 ## The important thing
 
@@ -673,23 +700,22 @@ DBE: Authentication / RBAC (JWT)
 DBE: Unified Hybrid Search (1.7A)
 ML: FiQA Dataset + Preprocessing + TF-IDF Baseline (1.7B-1)
 ML: Real Embedding Evaluation (1.7B-2)
+ML: Feature engineering, classification and clustering with evaluation (1.7D) + ML insights page
 DBE/ML: Demo Enterprise Corpus + Vector Ingestion (1.7B-3A)
 DBE: In-process Java ONNX MiniLM Query Embedding (1.7B-3C)
 DBE: Spring Boot Real Semantic Search Integration (1.7B-3B)
 DSA-3: TextHack, all 20 algorithms (452 assertions) + engine + benchmarks
 DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
-OSSP: Weeks 1–6 ShellForge (REPL, Input, Parser, Processes, Built-ins, Pipes/IPC)
+OSSP: Weeks 1–9 ShellForge (REPL, Input, Parser, Processes, Built-ins, Signals, Pipes/IPC, Valgrind/GDB, Redirection)
 DBE: React shell + JWT authentication (Frontend 1)
 DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 DBE: Repository, document viewer, search, upload/delete and administration pages
 DBE: Full-stack Docker deployment, smoke and load tested
 DBE/DSA: TextHack workbench API and page (pattern, similarity, citation flow)
+Deployment: live on free plans — Vercel + Render + Neon/Atlas/Qdrant Cloud
 
 REMAINING:
-Frontend: ML insights view
-ML: Classification, Clustering & Feature Engineering (Future COs)
-OSSP: Signals, process groups, job control, memory, file I/O, threads
-Deployment: public free-tier hosting (needs accounts)
+OSSP: Job control and process groups, FIFOs, mmap/virtual memory, directories, threads (no handbook chapters yet)
 ```
 
-For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–6 and all 20 DSA-3 algorithms verified. Documents can be uploaded and deleted through the API and UI, and the whole stack runs from one Compose file.
+For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–9 and all 20 DSA-3 algorithms verified. Documents can be uploaded and deleted through the API and UI, and the whole stack runs from one Compose file.

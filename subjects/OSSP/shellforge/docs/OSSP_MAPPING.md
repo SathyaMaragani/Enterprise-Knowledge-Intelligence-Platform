@@ -56,6 +56,19 @@
 
 ## Week 6
 
+**CO-2 / CO-3 — Signals and Process Control:**
+- Signals as asynchronous software interrupts; synchronous vs asynchronous events
+- Signal dispositions: default, ignore, catch; SIGKILL/SIGSTOP cannot be caught
+- `sigaction()` with `SA_RESTART` (and how it differs from `signal()`)
+- SIGINT: the shell survives Ctrl+C; the foreground child receives the default action
+- SIGCHLD: reaping with `waitpid(-1, NULL, WNOHANG)`; zombie processes (state `Z`)
+- Race between the SIGCHLD reaper and the foreground `waitpid()`, closed with `sigprocmask()`
+- Signal masks and ignored dispositions are inherited across `fork()` and `exec()`
+- SIGTSTP ignored until job control exists
+- Async-signal safety: `write()` in handlers, not `printf()`
+
+## Week 7
+
 **CO-3 — Inter-Process Communication (IPC):**
 - Anonymous pipes via `pipe()` system call
 - Unidirectional byte-stream communication model
@@ -65,3 +78,23 @@
 - Two-process command pipeline (`cmd1 | cmd2`)
 - File descriptor lifecycle management and EOF semantics
 - Deadlock prevention through parent write-end descriptor closure
+
+## Week 8
+
+**CO-4 — Memory Management and Debugging:**
+- Process memory layout: text, data, BSS, heap, stack
+- Memory errors: leaks, dangling pointers, overflows, double free, invalid reads and writes
+- Valgrind `--leak-check=full`: a clean report, plus a deliberate 200-byte leak as a control
+- GDB: breakpoints, backtrace, stepping, inspecting variables
+- AddressSanitizer / UndefinedBehaviorSanitizer (`make asan`), with a heap-buffer-overflow control
+- Defensive programming: checking every allocation and system call; fixes from the review
+
+## Week 9
+
+**CO-5 — File Descriptors and I/O Redirection:**
+- File descriptor table; stdin/stdout/stderr as fds 0, 1, 2
+- `open()` flags: `O_RDONLY`, `O_WRONLY`, `O_CREAT`, `O_TRUNC`, `O_APPEND`; mode `0644` and umask
+- `dup2()` to redirect a standard stream; `close()` to release the original
+- Operators `>`, `>>`, `<`, `2>`, with or without spaces, combined, and inside pipelines
+- Redirecting built-ins in the shell process: saving and restoring fds 0-2
+- Close-on-exec (`F_DUPFD_CLOEXEC`) to stop descriptor leaks into children

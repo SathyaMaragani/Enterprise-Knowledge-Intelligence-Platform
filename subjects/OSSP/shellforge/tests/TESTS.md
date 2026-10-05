@@ -9,7 +9,18 @@ container:
 docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 ```
 
-`make test` runs all three automated suites in order: Week 4, Week 5, Week 6.
+`make test` runs all six automated suites in order, Week 4 to Week 9.
+
+Week 8's Valgrind and GDB checks need those tools, which the gcc:13 image lacks.
+Build an image that adds them once, then use it in place of `gcc:13`:
+
+```bash
+printf 'FROM gcc:13\nRUN apt-get update && apt-get install -y --no-install-recommends valgrind gdb && rm -rf /var/lib/apt/lists/*\n' | docker build -t shellforge-dev -
+docker run --rm -v "$(pwd):/src" -w /src shellforge-dev sh -c "make clean && make test"
+```
+
+In plain gcc:13 those checks are reported as skipped, not failed. Week 6 and 8
+read `/proc` and use `setsid` and `ps`, so they need Linux.
 
 ## Automated Suites
 
@@ -17,7 +28,10 @@ docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make tes
 |---|---|---|
 | `tests/test_week4.sh` | Processes and command execution | 21 |
 | `tests/test_week5.sh` | Built-in commands and environment variables | 32 |
-| `tests/test_week6.sh` | Pipes and IPC | 23 |
+| `tests/test_week6.sh` | Signals and process control | 21 |
+| `tests/test_week7.sh` | Pipes and IPC | 23 |
+| `tests/test_week8.sh` | Valgrind, GDB and AddressSanitizer | 22 |
+| `tests/test_week9.sh` | File descriptors and I/O redirection | 29 |
 
 Run one suite on its own:
 
@@ -37,7 +51,7 @@ actually active — compile a deliberate one-line leak and check it is reported.
    - Expected: Program launches without errors.
 2. **Startup banner appears.**
    - Action: Observe output.
-   - Expected: `Welcome to ShellForge Version 6.0` banner is displayed.
+   - Expected: `Welcome to ShellForge Version 9.0` banner is displayed.
 3. **A command is tokenized into argv[].**
    - Action: Run with `--debug-tokens` and enter `ls -l /home`.
    - Expected: `argv[0] = ls`, `argv[1] = -l`, `argv[2] = /home`, `argv[3] = NULL`.
@@ -117,7 +131,7 @@ Executed in `gcc:13`:
 | ASan / LeakSanitizer / UBSan | 0 leaks, 0 errors |
 | **`tests/test_week5.sh`** | **32 passed, 0 failed** |
 
-## Week 6 — Pipes and IPC
+## Week 7 — Pipes and IPC
 
 1. **Direct IPC parent to child**: parent writes to `pipefd[1]`, child reads from `pipefd[0]`.
 2. **Direct IPC child to parent**: child writes, parent reads.
@@ -135,7 +149,7 @@ Executed in `gcc:13`:
 14. **Buffer and vector growth in a pipeline**: 1200-character argument and 100-argument vector both survive.
 15. **Sanitizers**: pipeline and IPC paths run under ASan + UBSan.
 
-### Week 6 results
+### Week 7 results
 
 | Test category | Result |
 |---|---|
@@ -150,7 +164,55 @@ Executed in `gcc:13`:
 | Pipeline failure handling, both sides | Passed |
 | Buffer and token vector growth | Passed |
 | ASan / UBSan | 0 leaks, 0 errors |
-| **`tests/test_week6.sh`** | **23 passed, 0 failed** |
+| **`tests/test_week7.sh`** | **23 passed, 0 failed** |
+
+## Week 6 — Signals and Process Control
+
+Ctrl+C is simulated the way a terminal delivers it: the shell runs under
+`setsid` in its own process group, and `kill -INT -<pgid>` signals the whole
+group, so the shell and its running child each receive it.
+
+| Test category | Result |
+|---|---|
+| Ctrl+C at an idle prompt: message, shell continues, exit code 0 | Passed |
+| Ctrl+C during `sleep 5`: child ends in about 2 s, shell continues | Passed |
+| Ctrl+C during `sleep 5 \| cat`: both children end | Passed |
+| Ctrl+Z ignored: no stopped process, session completes | Passed |
+| Child starts with SIGINT at default and SIGCHLD unblocked (`/proc/self/status`) | Passed |
+| Zombie without a handler, reaped with it (`tests/sigchld_check.c`) | Passed |
+| Foreground exit status never stolen by the reaper | Passed |
+| ASan / UBSan with SIGINT | 0 reports |
+| **`tests/test_week6.sh`** | **21 passed, 0 failed** |
+
+## Week 8 — Valgrind, GDB and AddressSanitizer
+
+| Test category | Result |
+|---|---|
+| Valgrind, full session: all heap blocks freed, 0 errors | 58 allocs, 58 frees |
+| Valgrind, exit by EOF instead of `exit` | 0 leaks, 0 errors |
+| Valgrind control: deliberate `malloc(200)` leak | reported, 200 bytes definitely lost |
+| GDB: breakpoint in `parse_line`, backtrace to `main`, tokens and NULL terminator | Passed |
+| `make asan`: full session, no ASan/LSan/UBSan report | Passed |
+| ASan control: heap-buffer-overflow reported with its source line | Passed |
+| No zombie children while the shell idles | Passed |
+| Every `malloc`/`realloc` result checked | 4 of 4 |
+| **`tests/test_week8.sh`** | **22 passed, 0 failed** (11 skipped without Valgrind/GDB) |
+
+## Week 9 — File Descriptors and I/O Redirection
+
+| Test category | Result |
+|---|---|
+| `>` writes, truncates, creates with mode 0644 | Passed |
+| `>>` appends, creates a missing file | Passed |
+| `<` input; missing input file reported | Passed |
+| `2>` stderr, including the shell's own "not found" message | Passed |
+| `sort < in > out`, operators without spaces, `a2>f` | Passed |
+| Built-ins redirected, terminal restored | Passed |
+| Redirection inside a pipeline | Passed |
+| Syntax and `open()` errors | Passed |
+| No descriptor leaks (child sees fds 0-3 only) | Passed |
+| ASan / UBSan | 0 reports |
+| **`tests/test_week9.sh`** | **29 passed, 0 failed** |
 
 ## Regression Summary
 
@@ -159,5 +221,8 @@ All three suites pass together via `make test`:
 ```
 tests/test_week4.sh    21 passed, 0 failed
 tests/test_week5.sh    32 passed, 0 failed
-tests/test_week6.sh    23 passed, 0 failed
+tests/test_week6.sh    21 passed, 0 failed
+tests/test_week7.sh    23 passed, 0 failed
+tests/test_week8.sh    22 passed, 0 failed, 0 skipped
+tests/test_week9.sh    29 passed, 0 failed
 ```
