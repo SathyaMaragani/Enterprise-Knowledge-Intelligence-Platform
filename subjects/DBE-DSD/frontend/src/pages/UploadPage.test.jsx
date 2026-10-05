@@ -46,18 +46,20 @@ function renderApp(path, { profile = MANAGER, upload, extra = {} } = {}) {
 }
 
 describe('uploadProblem', () => {
-  it('accepts text and markdown up to 1 MB', () => {
+  it('accepts PDF, DOCX, text and markdown up to 10 MB', () => {
+    expect(uploadProblem(textFile('policy.pdf'))).toBeNull();
+    expect(uploadProblem(textFile('handbook.DOCX'))).toBeNull();
     expect(uploadProblem(textFile('notes.md'))).toBeNull();
     expect(uploadProblem(textFile('NOTES.TXT'))).toBeNull();
     expect(uploadProblem(textFile('x.markdown'))).toBeNull();
-    expect(uploadProblem(new File(['a'.repeat(1024 * 1024)], 'max.txt'))).toBeNull();
+    expect(uploadProblem(new File([new Uint8Array(10 * 1024 * 1024)], 'max.pdf'))).toBeNull();
   });
 
   it('rejects missing, unsupported, empty and oversized files', () => {
     expect(uploadProblem(null)).toMatch(/Choose a file/);
-    expect(uploadProblem(textFile('report.pdf'))).toMatch(/Only \.txt and \.md/);
+    expect(uploadProblem(textFile('legacy.doc'))).toMatch(/Only \.pdf, \.docx, \.txt and \.md/);
     expect(uploadProblem(textFile('empty.txt', ''))).toMatch(/empty/);
-    expect(uploadProblem(new File(['a'.repeat(1024 * 1024 + 1)], 'big.txt'))).toMatch(/at most 1 MB/);
+    expect(uploadProblem(new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'big.pdf'))).toMatch(/at most 10 MB/);
   });
 });
 
@@ -114,8 +116,8 @@ describe('upload page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Upload document' }));
     expect(screen.getByRole('alert').textContent).toBe('Choose a file to upload.');
 
-    fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('scan.pdf')] } });
-    expect(screen.getByRole('alert').textContent).toBe('Only .txt and .md files can be uploaded.');
+    fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('legacy.doc')] } });
+    expect(screen.getByRole('alert').textContent).toBe('Only .pdf, .docx, .txt and .md files can be uploaded.');
 
     fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('ok.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload document' }));

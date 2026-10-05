@@ -1429,6 +1429,59 @@ class EipApplicationTests {
     }
 
     @Test
+    @WithUserDetails("alice_mgr")
+    void testUploadsPdfAndDocxAsText() throws Exception {
+        byte[] pdf = com.eip.backend.service.TextExtractorTest.pdf(
+                "Okapi travel allowance policy", "Claims are settled within ten days");
+        byte[] docx = com.eip.backend.service.TextExtractorTest.docx(
+                "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>"
+                        + "<w:p><w:r><w:t>Okapi onboarding checklist</w:t></w:r></w:p>"
+                        + "<w:p><w:r><w:t>Laptop</w:t><w:tab/><w:t>day one</w:t></w:r></w:p>"
+                        + "</w:body></w:document>");
+        Integer pdfId = null;
+        Integer docxId = null;
+        try {
+            pdfId = uploadedId(mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                    .multipart("/api/documents")
+                                    .file(new org.springframework.mock.web.MockMultipartFile(
+                                            "file", "okapi-travel.pdf", "application/pdf", pdf))
+                                    .param("category", "Finance"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.title").value("okapi-travel"))
+                    .andReturn());
+            docxId = uploadedId(mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                    .multipart("/api/documents")
+                                    .file(new org.springframework.mock.web.MockMultipartFile(
+                                            "file", "okapi-onboarding.docx", "application/octet-stream", docx))
+                                    .param("category", "HR"))
+                    .andExpect(status().isCreated())
+                    .andReturn());
+
+            assertEquals("PDF", documentRepository.findById(pdfId).orElseThrow().getDocumentType());
+            var pdfKnowledge = knowledgeDocumentRepository.findByPostgresDocumentId(pdfId).orElseThrow();
+            assertTrue(pdfKnowledge.getContent().getRawText().contains("Okapi travel allowance policy"));
+            assertTrue(pdfKnowledge.getContent().getRawText().contains("Claims are settled within ten days"));
+            assertEquals("application/pdf", pdfKnowledge.getSource().getMimeType());
+            assertEquals("pdfbox-3.0", pdfKnowledge.getProcessing().getExtractorVersion());
+
+            assertEquals("DOCX", documentRepository.findById(docxId).orElseThrow().getDocumentType());
+            var docxKnowledge = knowledgeDocumentRepository.findByPostgresDocumentId(docxId).orElseThrow();
+            assertEquals("Okapi onboarding checklist\nLaptop\tday one\n", docxKnowledge.getContent().getRawText());
+            assertEquals("docx-xml-1.0", docxKnowledge.getProcessing().getExtractorVersion());
+
+            // The extracted text is what the viewer shows and what gets chunked for search.
+            mockMvc.perform(get("/api/documents/" + docxId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.documentType").value("DOCX"))
+                    .andExpect(jsonPath("$.content.wordCount").value(6))
+                    .andExpect(jsonPath("$.chunks", hasSize(1)));
+        } finally {
+            removeUpload(pdfId);
+            removeUpload(docxId);
+        }
+    }
+
+    @Test
     @WithUserDetails("bob_eng")
     void testEmployeeCannotUpload() throws Exception {
         long before = documentRepository.count();
@@ -1453,9 +1506,15 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.message").value("Unknown category: Nope"));
         mockMvc.perform(upload.apply(textFile("n.txt", "text")))
                 .andExpect(jsonPath("$.message").value("Choose a category"));
+        mockMvc.perform(upload.apply(textFile("legacy.doc", "binary")).param("category", "HR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only .pdf, .docx, .txt and .md files can be uploaded"));
         mockMvc.perform(upload.apply(textFile("report.pdf", "%PDF-1.7")).param("category", "HR"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Only .txt and .md files can be uploaded"));
+                .andExpect(jsonPath("$.message").value("The file is not a readable PDF"));
+        mockMvc.perform(upload.apply(textFile("notes.docx", "not a zip")).param("category", "HR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The file is not a readable Word (.docx) document"));
         mockMvc.perform(upload.apply(textFile("empty.txt", "")).param("category", "HR"))
                 .andExpect(jsonPath("$.message").value("Choose a non-empty file to upload"));
         mockMvc.perform(upload.apply(textFile("blank.txt", " \n\t ")).param("category", "HR"))
@@ -1464,8 +1523,12 @@ class EipApplicationTests {
                                 "file", "latin1.txt", "text/plain", new byte[]{'c', 'a', 'f', (byte) 0xE9}))
                                 .param("category", "HR"))
                 .andExpect(jsonPath("$.message").value("The file must be UTF-8 text"));
-        mockMvc.perform(upload.apply(textFile("big.txt", "a".repeat(1024 * 1024 + 1))).param("category", "HR"))
-                .andExpect(jsonPath("$.message").value("Files can be at most 1 MB"));
+        mockMvc.perform(upload.apply(textFile("long.txt", "a".repeat(1024 * 1024 + 1))).param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("A document can hold at most 1 MB of text"));
+        mockMvc.perform(upload.apply(new org.springframework.mock.web.MockMultipartFile(
+                                "file", "huge.pdf", "application/pdf", new byte[10 * 1024 * 1024 + 1]))
+                                .param("category", "HR"))
+                .andExpect(jsonPath("$.message").value("Files can be at most 10 MB"));
         mockMvc.perform(upload.apply(textFile("t.txt", "text")).param("category", "HR").param("title", "x".repeat(256)))
                 .andExpect(jsonPath("$.message").value("Titles can be at most 255 characters"));
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/documents")

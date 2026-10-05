@@ -19,9 +19,9 @@ spring:
 
   servlet:
     multipart:
-      # Document uploads are plain text; DocumentIngestionService enforces the same 1 MB.
-      max-file-size: 1MB
-      max-request-size: 2MB
+      # PDF, Word and text uploads; DocumentIngestionService enforces the same 10 MB.
+      max-file-size: 10MB
+      max-request-size: 11MB
 
   data:
     mongodb:

@@ -21,7 +21,7 @@ server and return a generic message, never exception text.
 | 404 | Not Found | No endpoint matches the path, or the document, user or grant does not exist. |
 | 409 | Conflict | A username or email already in use, or a grant that already exists. |
 | 405 | Method Not Allowed | The path exists but not for this HTTP method. |
-| 413 | Payload Too Large | An upload over 1 MB. |
+| 413 | Payload Too Large | An upload over 10 MB. |
 | 415 | Unsupported Media Type | A body the endpoint does not accept, such as plain text sent to a JSON endpoint. |
 | 500 | Internal Server Error | Anything unexpected; the message is always `An unexpected error occurred.` |
 | 503 | Service Unavailable | Qdrant or the embedding model is unavailable for a request that needs it. |
@@ -155,7 +155,7 @@ Uploads a document owned by the caller. Requires the `DOCUMENT_CREATE` permissio
 
 | Field | Required | Notes |
 |---|---|---|
-| `file` | yes | A `.txt`, `.md` or `.markdown` file, UTF-8, non-blank, at most 1 MB. |
+| `file` | yes | A `.pdf`, `.docx`, `.txt`, `.md` or `.markdown` file, non-blank, at most 10 MB. Text and Markdown must be UTF-8. PDFs must contain a text layer; OCR is not performed. Extracted text is limited to 1 MB. |
 | `category` | yes | An existing category name. |
 | `title` | no | Defaults to the file name without its extension. At most 255 characters. |
 | `description` | no | |
@@ -188,10 +188,10 @@ Keyword search covers a document's title and description. Its body is found only
 through semantic search, so an `UPLOADED` document cannot yet be found by its
 content.
 
-Errors: 400 with a specific message (`Only .txt and .md files can be uploaded`,
+Errors: 400 with a specific message (`Only .pdf, .docx, .txt and .md files can be uploaded`,
 `The file must be UTF-8 text`, `The file has no text`, `Choose a category`,
 `Unknown category: X`, `Part 'file' is required`, ...), 403 without the
-permission, 413 over 1 MB.
+permission, 413 over 10 MB.
 
 ### DELETE /api/documents/{id}
 Deletes a document from Qdrant, MongoDB and PostgreSQL, in that order. Requires

@@ -210,7 +210,7 @@ document** button on the dashboard or the repository, shown only to roles with
 
 | Field | Behaviour |
 |---|---|
-| File | `.txt`, `.md` or `.markdown`, non-empty, at most 1 MB. Checked on selection and again on submit. |
+| File | `.pdf`, `.docx`, `.txt`, `.md` or `.markdown`, non-empty, at most 10 MB. Checked on selection and again on submit. PDFs must contain a text layer; scanned/image-only PDFs are not OCRed. |
 | Title | Optional; the placeholder shows the file name it defaults to. |
 | Description | Optional. |
 | Category | Required, from `GET /api/categories`. |

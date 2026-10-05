@@ -7,8 +7,8 @@ import { can } from '../auth/roles.js';
 import { UploadIcon } from '../components/icons.jsx';
 
 // Mirrors the backend's limits so most mistakes are caught before uploading.
-export const MAX_UPLOAD_BYTES = 1024 * 1024;
-const ACCEPTED = ['.txt', '.md', '.markdown'];
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ACCEPTED = ['.pdf', '.docx', '.txt', '.md', '.markdown'];
 
 export function uploadProblem(file) {
   if (!file) {
@@ -16,19 +16,21 @@ export function uploadProblem(file) {
   }
   const name = file.name.toLowerCase();
   if (!ACCEPTED.some((extension) => name.endsWith(extension))) {
-    return 'Only .txt and .md files can be uploaded.';
+    return 'Only .pdf, .docx, .txt and .md files can be uploaded.';
   }
   if (file.size === 0) {
     return 'The file is empty.';
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return 'Files can be at most 1 MB.';
+    return 'Files can be at most 10 MB.';
   }
   return null;
 }
 
 function formatSize(bytes) {
-  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function UploadPage() {
@@ -119,8 +121,9 @@ export default function UploadPage() {
       <header className="page-header">
         <h1 className="page-title">Upload a document</h1>
         <p className="page-subtitle">
-          Plain text or Markdown, up to 1 MB. The text is stored, split into chunks and, when semantic search is
-          available, embedded so it can be found by meaning.
+          PDF, Word, plain text or Markdown, up to 10 MB. Extracted text is stored, split into chunks and, when
+          semantic search is available, embedded so it can be found by meaning. Scanned PDFs need OCR and are not
+          supported.
         </p>
       </header>
 
@@ -128,7 +131,7 @@ export default function UploadPage() {
         <label htmlFor="upload-file">File</label>
         <label className="dropzone" htmlFor="upload-file">
           <UploadIcon size={28} />
-          <span>{file ? `${file.name} · ${formatSize(file.size)}` : 'Choose a .txt or .md file'}</span>
+          <span>{file ? `${file.name} · ${formatSize(file.size)}` : 'Choose a PDF, DOCX, TXT or MD file'}</span>
         </label>
         <input
           id="upload-file"

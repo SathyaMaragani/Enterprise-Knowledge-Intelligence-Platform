@@ -54,8 +54,8 @@ public class DocumentController {
     }
 
     /**
-     * Uploads a UTF-8 .txt or .md file (at most 1 MB) as a new document owned by the
-     * caller. Requires DOCUMENT_CREATE (admins and managers in the seed roles).
+     * Uploads a .pdf, .docx, or UTF-8 .txt or .md file (at most 10 MB, and 1 MB of
+     * extracted text) as a new document owned by the caller. Requires DOCUMENT_CREATE (admins and managers in the seed roles).
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")

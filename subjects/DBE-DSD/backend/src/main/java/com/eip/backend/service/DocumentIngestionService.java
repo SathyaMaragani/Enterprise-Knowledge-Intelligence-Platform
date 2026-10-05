@@ -22,16 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -52,15 +47,9 @@ public class DocumentIngestionService {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentIngestionService.class);
 
-    /** Extension -> {document type, MIME type}. Plain text only: no parser dependency is needed. */
-    private static final Map<String, String[]> SUPPORTED_TYPES = Map.of(
-            "txt", new String[]{"TXT", "text/plain"},
-            "md", new String[]{"MD", "text/markdown"},
-            "markdown", new String[]{"MD", "text/markdown"});
-
-    public static final long MAX_BYTES = 1024 * 1024;
+    /** The largest file accepted; the text taken from it is capped separately (TextExtractor). */
+    public static final long MAX_BYTES = 10L * 1024 * 1024;
     private static final int MAX_TITLE_LENGTH = 255;
-    static final String EXTRACTOR_VERSION = "utf8-text-1.0";
 
     private final DocumentRepository documentRepository;
     private final CategoryRepository categoryRepository;
@@ -98,8 +87,8 @@ public class DocumentIngestionService {
         }
 
         String filename = requireFilename(file);
-        String[] type = requireSupportedType(filename);
-        String text = requireText(file);
+        TextExtractor.Format format = requireSupportedFormat(filename);
+        String text = requireText(file, format);
         Category category = requireCategory(categoryName);
         String finalTitle = resolveTitle(title, filename);
         String finalDepartment = isBlank(department) ? category.getName() : department.trim();
@@ -109,7 +98,7 @@ public class DocumentIngestionService {
         document.setDescription(isBlank(description) ? null : description.trim());
         document.setCategory(category);
         document.setOwner(owner);
-        document.setDocumentType(type[0]);
+        document.setDocumentType(format.documentType);
         document.setStatus("PROCESSING");
         document.setStorageReference("pending");
         document = documentRepository.save(document);
@@ -119,7 +108,7 @@ public class DocumentIngestionService {
         boolean vectorsStored = false;
         try {
             List<String> chunkTexts = TextChunker.chunk(text);
-            KnowledgeDocument knowledge = buildKnowledgeDocument(id, finalTitle, text, filename, type[1],
+            KnowledgeDocument knowledge = buildKnowledgeDocument(id, finalTitle, text, filename, format,
                                                                  finalDepartment, owner.getUsername(), chunkTexts);
             knowledge = knowledgeDocumentRepository.save(knowledge);
             mongoSaved = true;
@@ -199,8 +188,8 @@ public class DocumentIngestionService {
     }
 
     private static KnowledgeDocument buildKnowledgeDocument(Integer id, String title, String text, String filename,
-                                                            String mimeType, String department, String uploadedBy,
-                                                            List<String> chunkTexts) {
+                                                            TextExtractor.Format format, String department,
+                                                            String uploadedBy, List<String> chunkTexts) {
         Date now = new Date();
 
         Content content = new Content();
@@ -210,7 +199,7 @@ public class DocumentIngestionService {
 
         Source source = new Source();
         source.setFilename(filename);
-        source.setMimeType(mimeType);
+        source.setMimeType(format.mimeType);
         source.setStorageType("MONGODB");
         source.setStorageReference("upload:" + filename);
 
@@ -226,7 +215,7 @@ public class DocumentIngestionService {
         Processing processing = new Processing();
         processing.setStatus("COMPLETED");
         processing.setProcessedAt(now);
-        processing.setExtractorVersion(EXTRACTOR_VERSION);
+        processing.setExtractorVersion(format.extractorVersion);
         processing.setChunkerVersion(TextChunker.VERSION);
 
         Version version = new Version();
@@ -269,43 +258,23 @@ public class DocumentIngestionService {
         return name.replace('\\', '/').substring(name.replace('\\', '/').lastIndexOf('/') + 1).trim();
     }
 
-    private static String[] requireSupportedType(String filename) {
-        int dot = filename.lastIndexOf('.');
-        String extension = dot < 0 ? "" : filename.substring(dot + 1).toLowerCase(Locale.ROOT);
-        String[] type = SUPPORTED_TYPES.get(extension);
-        if (type == null) {
-            throw new IllegalArgumentException("Only .txt and .md files can be uploaded");
+    private static TextExtractor.Format requireSupportedFormat(String filename) {
+        TextExtractor.Format format = TextExtractor.Format.of(filename);
+        if (format == null) {
+            throw new IllegalArgumentException("Only .pdf, .docx, .txt and .md files can be uploaded");
         }
-        return type;
+        return format;
     }
 
-    private static String requireText(MultipartFile file) {
+    private static String requireText(MultipartFile file, TextExtractor.Format format) {
         if (file.getSize() > MAX_BYTES) {
-            throw new IllegalArgumentException("Files can be at most 1 MB");
+            throw new IllegalArgumentException("Files can be at most 10 MB");
         }
-        String text;
         try {
-            text = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(file.getBytes()))
-                    .toString();
-        } catch (CharacterCodingException e) {
-            throw new IllegalArgumentException("The file must be UTF-8 text");
+            return TextExtractor.extract(format, file.getBytes());
         } catch (IOException e) {
             throw new IllegalStateException("Could not read the uploaded file", e);
         }
-        if (text.startsWith("﻿")) {
-            text = text.substring(1);
-        }
-        text = text.replace("\r\n", "\n").replace('\r', '\n');
-        if (text.indexOf('\0') >= 0) {
-            throw new IllegalArgumentException("The file must be UTF-8 text");
-        }
-        if (text.isBlank()) {
-            throw new IllegalArgumentException("The file has no text");
-        }
-        return text;
     }
 
     private Category requireCategory(String name) {

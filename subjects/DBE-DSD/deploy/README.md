@@ -166,7 +166,7 @@ PostgreSQL, MongoDB and Qdrant containers:
   and no OOM kill.
 
 Also:
-- the full backend suite, demo corpus included: 181 tests pass with the
+- the full backend suite, demo corpus included: 191 tests pass with the
   one-thread encoder;
 - the frontend: 157 tests, including `ServerGate`, and the production build;
 - `ProdProfileTest` fails if health details are switched back on.

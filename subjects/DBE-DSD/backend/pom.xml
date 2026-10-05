@@ -118,6 +118,13 @@
 			<artifactId>tokenizers</artifactId>
 			<version>0.26.0</version>
 		</dependency>
+
+		<!-- PDF text extraction for uploads (.docx is read with the JDK's zip and StAX) -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.8</version>
+		</dependency>
 	</dependencies>
 
 	<build>
