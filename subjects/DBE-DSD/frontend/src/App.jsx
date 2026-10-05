@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
@@ -9,6 +10,9 @@ import RepositoryPage from './pages/RepositoryPage.jsx';
 import SearchPage from './pages/SearchPage.jsx';
 import TextHackPage from './pages/TextHackPage.jsx';
 import UploadPage from './pages/UploadPage.jsx';
+
+// The insights page carries its evaluation data, so it loads only when opened.
+const InsightsPage = lazy(() => import('./pages/InsightsPage.jsx'));
 
 export default function App() {
   return (
@@ -28,6 +32,14 @@ export default function App() {
         <Route path="upload" element={<UploadPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="texthack" element={<TextHackPage />} />
+        <Route
+          path="insights"
+          element={
+            <Suspense fallback={<p className="muted page">Loading insights…</p>}>
+              <InsightsPage />
+            </Suspense>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

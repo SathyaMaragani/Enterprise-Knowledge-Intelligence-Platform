@@ -1,0 +1,6579 @@
+{
+ "generated": {
+  "seconds": 124.1,
+  "python": "3.10.9",
+  "sklearn": "1.7.2",
+  "embedding": "all-MiniLM-L6-v2 (ONNX, the platform's model)"
+ },
+ "corpus": {
+  "documents": 315,
+  "topics": 21,
+  "categories": [
+   {
+    "name": "Administration",
+    "documents": 45,
+    "topics": 3
+   },
+   {
+    "name": "Finance",
+    "documents": 60,
+    "topics": 4
+   },
+   {
+    "name": "HR",
+    "documents": 60,
+    "topics": 4
+   },
+   {
+    "name": "Legal",
+    "documents": 45,
+    "topics": 3
+   },
+   {
+    "name": "Research",
+    "documents": 45,
+    "topics": 3
+   },
+   {
+    "name": "Technical",
+    "documents": 60,
+    "topics": 4
+   }
+  ],
+  "similarity": {
+   "withinTopic": 0.994,
+   "acrossTopics": 0.088
+  },
+  "meanWords": 115.4
+ },
+ "features": [
+  {
+   "name": "tfidf-word",
+   "description": "TF-IDF over word 1-2-grams, stop words removed",
+   "dimensions": 2527
+  },
+  {
+   "name": "tfidf-char",
+   "description": "TF-IDF over character 3-5-grams",
+   "dimensions": 10346
+  },
+  {
+   "name": "minilm",
+   "description": "384-d MiniLM embedding of the whole document (the platform's search model)",
+   "dimensions": 384
+  },
+  {
+   "name": "combined",
+   "description": "character TF-IDF reduced to 100 LSA dimensions, joined with MiniLM",
+   "dimensions": 484
+  }
+ ],
+ "classification": {
+  "categories": [
+   "Administration",
+   "Finance",
+   "HR",
+   "Legal",
+   "Research",
+   "Technical"
+  ],
+  "bestModel": {
+   "feature": "tfidf-char",
+   "model": "naive-bayes",
+   "params": {
+    "alpha": 0.1
+   }
+  },
+  "selection": [
+   {
+    "feature": "tfidf-char",
+    "model": "naive-bayes",
+    "search": "grid",
+    "candidates": 3,
+    "fits": 45,
+    "bestParams": {
+     "alpha": 0.1
+    },
+    "cvAccuracy": 0.6,
+    "cvStd": 0.49,
+    "seconds": 1.1
+   },
+   {
+    "feature": "tfidf-word",
+    "model": "naive-bayes",
+    "search": "grid",
+    "candidates": 3,
+    "fits": 45,
+    "bestParams": {
+     "alpha": 0.1
+    },
+    "cvAccuracy": 0.533,
+    "cvStd": 0.499,
+    "seconds": 0.2
+   },
+   {
+    "feature": "tfidf-char",
+    "model": "knn",
+    "search": "grid",
+    "candidates": 10,
+    "fits": 150,
+    "bestParams": {
+     "n_neighbors": 1,
+     "weights": "uniform"
+    },
+    "cvAccuracy": 0.533,
+    "cvStd": 0.499,
+    "seconds": 4.1
+   },
+   {
+    "feature": "combined",
+    "model": "knn",
+    "search": "grid",
+    "candidates": 10,
+    "fits": 150,
+    "bestParams": {
+     "n_neighbors": 5,
+     "weights": "uniform"
+    },
+    "cvAccuracy": 0.507,
+    "cvStd": 0.484,
+    "seconds": 18.5
+   },
+   {
+    "feature": "combined",
+    "model": "linear-svm",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 1
+    },
+    "cvAccuracy": 0.489,
+    "cvStd": 0.465,
+    "seconds": 8.2
+   },
+   {
+    "feature": "minilm",
+    "model": "linear-svm",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 1
+    },
+    "cvAccuracy": 0.476,
+    "cvStd": 0.491,
+    "seconds": 0.3
+   },
+   {
+    "feature": "tfidf-word",
+    "model": "knn",
+    "search": "grid",
+    "candidates": 10,
+    "fits": 150,
+    "bestParams": {
+     "n_neighbors": 1,
+     "weights": "uniform"
+    },
+    "cvAccuracy": 0.467,
+    "cvStd": 0.499,
+    "seconds": 0.7
+   },
+   {
+    "feature": "minilm",
+    "model": "logistic-regression",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 10
+    },
+    "cvAccuracy": 0.467,
+    "cvStd": 0.499,
+    "seconds": 0.1
+   },
+   {
+    "feature": "minilm",
+    "model": "knn",
+    "search": "grid",
+    "candidates": 10,
+    "fits": 150,
+    "bestParams": {
+     "n_neighbors": 5,
+     "weights": "uniform"
+    },
+    "cvAccuracy": 0.413,
+    "cvStd": 0.459,
+    "seconds": 0.3
+   },
+   {
+    "feature": "combined",
+    "model": "logistic-regression",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 10
+    },
+    "cvAccuracy": 0.333,
+    "cvStd": 0.471,
+    "seconds": 7.8
+   },
+   {
+    "feature": "minilm",
+    "model": "random-forest",
+    "search": "random",
+    "candidates": 6,
+    "fits": 90,
+    "bestParams": {
+     "n_estimators": 100,
+     "min_samples_leaf": 1,
+     "max_features": 0.2,
+     "max_depth": 16
+    },
+    "cvAccuracy": 0.329,
+    "cvStd": 0.388,
+    "seconds": 4.1
+   },
+   {
+    "feature": "tfidf-char",
+    "model": "random-forest",
+    "search": "random",
+    "candidates": 6,
+    "fits": 90,
+    "bestParams": {
+     "n_estimators": 200,
+     "min_samples_leaf": 4,
+     "max_features": 0.2,
+     "max_depth": 16
+    },
+    "cvAccuracy": 0.271,
+    "cvStd": 0.44,
+    "seconds": 8.4
+   },
+   {
+    "feature": "tfidf-word",
+    "model": "linear-svm",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 0.1
+    },
+    "cvAccuracy": 0.267,
+    "cvStd": 0.442,
+    "seconds": 0.3
+   },
+   {
+    "feature": "tfidf-word",
+    "model": "random-forest",
+    "search": "random",
+    "candidates": 6,
+    "fits": 90,
+    "bestParams": {
+     "n_estimators": 200,
+     "min_samples_leaf": 4,
+     "max_features": 0.2,
+     "max_depth": 16
+    },
+    "cvAccuracy": 0.267,
+    "cvStd": 0.442,
+    "seconds": 3.1
+   },
+   {
+    "feature": "tfidf-char",
+    "model": "linear-svm",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 0.1
+    },
+    "cvAccuracy": 0.267,
+    "cvStd": 0.442,
+    "seconds": 4.5
+   },
+   {
+    "feature": "tfidf-word",
+    "model": "logistic-regression",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 100
+    },
+    "cvAccuracy": 0.249,
+    "cvStd": 0.417,
+    "seconds": 17.5
+   },
+   {
+    "feature": "tfidf-char",
+    "model": "logistic-regression",
+    "search": "grid",
+    "candidates": 4,
+    "fits": 60,
+    "bestParams": {
+     "C": 100
+    },
+    "cvAccuracy": 0.249,
+    "cvStd": 0.417,
+    "seconds": 2.4
+   },
+   {
+    "feature": "combined",
+    "model": "random-forest",
+    "search": "random",
+    "candidates": 6,
+    "fits": 90,
+    "bestParams": {
+     "n_estimators": 100,
+     "min_samples_leaf": 1,
+     "max_features": 0.2,
+     "max_depth": 16
+    },
+    "cvAccuracy": 0.227,
+    "cvStd": 0.381,
+    "seconds": 14.3
+   }
+  ],
+  "tuning": {
+   "grid": {
+    "candidates": 3,
+    "fits": 45,
+    "cvAccuracy": 0.6,
+    "seconds": 1.1,
+    "bestParams": {
+     "alpha": 0.1
+    }
+   },
+   "random": {
+    "candidates": 10,
+    "fits": 150,
+    "bestParams": {
+     "alpha": 0.1512
+    },
+    "cvAccuracy": 0.6,
+    "seconds": 3.7
+   }
+  },
+  "test": {
+   "topics": [
+    "admin-facilities",
+    "fin-expenses",
+    "hr-performance",
+    "legal-nda",
+    "res-ranking",
+    "tech-incident"
+   ],
+   "documents": 90,
+   "accuracy": 0.833,
+   "macroF1": 0.778,
+   "weightedF1": 0.778,
+   "report": [
+    {
+     "label": "Administration",
+     "precision": 0.5,
+     "recall": 1.0,
+     "f1-score": 0.667,
+     "support": 15
+    },
+    {
+     "label": "Finance",
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1-score": 0.0,
+     "support": 15
+    },
+    {
+     "label": "HR",
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1-score": 1.0,
+     "support": 15
+    },
+    {
+     "label": "Legal",
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1-score": 1.0,
+     "support": 15
+    },
+    {
+     "label": "Research",
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1-score": 1.0,
+     "support": 15
+    },
+    {
+     "label": "Technical",
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1-score": 1.0,
+     "support": 15
+    }
+   ],
+   "confusion": [
+    [
+     15,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     15,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     15,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     15,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     15,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     15
+    ]
+   ]
+  },
+  "leaveOneTopicOut": {
+   "accuracy": 0.571,
+   "macroF1": 0.548,
+   "topicsCorrect": 12,
+   "topics": 21,
+   "perTopic": [
+    {
+     "topic": "admin-facilities",
+     "category": "Administration",
+     "predicted": "Administration",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "admin-security",
+     "category": "Administration",
+     "predicted": "Legal",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "admin-travel",
+     "category": "Administration",
+     "predicted": "Finance",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "fin-budget",
+     "category": "Finance",
+     "predicted": "HR",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "fin-expenses",
+     "category": "Finance",
+     "predicted": "Administration",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "fin-procurement",
+     "category": "Finance",
+     "predicted": "HR",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "fin-quarterly",
+     "category": "Finance",
+     "predicted": "Research",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "hr-leave",
+     "category": "HR",
+     "predicted": "Finance",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "hr-onboarding",
+     "category": "HR",
+     "predicted": "HR",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "hr-performance",
+     "category": "HR",
+     "predicted": "HR",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "hr-remote",
+     "category": "HR",
+     "predicted": "HR",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "legal-dataprotection",
+     "category": "Legal",
+     "predicted": "Legal",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "legal-nda",
+     "category": "Legal",
+     "predicted": "Legal",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "legal-vendor",
+     "category": "Legal",
+     "predicted": "Legal",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "res-chunking",
+     "category": "Research",
+     "predicted": "Research",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "res-embeddings",
+     "category": "Research",
+     "predicted": "Research",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "res-ranking",
+     "category": "Research",
+     "predicted": "Research",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "tech-architecture",
+     "category": "Technical",
+     "predicted": "Legal",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "tech-coding",
+     "category": "Technical",
+     "predicted": "HR",
+     "accuracy": 0.0
+    },
+    {
+     "topic": "tech-database",
+     "category": "Technical",
+     "predicted": "Technical",
+     "accuracy": 1.0
+    },
+    {
+     "topic": "tech-incident",
+     "category": "Technical",
+     "predicted": "Technical",
+     "accuracy": 1.0
+    }
+   ],
+   "confusion": [
+    [
+     15,
+     15,
+     0,
+     15,
+     0,
+     0
+    ],
+    [
+     15,
+     0,
+     33,
+     0,
+     12,
+     0
+    ],
+    [
+     0,
+     15,
+     45,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     45,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     45,
+     0
+    ],
+    [
+     0,
+     0,
+     15,
+     15,
+     0,
+     30
+    ]
+   ]
+  },
+  "leakage": {
+   "randomSplitAccuracy": 1.0,
+   "groupedAccuracy": 0.571,
+   "chanceAccuracy": 0.19
+  },
+  "calibration": [
+   {
+    "model": "Logistic regression",
+    "feature": "minilm",
+    "bins": [
+     {
+      "confidence": 0.277,
+      "accuracy": 0.667,
+      "count": 6
+     },
+     {
+      "confidence": 0.349,
+      "accuracy": 0.591,
+      "count": 93
+     },
+     {
+      "confidence": 0.454,
+      "accuracy": 0.346,
+      "count": 78
+     },
+     {
+      "confidence": 0.533,
+      "accuracy": 0.213,
+      "count": 61
+     },
+     {
+      "confidence": 0.631,
+      "accuracy": 0.478,
+      "count": 23
+     },
+     {
+      "confidence": 0.72,
+      "accuracy": 0.625,
+      "count": 24
+     },
+     {
+      "confidence": 0.811,
+      "accuracy": 1.0,
+      "count": 15
+     },
+     {
+      "confidence": 0.931,
+      "accuracy": 1.0,
+      "count": 15
+     }
+    ],
+    "ece": 0.198,
+    "brier": 0.643,
+    "logLoss": 1.241,
+    "meanConfidence": 0.508,
+    "accuracy": 0.492
+   },
+   {
+    "model": "Naive Bayes",
+    "feature": "tfidf-word",
+    "bins": [
+     {
+      "confidence": 0.36,
+      "accuracy": 0.0,
+      "count": 15
+     },
+     {
+      "confidence": 0.458,
+      "accuracy": 0.333,
+      "count": 90
+     },
+     {
+      "confidence": 0.562,
+      "accuracy": 0.333,
+      "count": 45
+     },
+     {
+      "confidence": 0.759,
+      "accuracy": 0.5,
+      "count": 30
+     },
+     {
+      "confidence": 0.84,
+      "accuracy": 0.4,
+      "count": 75
+     },
+     {
+      "confidence": 0.989,
+      "accuracy": 1.0,
+      "count": 60
+     }
+    ],
+    "ece": 0.217,
+    "brier": 0.632,
+    "logLoss": 1.109,
+    "meanConfidence": 0.689,
+    "accuracy": 0.476
+   },
+   {
+    "model": "Random forest",
+    "feature": "minilm",
+    "bins": [
+     {
+      "confidence": 0.197,
+      "accuracy": 0.2,
+      "count": 5
+     },
+     {
+      "confidence": 0.253,
+      "accuracy": 0.291,
+      "count": 182
+     },
+     {
+      "confidence": 0.335,
+      "accuracy": 0.391,
+      "count": 110
+     },
+     {
+      "confidence": 0.437,
+      "accuracy": 0.056,
+      "count": 18
+     }
+    ],
+    "ece": 0.063,
+    "brier": 0.796,
+    "logLoss": 1.661,
+    "meanConfidence": 0.291,
+    "accuracy": 0.311
+   },
+   {
+    "model": "Linear SVM + Platt scaling",
+    "feature": "minilm",
+    "bins": [
+     {
+      "confidence": 0.272,
+      "accuracy": 0.333,
+      "count": 12
+     },
+     {
+      "confidence": 0.362,
+      "accuracy": 0.257,
+      "count": 70
+     },
+     {
+      "confidence": 0.449,
+      "accuracy": 0.547,
+      "count": 86
+     },
+     {
+      "confidence": 0.558,
+      "accuracy": 0.496,
+      "count": 117
+     },
+     {
+      "confidence": 0.642,
+      "accuracy": 0.0,
+      "count": 15
+     },
+     {
+      "confidence": 0.871,
+      "accuracy": 0.0,
+      "count": 15
+     }
+    ],
+    "ece": 0.147,
+    "brier": 0.775,
+    "logLoss": 1.525,
+    "meanConfidence": 0.493,
+    "accuracy": 0.403
+   }
+  ]
+ },
+ "clustering": {
+  "features": {
+   "minilm": 384,
+   "minilm-pca": 17,
+   "lsa": 100
+  },
+  "pca": {
+   "cumulativeVariance": [
+    0.15,
+    0.245,
+    0.327,
+    0.399,
+    0.461,
+    0.517,
+    0.569,
+    0.619,
+    0.664,
+    0.705,
+    0.742,
+    0.777,
+    0.811,
+    0.841,
+    0.869,
+    0.895,
+    0.918,
+    0.939,
+    0.96,
+    0.977,
+    0.981,
+    0.984,
+    0.987,
+    0.989,
+    0.99,
+    0.992,
+    0.993,
+    0.994,
+    0.994,
+    0.995,
+    0.995,
+    0.996,
+    0.996,
+    0.996,
+    0.997,
+    0.997,
+    0.997,
+    0.998,
+    0.998,
+    0.998,
+    0.998,
+    0.998,
+    0.998,
+    0.998,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999,
+    0.999
+   ],
+   "componentsFor90": 17,
+   "map2dVariance": [
+    0.15,
+    0.095
+   ]
+  },
+  "kSweep": [
+   {
+    "k": 2,
+    "inertia": 215.534,
+    "silhouette": 0.212
+   },
+   {
+    "k": 3,
+    "inertia": 190.838,
+    "silhouette": 0.266
+   },
+   {
+    "k": 4,
+    "inertia": 173.795,
+    "silhouette": 0.278
+   },
+   {
+    "k": 5,
+    "inertia": 159.232,
+    "silhouette": 0.314
+   },
+   {
+    "k": 6,
+    "inertia": 145.201,
+    "silhouette": 0.356
+   },
+   {
+    "k": 7,
+    "inertia": 130.392,
+    "silhouette": 0.411
+   },
+   {
+    "k": 8,
+    "inertia": 118.794,
+    "silhouette": 0.459
+   },
+   {
+    "k": 9,
+    "inertia": 108.199,
+    "silhouette": 0.498
+   },
+   {
+    "k": 10,
+    "inertia": 97.697,
+    "silhouette": 0.536
+   },
+   {
+    "k": 11,
+    "inertia": 88.646,
+    "silhouette": 0.553
+   },
+   {
+    "k": 12,
+    "inertia": 79.008,
+    "silhouette": 0.611
+   },
+   {
+    "k": 13,
+    "inertia": 68.871,
+    "silhouette": 0.66
+   },
+   {
+    "k": 14,
+    "inertia": 59.407,
+    "silhouette": 0.698
+   },
+   {
+    "k": 15,
+    "inertia": 50.473,
+    "silhouette": 0.718
+   },
+   {
+    "k": 16,
+    "inertia": 43.013,
+    "silhouette": 0.753
+   },
+   {
+    "k": 17,
+    "inertia": 33.939,
+    "silhouette": 0.809
+   },
+   {
+    "k": 18,
+    "inertia": 26.541,
+    "silhouette": 0.848
+   },
+   {
+    "k": 19,
+    "inertia": 19.166,
+    "silhouette": 0.885
+   },
+   {
+    "k": 20,
+    "inertia": 12.071,
+    "silhouette": 0.932
+   },
+   {
+    "k": 21,
+    "inertia": 6.146,
+    "silhouette": 0.967
+   },
+   {
+    "k": 22,
+    "inertia": 5.103,
+    "silhouette": 0.955
+   },
+   {
+    "k": 23,
+    "inertia": 4.419,
+    "silhouette": 0.962
+   },
+   {
+    "k": 24,
+    "inertia": 3.906,
+    "silhouette": 0.971
+   },
+   {
+    "k": 25,
+    "inertia": 3.644,
+    "silhouette": 0.95
+   },
+   {
+    "k": 26,
+    "inertia": 3.311,
+    "silhouette": 0.953
+   },
+   {
+    "k": 27,
+    "inertia": 3.192,
+    "silhouette": 0.92
+   },
+   {
+    "k": 28,
+    "inertia": 3.014,
+    "silhouette": 0.91
+   },
+   {
+    "k": 29,
+    "inertia": 2.882,
+    "silhouette": 0.915
+   },
+   {
+    "k": 30,
+    "inertia": 2.848,
+    "silhouette": 0.915
+   }
+  ],
+  "bestK": 24,
+  "elbowK": 17,
+  "initialisation": [
+   {
+    "k": 6,
+    "init": "random",
+    "meanInertia": 157.32,
+    "stdInertia": 7.317,
+    "meanIterations": 3.0,
+    "reachedBest": 0,
+    "runs": 20,
+    "meanTopicAri": 0.307
+   },
+   {
+    "k": 6,
+    "init": "k-means++",
+    "meanInertia": 146.462,
+    "stdInertia": 2.583,
+    "meanIterations": 2.9,
+    "reachedBest": 1,
+    "runs": 20,
+    "meanTopicAri": 0.332
+   },
+   {
+    "k": 24,
+    "init": "random",
+    "meanInertia": 30.572,
+    "stdInertia": 10.087,
+    "meanIterations": 4.2,
+    "reachedBest": 0,
+    "runs": 20,
+    "meanTopicAri": 0.794
+   },
+   {
+    "k": 24,
+    "init": "k-means++",
+    "meanInertia": 4.135,
+    "stdInertia": 0.345,
+    "meanIterations": 2.0,
+    "reachedBest": 5,
+    "runs": 20,
+    "meanTopicAri": 0.978
+   }
+  ],
+  "dbscan": {
+   "eps": 0.0303,
+   "minSamples": 5,
+   "kDistance": [
+    0.0006,
+    0.0008,
+    0.0009,
+    0.001,
+    0.001,
+    0.001,
+    0.0011,
+    0.0012,
+    0.0015,
+    0.0026,
+    0.0028,
+    0.0029,
+    0.003,
+    0.0031,
+    0.0032,
+    0.0032,
+    0.0033,
+    0.0034,
+    0.0034,
+    0.0034,
+    0.0035,
+    0.0035,
+    0.0036,
+    0.0037,
+    0.0038,
+    0.0038,
+    0.0039,
+    0.004,
+    0.0041,
+    0.0042,
+    0.0043,
+    0.0044,
+    0.0045,
+    0.0045,
+    0.0045,
+    0.0046,
+    0.0047,
+    0.0048,
+    0.0049,
+    0.005,
+    0.005,
+    0.0051,
+    0.0053,
+    0.0054,
+    0.0059,
+    0.0059,
+    0.0059,
+    0.0061,
+    0.0063,
+    0.0064,
+    0.0065,
+    0.0066,
+    0.0067,
+    0.0067,
+    0.0069,
+    0.007,
+    0.0071,
+    0.0072,
+    0.0073,
+    0.0074,
+    0.0075,
+    0.0078,
+    0.008,
+    0.0081,
+    0.0081,
+    0.0083,
+    0.0085,
+    0.0087,
+    0.0088,
+    0.0088,
+    0.0091,
+    0.0094,
+    0.0095,
+    0.0099,
+    0.0099,
+    0.01,
+    0.0101,
+    0.0104,
+    0.0111,
+    0.0115,
+    0.0117,
+    0.0117,
+    0.0121,
+    0.0124,
+    0.0125,
+    0.0126,
+    0.0127,
+    0.0135,
+    0.0146,
+    0.0149,
+    0.0157,
+    0.0163,
+    0.0181,
+    0.0198,
+    0.0221,
+    0.0237,
+    0.0255,
+    0.027,
+    0.0291,
+    0.0303,
+    0.0363,
+    0.0461,
+    0.1948,
+    0.2005,
+    0.2423
+   ]
+  },
+  "comparison": [
+   {
+    "algorithm": "K-means (k-means++)",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.067,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.356,
+    "category": {
+     "ari": 0.576,
+     "nmi": 0.713,
+     "homogeneity": 0.713,
+     "completeness": 0.713
+    },
+    "topic": {
+     "ari": 0.377,
+     "nmi": 0.738
+    }
+   },
+   {
+    "algorithm": "K-means (random init)",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.048,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.348,
+    "category": {
+     "ari": 0.32,
+     "nmi": 0.604,
+     "homogeneity": 0.561,
+     "completeness": 0.654
+    },
+    "topic": {
+     "ari": 0.213,
+     "nmi": 0.668
+    }
+   },
+   {
+    "algorithm": "Mini-batch k-means",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.105,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.357,
+    "category": {
+     "ari": 0.489,
+     "nmi": 0.679,
+     "homogeneity": 0.674,
+     "completeness": 0.685
+    },
+    "topic": {
+     "ari": 0.358,
+     "nmi": 0.731
+    }
+   },
+   {
+    "algorithm": "K-means on PCA",
+    "features": "minilm-pca",
+    "k": 6,
+    "seconds": 0.047,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.405,
+    "category": {
+     "ari": 0.596,
+     "nmi": 0.722,
+     "homogeneity": 0.72,
+     "completeness": 0.725
+    },
+    "topic": {
+     "ari": 0.367,
+     "nmi": 0.735
+    }
+   },
+   {
+    "algorithm": "K-means on LSA (TF-IDF)",
+    "features": "lsa",
+    "k": 6,
+    "seconds": 0.05,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.281,
+    "category": {
+     "ari": 0.447,
+     "nmi": 0.614,
+     "homogeneity": 0.607,
+     "completeness": 0.621
+    },
+    "topic": {
+     "ari": 0.349,
+     "nmi": 0.728
+    }
+   },
+   {
+    "algorithm": "Agglomerative, single link",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.026,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.366,
+    "category": {
+     "ari": 0.287,
+     "nmi": 0.559,
+     "homogeneity": 0.485,
+     "completeness": 0.66
+    },
+    "topic": {
+     "ari": 0.146,
+     "nmi": 0.602
+    }
+   },
+   {
+    "algorithm": "Agglomerative, complete link",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.008,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.386,
+    "category": {
+     "ari": 0.364,
+     "nmi": 0.62,
+     "homogeneity": 0.583,
+     "completeness": 0.663
+    },
+    "topic": {
+     "ari": 0.241,
+     "nmi": 0.679
+    }
+   },
+   {
+    "algorithm": "Agglomerative, average link",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.008,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.386,
+    "category": {
+     "ari": 0.364,
+     "nmi": 0.62,
+     "homogeneity": 0.583,
+     "completeness": 0.663
+    },
+    "topic": {
+     "ari": 0.241,
+     "nmi": 0.679
+    }
+   },
+   {
+    "algorithm": "Agglomerative, Ward",
+    "features": "minilm",
+    "k": 6,
+    "seconds": 0.008,
+    "clusters": 6,
+    "noise": 0,
+    "silhouette": 0.379,
+    "category": {
+     "ari": 0.406,
+     "nmi": 0.596,
+     "homogeneity": 0.587,
+     "completeness": 0.604
+    },
+    "topic": {
+     "ari": 0.34,
+     "nmi": 0.725
+    }
+   },
+   {
+    "algorithm": "K-means (k-means++)",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.152,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.971,
+    "category": {
+     "ari": 0.365,
+     "nmi": 0.729,
+     "homogeneity": 1.0,
+     "completeness": 0.574
+    },
+    "topic": {
+     "ari": 0.981,
+     "nmi": 0.99
+    }
+   },
+   {
+    "algorithm": "K-means (random init)",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.06,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.779,
+    "category": {
+     "ari": 0.437,
+     "nmi": 0.739,
+     "homogeneity": 1.0,
+     "completeness": 0.586
+    },
+    "topic": {
+     "ari": 0.799,
+     "nmi": 0.949
+    }
+   },
+   {
+    "algorithm": "Mini-batch k-means",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.167,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.813,
+    "category": {
+     "ari": 0.335,
+     "nmi": 0.703,
+     "homogeneity": 0.963,
+     "completeness": 0.554
+    },
+    "topic": {
+     "ari": 0.902,
+     "nmi": 0.97
+    }
+   },
+   {
+    "algorithm": "K-means on PCA",
+    "features": "minilm-pca",
+    "k": 24,
+    "seconds": 0.075,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.993,
+    "category": {
+     "ari": 0.365,
+     "nmi": 0.729,
+     "homogeneity": 1.0,
+     "completeness": 0.573
+    },
+    "topic": {
+     "ari": 0.98,
+     "nmi": 0.99
+    }
+   },
+   {
+    "algorithm": "K-means on LSA (TF-IDF)",
+    "features": "lsa",
+    "k": 24,
+    "seconds": 0.084,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.969,
+    "category": {
+     "ari": 0.359,
+     "nmi": 0.727,
+     "homogeneity": 1.0,
+     "completeness": 0.571
+    },
+    "topic": {
+     "ari": 0.971,
+     "nmi": 0.987
+    }
+   },
+   {
+    "algorithm": "Agglomerative, single link",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.008,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.965,
+    "category": {
+     "ari": 0.366,
+     "nmi": 0.73,
+     "homogeneity": 1.0,
+     "completeness": 0.575
+    },
+    "topic": {
+     "ari": 0.982,
+     "nmi": 0.991
+    }
+   },
+   {
+    "algorithm": "Agglomerative, complete link",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.009,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.965,
+    "category": {
+     "ari": 0.366,
+     "nmi": 0.73,
+     "homogeneity": 1.0,
+     "completeness": 0.575
+    },
+    "topic": {
+     "ari": 0.982,
+     "nmi": 0.991
+    }
+   },
+   {
+    "algorithm": "Agglomerative, average link",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.008,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.965,
+    "category": {
+     "ari": 0.366,
+     "nmi": 0.73,
+     "homogeneity": 1.0,
+     "completeness": 0.575
+    },
+    "topic": {
+     "ari": 0.982,
+     "nmi": 0.991
+    }
+   },
+   {
+    "algorithm": "Agglomerative, Ward",
+    "features": "minilm",
+    "k": 24,
+    "seconds": 0.008,
+    "clusters": 24,
+    "noise": 0,
+    "silhouette": 0.971,
+    "category": {
+     "ari": 0.365,
+     "nmi": 0.729,
+     "homogeneity": 1.0,
+     "completeness": 0.573
+    },
+    "topic": {
+     "ari": 0.98,
+     "nmi": 0.99
+    }
+   },
+   {
+    "algorithm": "DBSCAN",
+    "features": "minilm",
+    "k": null,
+    "seconds": 0.004,
+    "clusters": 21,
+    "noise": 11,
+    "silhouette": 0.979,
+    "category": {
+     "ari": 0.364,
+     "nmi": 0.726,
+     "homogeneity": 0.991,
+     "completeness": 0.573
+    },
+    "topic": {
+     "ari": 0.976,
+     "nmi": 0.989
+    }
+   }
+  ],
+  "themes": [
+   {
+    "cluster": 0,
+    "size": 60,
+    "terms": [
+     "leave",
+     "calibration",
+     "quarter",
+     "annual",
+     "plan",
+     "budget"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 0.5,
+    "categories": {
+     "Finance": 30,
+     "HR": 30
+    },
+    "topics": 4,
+    "examples": [
+     "Annual Leave and Time Off Policy 2025",
+     "Performance Review and Calibration Guide 2024",
+     "Quarterly Financial Report Q1 2025"
+    ]
+   },
+   {
+    "cluster": 2,
+    "size": 60,
+    "terms": [
+     "severity",
+     "review",
+     "store",
+     "rollback",
+     "test",
+     "change"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 60
+    },
+    "topics": 4,
+    "examples": [
+     "Fathom Platform Architecture Overview v2.2",
+     "Engineering Code Standards and Review Guide v2.4",
+     "Incident Response and On-Call Runbook v2.2"
+    ]
+   },
+   {
+    "cluster": 3,
+    "size": 60,
+    "terms": [
+     "travel",
+     "claims",
+     "purchase",
+     "supplier",
+     "order",
+     "termination"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 0.5,
+    "categories": {
+     "Administration": 15,
+     "Finance": 30,
+     "Legal": 15
+    },
+    "topics": 4,
+    "examples": [
+     "Employee Expense and Reimbursement Policy 2025",
+     "Procurement and Purchase Order Standard 2024",
+     "Vendor Contract and Supplier Terms Review 2024"
+    ]
+   },
+   {
+    "cluster": 1,
+    "size": 45,
+    "terms": [
+     "retrieval",
+     "lexical",
+     "overlap",
+     "semantic",
+     "weighting",
+     "document"
+    ],
+    "dominantCategory": "Research",
+    "purity": 1.0,
+    "categories": {
+     "Research": 45
+    },
+    "topics": 3,
+    "examples": [
+     "Evaluation of Sentence Embedding Models for Retrieval 2024",
+     "Hybrid Ranking Strategies for Enterprise Search 2024",
+     "Document Chunking Strategies and Retrieval Quality 2025"
+    ]
+   },
+   {
+    "cluster": 4,
+    "size": 45,
+    "terms": [
+     "access",
+     "probation",
+     "home",
+     "workstation",
+     "pass",
+     "facilities"
+    ],
+    "dominantCategory": "HR",
+    "purity": 0.667,
+    "categories": {
+     "Administration": 15,
+     "HR": 30
+    },
+    "topics": 3,
+    "examples": [
+     "New Joiner Onboarding Handbook 2025",
+     "Hybrid and Remote Working Standard 2024",
+     "Office Facilities and Workspace Guide 2024"
+    ]
+   },
+   {
+    "cluster": 5,
+    "size": 45,
+    "terms": [
+     "confidential",
+     "records",
+     "basis",
+     "information",
+     "phishing",
+     "disclosure"
+    ],
+    "dominantCategory": "Legal",
+    "purity": 0.667,
+    "categories": {
+     "Administration": 15,
+     "Legal": 30
+    },
+    "topics": 3,
+    "examples": [
+     "Mutual Non-Disclosure Agreement Template v3.3",
+     "Data Protection and Records Retention Policy 2026",
+     "Information Security Awareness Standard 2026"
+    ]
+   }
+  ],
+  "fineThemes": [
+   {
+    "cluster": 0,
+    "size": 15,
+    "terms": [
+     "severity",
+     "minutes",
+     "escalation",
+     "communication"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Incident Response and On-Call Runbook v2.2"
+    ]
+   },
+   {
+    "cluster": 1,
+    "size": 15,
+    "terms": [
+     "leave",
+     "entitlement",
+     "annual",
+     "carry-over"
+    ],
+    "dominantCategory": "HR",
+    "purity": 1.0,
+    "categories": {
+     "HR": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Annual Leave and Time Off Policy 2025"
+    ]
+   },
+   {
+    "cluster": 2,
+    "size": 15,
+    "terms": [
+     "models",
+     "benchmark",
+     "dense",
+     "retrieval"
+    ],
+    "dominantCategory": "Research",
+    "purity": 1.0,
+    "categories": {
+     "Research": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Evaluation of Sentence Embedding Models for Retrieval 2024"
+    ]
+   },
+   {
+    "cluster": 3,
+    "size": 15,
+    "terms": [
+     "confidential",
+     "disclosure",
+     "party",
+     "information"
+    ],
+    "dominantCategory": "Legal",
+    "purity": 1.0,
+    "categories": {
+     "Legal": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Mutual Non-Disclosure Agreement Template v3.3"
+    ]
+   },
+   {
+    "cluster": 4,
+    "size": 15,
+    "terms": [
+     "purchase",
+     "order",
+     "supplier",
+     "onboarding"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 1.0,
+    "categories": {
+     "Finance": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Procurement and Purchase Order Standard 2024"
+    ]
+   },
+   {
+    "cluster": 5,
+    "size": 15,
+    "terms": [
+     "rollback",
+     "structure",
+     "schema",
+     "version"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Database Migration and Schema Change Policy v2.4"
+    ]
+   },
+   {
+    "cluster": 6,
+    "size": 15,
+    "terms": [
+     "quarter",
+     "cost",
+     "plan",
+     "cent"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 1.0,
+    "categories": {
+     "Finance": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Quarterly Financial Report Q1 2025"
+    ]
+   },
+   {
+    "cluster": 7,
+    "size": 15,
+    "terms": [
+     "access",
+     "workspace",
+     "maintenance",
+     "building"
+    ],
+    "dominantCategory": "Administration",
+    "purity": 1.0,
+    "categories": {
+     "Administration": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Office Facilities and Workspace Guide 2024"
+    ]
+   },
+   {
+    "cluster": 8,
+    "size": 15,
+    "terms": [
+     "test",
+     "review",
+     "coverage",
+     "criteria"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Engineering Code Standards and Review Guide v2.4"
+    ]
+   },
+   {
+    "cluster": 9,
+    "size": 15,
+    "terms": [
+     "phishing",
+     "reporting",
+     "device",
+     "clear"
+    ],
+    "dominantCategory": "Administration",
+    "purity": 1.0,
+    "categories": {
+     "Administration": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Information Security Awareness Standard 2026"
+    ]
+   },
+   {
+    "cluster": 10,
+    "size": 15,
+    "terms": [
+     "claims",
+     "payment",
+     "receipts",
+     "claim"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 1.0,
+    "categories": {
+     "Finance": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Employee Expense and Reimbursement Policy 2025"
+    ]
+   },
+   {
+    "cluster": 12,
+    "size": 15,
+    "terms": [
+     "termination",
+     "processing",
+     "caps",
+     "liability"
+    ],
+    "dominantCategory": "Legal",
+    "purity": 1.0,
+    "categories": {
+     "Legal": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Vendor Contract and Supplier Terms Review 2024"
+    ]
+   },
+   {
+    "cluster": 13,
+    "size": 15,
+    "terms": [
+     "records",
+     "basis",
+     "lawful",
+     "retention"
+    ],
+    "dominantCategory": "Legal",
+    "purity": 1.0,
+    "categories": {
+     "Legal": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Data Protection and Records Retention Policy 2026"
+    ]
+   },
+   {
+    "cluster": 14,
+    "size": 15,
+    "terms": [
+     "calibration",
+     "rating",
+     "appeals",
+     "cycle"
+    ],
+    "dominantCategory": "HR",
+    "purity": 1.0,
+    "categories": {
+     "HR": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Performance Review and Calibration Guide 2024"
+    ]
+   },
+   {
+    "cluster": 15,
+    "size": 15,
+    "terms": [
+     "probation",
+     "week",
+     "onboarding",
+     "start"
+    ],
+    "dominantCategory": "HR",
+    "purity": 1.0,
+    "categories": {
+     "HR": 15
+    },
+    "topics": 1,
+    "examples": [
+     "New Joiner Onboarding Handbook 2025"
+    ]
+   },
+   {
+    "cluster": 16,
+    "size": 15,
+    "terms": [
+     "home",
+     "workstation",
+     "attendance",
+     "remote"
+    ],
+    "dominantCategory": "HR",
+    "purity": 1.0,
+    "categories": {
+     "HR": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Hybrid and Remote Working Standard 2024"
+    ]
+   },
+   {
+    "cluster": 17,
+    "size": 15,
+    "terms": [
+     "lexical",
+     "weighting",
+     "semantic",
+     "paraphrase"
+    ],
+    "dominantCategory": "Research",
+    "purity": 1.0,
+    "categories": {
+     "Research": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Hybrid Ranking Strategies for Enterprise Search 2024"
+    ]
+   },
+   {
+    "cluster": 18,
+    "size": 15,
+    "terms": [
+     "budget",
+     "life",
+     "capital",
+     "expenditure"
+    ],
+    "dominantCategory": "Finance",
+    "purity": 1.0,
+    "categories": {
+     "Finance": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Departmental Budget Planning Guidelines 2024"
+    ]
+   },
+   {
+    "cluster": 19,
+    "size": 15,
+    "terms": [
+     "travel",
+     "class",
+     "booking",
+     "corporate"
+    ],
+    "dominantCategory": "Administration",
+    "purity": 1.0,
+    "categories": {
+     "Administration": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Business Travel and Booking Standard 2024"
+    ]
+   },
+   {
+    "cluster": 20,
+    "size": 15,
+    "terms": [
+     "overlap",
+     "document",
+     "chunk",
+     "words"
+    ],
+    "dominantCategory": "Research",
+    "purity": 1.0,
+    "categories": {
+     "Research": 15
+    },
+    "topics": 1,
+    "examples": [
+     "Document Chunking Strategies and Retrieval Quality 2025"
+    ]
+   },
+   {
+    "cluster": 21,
+    "size": 7,
+    "terms": [
+     "store",
+     "services",
+     "service",
+     "vector"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 7
+    },
+    "topics": 1,
+    "examples": [
+     "Atlas Platform Architecture Overview v2.1"
+    ]
+   },
+   {
+    "cluster": 11,
+    "size": 3,
+    "terms": [
+     "store",
+     "services",
+     "everest",
+     "service"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 3
+    },
+    "topics": 1,
+    "examples": [
+     "Everest Platform Architecture Overview v3.4"
+    ]
+   },
+   {
+    "cluster": 22,
+    "size": 3,
+    "terms": [
+     "store",
+     "services",
+     "service",
+     "fathom"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 3
+    },
+    "topics": 1,
+    "examples": [
+     "Fathom Platform Architecture Overview v2.2"
+    ]
+   },
+   {
+    "cluster": 23,
+    "size": 2,
+    "terms": [
+     "store",
+     "services",
+     "service",
+     "beacon"
+    ],
+    "dominantCategory": "Technical",
+    "purity": 1.0,
+    "categories": {
+     "Technical": 2
+    },
+    "topics": 1,
+    "examples": [
+     "Beacon Platform Architecture Overview v1.0"
+    ]
+   }
+  ],
+  "map": [
+   {
+    "tsne": [
+     12.0,
+     -6.7
+    ],
+    "pca": [
+     0.502,
+     -0.044
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2025"
+   },
+   {
+    "tsne": [
+     11.89,
+     -6.75
+    ],
+    "pca": [
+     0.498,
+     -0.042
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2026"
+   },
+   {
+    "tsne": [
+     11.88,
+     -6.78
+    ],
+    "pca": [
+     0.497,
+     -0.041
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2026"
+   },
+   {
+    "tsne": [
+     11.97,
+     -6.66
+    ],
+    "pca": [
+     0.5,
+     -0.043
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2025"
+   },
+   {
+    "tsne": [
+     11.92,
+     -6.79
+    ],
+    "pca": [
+     0.495,
+     -0.046
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2026"
+   },
+   {
+    "tsne": [
+     11.99,
+     -6.67
+    ],
+    "pca": [
+     0.493,
+     -0.037
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2025"
+   },
+   {
+    "tsne": [
+     12.01,
+     -6.68
+    ],
+    "pca": [
+     0.505,
+     -0.05
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2025"
+   },
+   {
+    "tsne": [
+     11.92,
+     -6.77
+    ],
+    "pca": [
+     0.501,
+     -0.045
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2026"
+   },
+   {
+    "tsne": [
+     12.01,
+     -6.8
+    ],
+    "pca": [
+     0.494,
+     -0.037
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2024"
+   },
+   {
+    "tsne": [
+     12.01,
+     -6.74
+    ],
+    "pca": [
+     0.496,
+     -0.034
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2024"
+   },
+   {
+    "tsne": [
+     11.86,
+     -6.74
+    ],
+    "pca": [
+     0.499,
+     -0.046
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2026"
+   },
+   {
+    "tsne": [
+     12.01,
+     -6.78
+    ],
+    "pca": [
+     0.493,
+     -0.034
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2024"
+   },
+   {
+    "tsne": [
+     11.91,
+     -6.81
+    ],
+    "pca": [
+     0.497,
+     -0.031
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2024"
+   },
+   {
+    "tsne": [
+     11.98,
+     -6.74
+    ],
+    "pca": [
+     0.501,
+     -0.046
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2025"
+   },
+   {
+    "tsne": [
+     12.03,
+     -6.78
+    ],
+    "pca": [
+     0.49,
+     -0.03
+    ],
+    "category": "HR",
+    "topic": "hr-leave",
+    "cluster": 0,
+    "title": "Annual Leave and Time Off Policy 2024"
+   },
+   {
+    "tsne": [
+     15.39,
+     5.2
+    ],
+    "pca": [
+     0.17,
+     -0.197
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2025"
+   },
+   {
+    "tsne": [
+     15.4,
+     5.22
+    ],
+    "pca": [
+     0.164,
+     -0.191
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.42,
+     5.23
+    ],
+    "pca": [
+     0.168,
+     -0.187
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2024"
+   },
+   {
+    "tsne": [
+     15.38,
+     5.15
+    ],
+    "pca": [
+     0.18,
+     -0.205
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.46,
+     5.07
+    ],
+    "pca": [
+     0.183,
+     -0.207
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.4,
+     5.12
+    ],
+    "pca": [
+     0.167,
+     -0.204
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2024"
+   },
+   {
+    "tsne": [
+     15.51,
+     5.19
+    ],
+    "pca": [
+     0.177,
+     -0.213
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.55,
+     5.15
+    ],
+    "pca": [
+     0.183,
+     -0.213
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2025"
+   },
+   {
+    "tsne": [
+     15.44,
+     5.09
+    ],
+    "pca": [
+     0.193,
+     -0.215
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.41,
+     5.23
+    ],
+    "pca": [
+     0.165,
+     -0.189
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2024"
+   },
+   {
+    "tsne": [
+     15.55,
+     5.08
+    ],
+    "pca": [
+     0.197,
+     -0.211
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2025"
+   },
+   {
+    "tsne": [
+     15.55,
+     5.11
+    ],
+    "pca": [
+     0.196,
+     -0.203
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2024"
+   },
+   {
+    "tsne": [
+     15.47,
+     5.19
+    ],
+    "pca": [
+     0.175,
+     -0.215
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     15.53,
+     5.08
+    ],
+    "pca": [
+     0.198,
+     -0.21
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2025"
+   },
+   {
+    "tsne": [
+     15.52,
+     5.18
+    ],
+    "pca": [
+     0.175,
+     -0.209
+    ],
+    "category": "HR",
+    "topic": "hr-onboarding",
+    "cluster": 4,
+    "title": "New Joiner Onboarding Handbook 2026"
+   },
+   {
+    "tsne": [
+     21.22,
+     2.65
+    ],
+    "pca": [
+     0.194,
+     -0.231
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2024"
+   },
+   {
+    "tsne": [
+     21.2,
+     2.64
+    ],
+    "pca": [
+     0.191,
+     -0.236
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.11,
+     2.57
+    ],
+    "pca": [
+     0.203,
+     -0.244
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.12,
+     2.73
+    ],
+    "pca": [
+     0.196,
+     -0.235
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.09,
+     2.59
+    ],
+    "pca": [
+     0.2,
+     -0.247
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.18,
+     2.72
+    ],
+    "pca": [
+     0.191,
+     -0.235
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.08,
+     2.58
+    ],
+    "pca": [
+     0.207,
+     -0.245
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.12,
+     2.72
+    ],
+    "pca": [
+     0.196,
+     -0.237
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.11,
+     2.58
+    ],
+    "pca": [
+     0.204,
+     -0.241
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.21,
+     2.7
+    ],
+    "pca": [
+     0.186,
+     -0.231
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2024"
+   },
+   {
+    "tsne": [
+     21.04,
+     2.65
+    ],
+    "pca": [
+     0.203,
+     -0.244
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.14,
+     2.72
+    ],
+    "pca": [
+     0.197,
+     -0.236
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.02,
+     2.63
+    ],
+    "pca": [
+     0.209,
+     -0.246
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     21.2,
+     2.68
+    ],
+    "pca": [
+     0.191,
+     -0.236
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2026"
+   },
+   {
+    "tsne": [
+     21.01,
+     2.62
+    ],
+    "pca": [
+     0.207,
+     -0.239
+    ],
+    "category": "HR",
+    "topic": "hr-remote",
+    "cluster": 4,
+    "title": "Hybrid and Remote Working Standard 2025"
+   },
+   {
+    "tsne": [
+     1.85,
+     -7.97
+    ],
+    "pca": [
+     -0.033,
+     -0.331
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.0,
+     -7.92
+    ],
+    "pca": [
+     -0.006,
+     -0.331
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.04,
+     -7.87
+    ],
+    "pca": [
+     0.008,
+     -0.335
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2025"
+   },
+   {
+    "tsne": [
+     1.84,
+     -7.89
+    ],
+    "pca": [
+     -0.024,
+     -0.326
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     1.88,
+     -7.97
+    ],
+    "pca": [
+     -0.03,
+     -0.337
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2026"
+   },
+   {
+    "tsne": [
+     1.89,
+     -7.9
+    ],
+    "pca": [
+     -0.028,
+     -0.326
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2026"
+   },
+   {
+    "tsne": [
+     1.85,
+     -7.93
+    ],
+    "pca": [
+     -0.027,
+     -0.328
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.02,
+     -7.89
+    ],
+    "pca": [
+     -0.003,
+     -0.333
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2026"
+   },
+   {
+    "tsne": [
+     1.89,
+     -7.93
+    ],
+    "pca": [
+     -0.02,
+     -0.335
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2025"
+   },
+   {
+    "tsne": [
+     1.99,
+     -7.94
+    ],
+    "pca": [
+     -0.012,
+     -0.332
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.0,
+     -7.94
+    ],
+    "pca": [
+     -0.008,
+     -0.33
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     1.96,
+     -7.95
+    ],
+    "pca": [
+     -0.007,
+     -0.329
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.01,
+     -7.86
+    ],
+    "pca": [
+     -0.006,
+     -0.333
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2024"
+   },
+   {
+    "tsne": [
+     2.02,
+     -7.89
+    ],
+    "pca": [
+     -0.012,
+     -0.332
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2026"
+   },
+   {
+    "tsne": [
+     1.85,
+     -7.84
+    ],
+    "pca": [
+     -0.026,
+     -0.329
+    ],
+    "category": "HR",
+    "topic": "hr-performance",
+    "cluster": 0,
+    "title": "Performance Review and Calibration Guide 2026"
+   },
+   {
+    "tsne": [
+     14.5,
+     -4.55
+    ],
+    "pca": [
+     0.368,
+     -0.153
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.55,
+     -4.47
+    ],
+    "pca": [
+     0.362,
+     -0.151
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.56,
+     -4.51
+    ],
+    "pca": [
+     0.364,
+     -0.156
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.51,
+     -4.52
+    ],
+    "pca": [
+     0.369,
+     -0.152
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.49,
+     -4.56
+    ],
+    "pca": [
+     0.361,
+     -0.16
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.4,
+     -4.5
+    ],
+    "pca": [
+     0.352,
+     -0.148
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.58,
+     -4.47
+    ],
+    "pca": [
+     0.363,
+     -0.142
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2024"
+   },
+   {
+    "tsne": [
+     14.47,
+     -4.46
+    ],
+    "pca": [
+     0.367,
+     -0.154
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.53,
+     -4.52
+    ],
+    "pca": [
+     0.36,
+     -0.147
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.45,
+     -4.45
+    ],
+    "pca": [
+     0.356,
+     -0.153
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.48,
+     -4.41
+    ],
+    "pca": [
+     0.362,
+     -0.153
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.49,
+     -4.56
+    ],
+    "pca": [
+     0.359,
+     -0.14
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2024"
+   },
+   {
+    "tsne": [
+     14.46,
+     -4.45
+    ],
+    "pca": [
+     0.363,
+     -0.155
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     14.4,
+     -4.5
+    ],
+    "pca": [
+     0.361,
+     -0.154
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2026"
+   },
+   {
+    "tsne": [
+     14.49,
+     -4.46
+    ],
+    "pca": [
+     0.365,
+     -0.145
+    ],
+    "category": "Finance",
+    "topic": "fin-expenses",
+    "cluster": 3,
+    "title": "Employee Expense and Reimbursement Policy 2025"
+   },
+   {
+    "tsne": [
+     6.79,
+     -2.73
+    ],
+    "pca": [
+     0.036,
+     -0.103
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q1 2025"
+   },
+   {
+    "tsne": [
+     6.83,
+     -2.69
+    ],
+    "pca": [
+     0.045,
+     -0.101
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q2 2025"
+   },
+   {
+    "tsne": [
+     6.83,
+     -2.5
+    ],
+    "pca": [
+     0.041,
+     -0.1
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q2 2025"
+   },
+   {
+    "tsne": [
+     6.86,
+     -2.64
+    ],
+    "pca": [
+     0.043,
+     -0.096
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2025"
+   },
+   {
+    "tsne": [
+     6.79,
+     -2.52
+    ],
+    "pca": [
+     0.021,
+     -0.078
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2024"
+   },
+   {
+    "tsne": [
+     6.71,
+     -2.61
+    ],
+    "pca": [
+     0.016,
+     -0.102
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2026"
+   },
+   {
+    "tsne": [
+     6.72,
+     -2.58
+    ],
+    "pca": [
+     0.015,
+     -0.08
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2026"
+   },
+   {
+    "tsne": [
+     6.8,
+     -2.7
+    ],
+    "pca": [
+     0.04,
+     -0.102
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q1 2025"
+   },
+   {
+    "tsne": [
+     6.71,
+     -2.62
+    ],
+    "pca": [
+     0.015,
+     -0.102
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2026"
+   },
+   {
+    "tsne": [
+     6.75,
+     -2.63
+    ],
+    "pca": [
+     0.02,
+     -0.089
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2026"
+   },
+   {
+    "tsne": [
+     6.83,
+     -2.62
+    ],
+    "pca": [
+     0.029,
+     -0.105
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2024"
+   },
+   {
+    "tsne": [
+     6.73,
+     -2.57
+    ],
+    "pca": [
+     0.03,
+     -0.108
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q4 2026"
+   },
+   {
+    "tsne": [
+     6.84,
+     -2.46
+    ],
+    "pca": [
+     0.027,
+     -0.089
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q4 2026"
+   },
+   {
+    "tsne": [
+     6.73,
+     -2.62
+    ],
+    "pca": [
+     0.03,
+     -0.107
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q4 2026"
+   },
+   {
+    "tsne": [
+     6.79,
+     -2.64
+    ],
+    "pca": [
+     0.027,
+     -0.1
+    ],
+    "category": "Finance",
+    "topic": "fin-quarterly",
+    "cluster": 0,
+    "title": "Quarterly Financial Report Q3 2026"
+   },
+   {
+    "tsne": [
+     8.19,
+     -7.34
+    ],
+    "pca": [
+     0.304,
+     -0.245
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.24,
+     -7.25
+    ],
+    "pca": [
+     0.304,
+     -0.248
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.13,
+     -7.23
+    ],
+    "pca": [
+     0.298,
+     -0.249
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.25,
+     -7.31
+    ],
+    "pca": [
+     0.304,
+     -0.244
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.18,
+     -7.24
+    ],
+    "pca": [
+     0.296,
+     -0.252
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.27,
+     -7.22
+    ],
+    "pca": [
+     0.303,
+     -0.244
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2025"
+   },
+   {
+    "tsne": [
+     8.17,
+     -7.22
+    ],
+    "pca": [
+     0.306,
+     -0.246
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.24,
+     -7.3
+    ],
+    "pca": [
+     0.311,
+     -0.247
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.1,
+     -7.26
+    ],
+    "pca": [
+     0.294,
+     -0.247
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.24,
+     -7.27
+    ],
+    "pca": [
+     0.309,
+     -0.253
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2025"
+   },
+   {
+    "tsne": [
+     8.12,
+     -7.3
+    ],
+    "pca": [
+     0.3,
+     -0.245
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2024"
+   },
+   {
+    "tsne": [
+     8.14,
+     -7.29
+    ],
+    "pca": [
+     0.298,
+     -0.245
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.13,
+     -7.18
+    ],
+    "pca": [
+     0.298,
+     -0.253
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.08,
+     -7.29
+    ],
+    "pca": [
+     0.295,
+     -0.24
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     8.1,
+     -7.24
+    ],
+    "pca": [
+     0.292,
+     -0.24
+    ],
+    "category": "Finance",
+    "topic": "fin-budget",
+    "cluster": 0,
+    "title": "Departmental Budget Planning Guidelines 2026"
+   },
+   {
+    "tsne": [
+     11.83,
+     4.6
+    ],
+    "pca": [
+     0.218,
+     -0.185
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     11.7,
+     4.51
+    ],
+    "pca": [
+     0.216,
+     -0.186
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.8,
+     4.43
+    ],
+    "pca": [
+     0.226,
+     -0.191
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2025"
+   },
+   {
+    "tsne": [
+     11.84,
+     4.59
+    ],
+    "pca": [
+     0.219,
+     -0.184
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     11.86,
+     4.51
+    ],
+    "pca": [
+     0.226,
+     -0.196
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2025"
+   },
+   {
+    "tsne": [
+     11.88,
+     4.57
+    ],
+    "pca": [
+     0.219,
+     -0.185
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     11.82,
+     4.54
+    ],
+    "pca": [
+     0.217,
+     -0.193
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.7,
+     4.52
+    ],
+    "pca": [
+     0.218,
+     -0.185
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.72,
+     4.54
+    ],
+    "pca": [
+     0.216,
+     -0.179
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     11.7,
+     4.49
+    ],
+    "pca": [
+     0.216,
+     -0.186
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.7,
+     4.51
+    ],
+    "pca": [
+     0.214,
+     -0.187
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.74,
+     4.44
+    ],
+    "pca": [
+     0.218,
+     -0.184
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2026"
+   },
+   {
+    "tsne": [
+     11.74,
+     4.56
+    ],
+    "pca": [
+     0.215,
+     -0.183
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     11.81,
+     4.51
+    ],
+    "pca": [
+     0.224,
+     -0.193
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2025"
+   },
+   {
+    "tsne": [
+     11.78,
+     4.59
+    ],
+    "pca": [
+     0.217,
+     -0.178
+    ],
+    "category": "Finance",
+    "topic": "fin-procurement",
+    "cluster": 3,
+    "title": "Procurement and Purchase Order Standard 2024"
+   },
+   {
+    "tsne": [
+     -8.22,
+     7.98
+    ],
+    "pca": [
+     -0.232,
+     0.341
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Fathom Platform Architecture Overview v2.2"
+   },
+   {
+    "tsne": [
+     -8.21,
+     7.97
+    ],
+    "pca": [
+     -0.238,
+     0.35
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Fathom Platform Architecture Overview v3.0"
+   },
+   {
+    "tsne": [
+     -8.22,
+     7.97
+    ],
+    "pca": [
+     -0.238,
+     0.343
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Fathom Platform Architecture Overview v1.3"
+   },
+   {
+    "tsne": [
+     -8.17,
+     7.64
+    ],
+    "pca": [
+     -0.261,
+     0.353
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v2.1"
+   },
+   {
+    "tsne": [
+     -8.45,
+     8.01
+    ],
+    "pca": [
+     -0.292,
+     0.342
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Beacon Platform Architecture Overview v1.0"
+   },
+   {
+    "tsne": [
+     -8.46,
+     7.75
+    ],
+    "pca": [
+     -0.287,
+     0.332
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Corvus Platform Architecture Overview v2.3"
+   },
+   {
+    "tsne": [
+     -8.18,
+     7.89
+    ],
+    "pca": [
+     -0.244,
+     0.343
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Everest Platform Architecture Overview v3.4"
+   },
+   {
+    "tsne": [
+     -8.17,
+     7.64
+    ],
+    "pca": [
+     -0.264,
+     0.359
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v3.2"
+   },
+   {
+    "tsne": [
+     -8.17,
+     7.9
+    ],
+    "pca": [
+     -0.241,
+     0.341
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Everest Platform Architecture Overview v3.0"
+   },
+   {
+    "tsne": [
+     -8.19,
+     7.9
+    ],
+    "pca": [
+     -0.243,
+     0.336
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Everest Platform Architecture Overview v1.4"
+   },
+   {
+    "tsne": [
+     -8.18,
+     7.65
+    ],
+    "pca": [
+     -0.266,
+     0.352
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v1.0"
+   },
+   {
+    "tsne": [
+     -8.17,
+     7.63
+    ],
+    "pca": [
+     -0.268,
+     0.358
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v3.1"
+   },
+   {
+    "tsne": [
+     -8.17,
+     7.64
+    ],
+    "pca": [
+     -0.27,
+     0.356
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v3.1"
+   },
+   {
+    "tsne": [
+     -8.46,
+     8.03
+    ],
+    "pca": [
+     -0.284,
+     0.337
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Beacon Platform Architecture Overview v2.0"
+   },
+   {
+    "tsne": [
+     -8.18,
+     7.64
+    ],
+    "pca": [
+     -0.263,
+     0.358
+    ],
+    "category": "Technical",
+    "topic": "tech-architecture",
+    "cluster": 2,
+    "title": "Atlas Platform Architecture Overview v1.4"
+   },
+   {
+    "tsne": [
+     -1.71,
+     -7.59
+    ],
+    "pca": [
+     -0.128,
+     -0.03
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v2.4"
+   },
+   {
+    "tsne": [
+     -1.76,
+     -7.54
+    ],
+    "pca": [
+     -0.137,
+     -0.033
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v1.4"
+   },
+   {
+    "tsne": [
+     -1.77,
+     -7.55
+    ],
+    "pca": [
+     -0.137,
+     -0.042
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v1.0"
+   },
+   {
+    "tsne": [
+     -1.83,
+     -7.38
+    ],
+    "pca": [
+     -0.146,
+     -0.011
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.3"
+   },
+   {
+    "tsne": [
+     -1.8,
+     -7.42
+    ],
+    "pca": [
+     -0.145,
+     -0.036
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v1.3"
+   },
+   {
+    "tsne": [
+     -1.75,
+     -7.39
+    ],
+    "pca": [
+     -0.147,
+     -0.013
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.0"
+   },
+   {
+    "tsne": [
+     -1.75,
+     -7.51
+    ],
+    "pca": [
+     -0.14,
+     -0.03
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v1.4"
+   },
+   {
+    "tsne": [
+     -1.8,
+     -7.55
+    ],
+    "pca": [
+     -0.133,
+     -0.041
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v1.0"
+   },
+   {
+    "tsne": [
+     -1.75,
+     -7.45
+    ],
+    "pca": [
+     -0.138,
+     -0.015
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.4"
+   },
+   {
+    "tsne": [
+     -1.77,
+     -7.4
+    ],
+    "pca": [
+     -0.148,
+     -0.023
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v2.3"
+   },
+   {
+    "tsne": [
+     -1.72,
+     -7.42
+    ],
+    "pca": [
+     -0.142,
+     -0.019
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.2"
+   },
+   {
+    "tsne": [
+     -1.83,
+     -7.38
+    ],
+    "pca": [
+     -0.15,
+     -0.013
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.3"
+   },
+   {
+    "tsne": [
+     -1.73,
+     -7.44
+    ],
+    "pca": [
+     -0.14,
+     -0.033
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v2.3"
+   },
+   {
+    "tsne": [
+     -1.7,
+     -7.57
+    ],
+    "pca": [
+     -0.137,
+     -0.044
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v2.1"
+   },
+   {
+    "tsne": [
+     -1.79,
+     -7.38
+    ],
+    "pca": [
+     -0.149,
+     -0.02
+    ],
+    "category": "Technical",
+    "topic": "tech-coding",
+    "cluster": 2,
+    "title": "Engineering Code Standards and Review Guide v3.1"
+   },
+   {
+    "tsne": [
+     -1.68,
+     -2.25
+    ],
+    "pca": [
+     -0.078,
+     -0.005
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.2"
+   },
+   {
+    "tsne": [
+     -1.65,
+     -2.19
+    ],
+    "pca": [
+     -0.071,
+     -0.015
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.1"
+   },
+   {
+    "tsne": [
+     -1.66,
+     -2.22
+    ],
+    "pca": [
+     -0.076,
+     -0.014
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.1"
+   },
+   {
+    "tsne": [
+     -1.69,
+     -2.15
+    ],
+    "pca": [
+     -0.079,
+     -0.004
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v1.4"
+   },
+   {
+    "tsne": [
+     -1.68,
+     -2.21
+    ],
+    "pca": [
+     -0.072,
+     -0.014
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v1.2"
+   },
+   {
+    "tsne": [
+     -1.7,
+     -2.18
+    ],
+    "pca": [
+     -0.069,
+     -0.007
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.0"
+   },
+   {
+    "tsne": [
+     -1.74,
+     -2.11
+    ],
+    "pca": [
+     -0.081,
+     0.005
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v3.3"
+   },
+   {
+    "tsne": [
+     -1.75,
+     -2.12
+    ],
+    "pca": [
+     -0.082,
+     0.005
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v3.2"
+   },
+   {
+    "tsne": [
+     -1.75,
+     -2.12
+    ],
+    "pca": [
+     -0.086,
+     0.008
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v3.2"
+   },
+   {
+    "tsne": [
+     -1.67,
+     -2.17
+    ],
+    "pca": [
+     -0.078,
+     -0.003
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.4"
+   },
+   {
+    "tsne": [
+     -1.66,
+     -2.2
+    ],
+    "pca": [
+     -0.076,
+     -0.01
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.0"
+   },
+   {
+    "tsne": [
+     -1.74,
+     -2.16
+    ],
+    "pca": [
+     -0.087,
+     0.004
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v3.1"
+   },
+   {
+    "tsne": [
+     -1.69,
+     -2.12
+    ],
+    "pca": [
+     -0.077,
+     -0.004
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.3"
+   },
+   {
+    "tsne": [
+     -1.67,
+     -2.22
+    ],
+    "pca": [
+     -0.073,
+     -0.008
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v2.0"
+   },
+   {
+    "tsne": [
+     -1.74,
+     -2.1
+    ],
+    "pca": [
+     -0.081,
+     0.01
+    ],
+    "category": "Technical",
+    "topic": "tech-incident",
+    "cluster": 2,
+    "title": "Incident Response and On-Call Runbook v3.3"
+   },
+   {
+    "tsne": [
+     -5.1,
+     4.84
+    ],
+    "pca": [
+     -0.021,
+     0.509
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.4"
+   },
+   {
+    "tsne": [
+     -5.09,
+     4.75
+    ],
+    "pca": [
+     -0.032,
+     0.51
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v3.3"
+   },
+   {
+    "tsne": [
+     -5.08,
+     4.78
+    ],
+    "pca": [
+     -0.028,
+     0.509
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v3.2"
+   },
+   {
+    "tsne": [
+     -5.1,
+     4.85
+    ],
+    "pca": [
+     -0.022,
+     0.507
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.1"
+   },
+   {
+    "tsne": [
+     -5.07,
+     4.82
+    ],
+    "pca": [
+     -0.015,
+     0.504
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.2"
+   },
+   {
+    "tsne": [
+     -5.13,
+     4.82
+    ],
+    "pca": [
+     -0.024,
+     0.504
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v1.2"
+   },
+   {
+    "tsne": [
+     -5.13,
+     4.83
+    ],
+    "pca": [
+     -0.024,
+     0.505
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.4"
+   },
+   {
+    "tsne": [
+     -5.08,
+     4.75
+    ],
+    "pca": [
+     -0.026,
+     0.509
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.3"
+   },
+   {
+    "tsne": [
+     -5.08,
+     4.82
+    ],
+    "pca": [
+     -0.02,
+     0.505
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.1"
+   },
+   {
+    "tsne": [
+     -5.11,
+     4.73
+    ],
+    "pca": [
+     -0.031,
+     0.507
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v1.3"
+   },
+   {
+    "tsne": [
+     -5.13,
+     4.82
+    ],
+    "pca": [
+     -0.027,
+     0.503
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v1.4"
+   },
+   {
+    "tsne": [
+     -5.08,
+     4.72
+    ],
+    "pca": [
+     -0.03,
+     0.507
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v1.3"
+   },
+   {
+    "tsne": [
+     -5.11,
+     4.83
+    ],
+    "pca": [
+     -0.025,
+     0.505
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v2.4"
+   },
+   {
+    "tsne": [
+     -5.07,
+     4.83
+    ],
+    "pca": [
+     -0.029,
+     0.512
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v3.2"
+   },
+   {
+    "tsne": [
+     -5.1,
+     4.7
+    ],
+    "pca": [
+     -0.034,
+     0.506
+    ],
+    "category": "Technical",
+    "topic": "tech-database",
+    "cluster": 2,
+    "title": "Database Migration and Schema Change Policy v1.3"
+   },
+   {
+    "tsne": [
+     -36.48,
+     -5.29
+    ],
+    "pca": [
+     -0.755,
+     -0.226
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2024"
+   },
+   {
+    "tsne": [
+     -36.66,
+     -5.54
+    ],
+    "pca": [
+     -0.754,
+     -0.227
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.68,
+     -5.53
+    ],
+    "pca": [
+     -0.753,
+     -0.23
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.69,
+     -5.53
+    ],
+    "pca": [
+     -0.753,
+     -0.228
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.68,
+     -5.53
+    ],
+    "pca": [
+     -0.755,
+     -0.231
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.51,
+     -5.26
+    ],
+    "pca": [
+     -0.753,
+     -0.228
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.52,
+     -5.26
+    ],
+    "pca": [
+     -0.746,
+     -0.233
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2025"
+   },
+   {
+    "tsne": [
+     -36.49,
+     -5.29
+    ],
+    "pca": [
+     -0.754,
+     -0.227
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2024"
+   },
+   {
+    "tsne": [
+     -36.52,
+     -5.27
+    ],
+    "pca": [
+     -0.745,
+     -0.232
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2025"
+   },
+   {
+    "tsne": [
+     -36.64,
+     -5.56
+    ],
+    "pca": [
+     -0.747,
+     -0.233
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2025"
+   },
+   {
+    "tsne": [
+     -36.63,
+     -5.56
+    ],
+    "pca": [
+     -0.751,
+     -0.229
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2026"
+   },
+   {
+    "tsne": [
+     -36.67,
+     -5.55
+    ],
+    "pca": [
+     -0.747,
+     -0.232
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2025"
+   },
+   {
+    "tsne": [
+     -36.47,
+     -5.52
+    ],
+    "pca": [
+     -0.75,
+     -0.228
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2024"
+   },
+   {
+    "tsne": [
+     -36.45,
+     -5.32
+    ],
+    "pca": [
+     -0.753,
+     -0.228
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2024"
+   },
+   {
+    "tsne": [
+     -36.44,
+     -5.34
+    ],
+    "pca": [
+     -0.751,
+     -0.225
+    ],
+    "category": "Research",
+    "topic": "res-embeddings",
+    "cluster": 1,
+    "title": "Evaluation of Sentence Embedding Models for Retrieval 2024"
+   },
+   {
+    "tsne": [
+     -34.55,
+     -3.39
+    ],
+    "pca": [
+     -0.691,
+     -0.107
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.58,
+     -3.41
+    ],
+    "pca": [
+     -0.688,
+     -0.115
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -34.42,
+     -3.42
+    ],
+    "pca": [
+     -0.685,
+     -0.11
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.39,
+     -3.47
+    ],
+    "pca": [
+     -0.684,
+     -0.11
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -34.43,
+     -3.62
+    ],
+    "pca": [
+     -0.692,
+     -0.109
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.39,
+     -3.54
+    ],
+    "pca": [
+     -0.674,
+     -0.116
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2025"
+   },
+   {
+    "tsne": [
+     -34.6,
+     -3.43
+    ],
+    "pca": [
+     -0.694,
+     -0.109
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.48,
+     -3.38
+    ],
+    "pca": [
+     -0.689,
+     -0.109
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.46,
+     -3.64
+    ],
+    "pca": [
+     -0.694,
+     -0.11
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.63,
+     -3.53
+    ],
+    "pca": [
+     -0.695,
+     -0.115
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -34.47,
+     -3.63
+    ],
+    "pca": [
+     -0.69,
+     -0.115
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -34.62,
+     -3.51
+    ],
+    "pca": [
+     -0.692,
+     -0.116
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -34.45,
+     -3.64
+    ],
+    "pca": [
+     -0.691,
+     -0.113
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.41,
+     -3.6
+    ],
+    "pca": [
+     -0.692,
+     -0.109
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2024"
+   },
+   {
+    "tsne": [
+     -34.59,
+     -3.41
+    ],
+    "pca": [
+     -0.691,
+     -0.109
+    ],
+    "category": "Research",
+    "topic": "res-ranking",
+    "cluster": 1,
+    "title": "Hybrid Ranking Strategies for Enterprise Search 2026"
+   },
+   {
+    "tsne": [
+     -38.11,
+     -4.29
+    ],
+    "pca": [
+     -0.69,
+     -0.211
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -38.15,
+     -4.54
+    ],
+    "pca": [
+     -0.691,
+     -0.206
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -38.02,
+     -4.24
+    ],
+    "pca": [
+     -0.693,
+     -0.206
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -37.95,
+     -4.26
+    ],
+    "pca": [
+     -0.694,
+     -0.205
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2024"
+   },
+   {
+    "tsne": [
+     -38.15,
+     -4.56
+    ],
+    "pca": [
+     -0.689,
+     -0.213
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -37.96,
+     -4.25
+    ],
+    "pca": [
+     -0.689,
+     -0.209
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -37.93,
+     -4.29
+    ],
+    "pca": [
+     -0.697,
+     -0.205
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -38.16,
+     -4.54
+    ],
+    "pca": [
+     -0.694,
+     -0.207
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -38.12,
+     -4.59
+    ],
+    "pca": [
+     -0.697,
+     -0.209
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -38.12,
+     -4.58
+    ],
+    "pca": [
+     -0.695,
+     -0.21
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -37.95,
+     -4.27
+    ],
+    "pca": [
+     -0.693,
+     -0.209
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -38.1,
+     -4.59
+    ],
+    "pca": [
+     -0.691,
+     -0.21
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2025"
+   },
+   {
+    "tsne": [
+     -37.92,
+     -4.28
+    ],
+    "pca": [
+     -0.697,
+     -0.205
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2024"
+   },
+   {
+    "tsne": [
+     -38.17,
+     -4.51
+    ],
+    "pca": [
+     -0.692,
+     -0.205
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2026"
+   },
+   {
+    "tsne": [
+     -37.94,
+     -4.26
+    ],
+    "pca": [
+     -0.696,
+     -0.204
+    ],
+    "category": "Research",
+    "topic": "res-chunking",
+    "cluster": 1,
+    "title": "Document Chunking Strategies and Retrieval Quality 2024"
+   },
+   {
+    "tsne": [
+     1.18,
+     8.78
+    ],
+    "pca": [
+     0.004,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.3"
+   },
+   {
+    "tsne": [
+     1.18,
+     8.84
+    ],
+    "pca": [
+     0.008,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.2"
+   },
+   {
+    "tsne": [
+     1.25,
+     8.79
+    ],
+    "pca": [
+     0.013,
+     0.54
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v2.3"
+   },
+   {
+    "tsne": [
+     1.26,
+     8.76
+    ],
+    "pca": [
+     0.007,
+     0.537
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v1.1"
+   },
+   {
+    "tsne": [
+     1.21,
+     8.85
+    ],
+    "pca": [
+     0.01,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.4"
+   },
+   {
+    "tsne": [
+     1.22,
+     8.74
+    ],
+    "pca": [
+     0.001,
+     0.534
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v1.1"
+   },
+   {
+    "tsne": [
+     1.24,
+     8.86
+    ],
+    "pca": [
+     0.004,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.2"
+   },
+   {
+    "tsne": [
+     1.2,
+     8.79
+    ],
+    "pca": [
+     0.008,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.2"
+   },
+   {
+    "tsne": [
+     1.26,
+     8.89
+    ],
+    "pca": [
+     0.02,
+     0.544
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v2.4"
+   },
+   {
+    "tsne": [
+     1.28,
+     8.88
+    ],
+    "pca": [
+     0.014,
+     0.545
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v2.4"
+   },
+   {
+    "tsne": [
+     1.21,
+     8.82
+    ],
+    "pca": [
+     0.002,
+     0.542
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.2"
+   },
+   {
+    "tsne": [
+     1.34,
+     8.82
+    ],
+    "pca": [
+     0.012,
+     0.54
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v2.1"
+   },
+   {
+    "tsne": [
+     1.29,
+     8.79
+    ],
+    "pca": [
+     0.001,
+     0.538
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.3"
+   },
+   {
+    "tsne": [
+     1.16,
+     8.85
+    ],
+    "pca": [
+     0.008,
+     0.551
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v3.4"
+   },
+   {
+    "tsne": [
+     1.33,
+     8.85
+    ],
+    "pca": [
+     0.009,
+     0.538
+    ],
+    "category": "Legal",
+    "topic": "legal-nda",
+    "cluster": 5,
+    "title": "Mutual Non-Disclosure Agreement Template v2.1"
+   },
+   {
+    "tsne": [
+     -1.94,
+     10.29
+    ],
+    "pca": [
+     0.033,
+     0.549
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2026"
+   },
+   {
+    "tsne": [
+     -1.91,
+     10.23
+    ],
+    "pca": [
+     0.034,
+     0.554
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.92,
+     10.24
+    ],
+    "pca": [
+     0.039,
+     0.548
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.88,
+     10.33
+    ],
+    "pca": [
+     0.048,
+     0.534
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2025"
+   },
+   {
+    "tsne": [
+     -1.9,
+     10.29
+    ],
+    "pca": [
+     0.035,
+     0.546
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2026"
+   },
+   {
+    "tsne": [
+     -1.91,
+     10.2
+    ],
+    "pca": [
+     0.033,
+     0.551
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.89,
+     10.19
+    ],
+    "pca": [
+     0.036,
+     0.552
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.9,
+     10.18
+    ],
+    "pca": [
+     0.04,
+     0.554
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.94,
+     10.28
+    ],
+    "pca": [
+     0.043,
+     0.538
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2025"
+   },
+   {
+    "tsne": [
+     -1.88,
+     10.2
+    ],
+    "pca": [
+     0.029,
+     0.551
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2026"
+   },
+   {
+    "tsne": [
+     -1.89,
+     10.33
+    ],
+    "pca": [
+     0.036,
+     0.546
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.94,
+     10.27
+    ],
+    "pca": [
+     0.047,
+     0.531
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2025"
+   },
+   {
+    "tsne": [
+     -1.84,
+     10.25
+    ],
+    "pca": [
+     0.037,
+     0.552
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2024"
+   },
+   {
+    "tsne": [
+     -1.84,
+     10.26
+    ],
+    "pca": [
+     0.031,
+     0.55
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2026"
+   },
+   {
+    "tsne": [
+     -1.85,
+     10.26
+    ],
+    "pca": [
+     0.046,
+     0.538
+    ],
+    "category": "Legal",
+    "topic": "legal-dataprotection",
+    "cluster": 5,
+    "title": "Data Protection and Records Retention Policy 2025"
+   },
+   {
+    "tsne": [
+     8.19,
+     2.32
+    ],
+    "pca": [
+     0.208,
+     0.115
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.17,
+     2.32
+    ],
+    "pca": [
+     0.212,
+     0.12
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.17,
+     2.24
+    ],
+    "pca": [
+     0.218,
+     0.108
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2025"
+   },
+   {
+    "tsne": [
+     8.13,
+     2.41
+    ],
+    "pca": [
+     0.211,
+     0.12
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2026"
+   },
+   {
+    "tsne": [
+     8.18,
+     2.28
+    ],
+    "pca": [
+     0.219,
+     0.11
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2025"
+   },
+   {
+    "tsne": [
+     8.14,
+     2.21
+    ],
+    "pca": [
+     0.219,
+     0.106
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2025"
+   },
+   {
+    "tsne": [
+     8.1,
+     2.38
+    ],
+    "pca": [
+     0.215,
+     0.12
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.14,
+     2.42
+    ],
+    "pca": [
+     0.215,
+     0.12
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2026"
+   },
+   {
+    "tsne": [
+     8.1,
+     2.31
+    ],
+    "pca": [
+     0.212,
+     0.122
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.16,
+     2.31
+    ],
+    "pca": [
+     0.209,
+     0.117
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2026"
+   },
+   {
+    "tsne": [
+     8.12,
+     2.32
+    ],
+    "pca": [
+     0.211,
+     0.119
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.13,
+     2.41
+    ],
+    "pca": [
+     0.212,
+     0.121
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2024"
+   },
+   {
+    "tsne": [
+     8.17,
+     2.28
+    ],
+    "pca": [
+     0.22,
+     0.113
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2025"
+   },
+   {
+    "tsne": [
+     8.11,
+     2.36
+    ],
+    "pca": [
+     0.211,
+     0.12
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2026"
+   },
+   {
+    "tsne": [
+     8.08,
+     2.4
+    ],
+    "pca": [
+     0.211,
+     0.124
+    ],
+    "category": "Legal",
+    "topic": "legal-vendor",
+    "cluster": 3,
+    "title": "Vendor Contract and Supplier Terms Review 2026"
+   },
+   {
+    "tsne": [
+     18.52,
+     0.99
+    ],
+    "pca": [
+     0.329,
+     -0.161
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2024"
+   },
+   {
+    "tsne": [
+     18.5,
+     1.03
+    ],
+    "pca": [
+     0.326,
+     -0.166
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2024"
+   },
+   {
+    "tsne": [
+     18.51,
+     0.98
+    ],
+    "pca": [
+     0.329,
+     -0.164
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2024"
+   },
+   {
+    "tsne": [
+     18.44,
+     1.05
+    ],
+    "pca": [
+     0.328,
+     -0.17
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2026"
+   },
+   {
+    "tsne": [
+     18.45,
+     0.96
+    ],
+    "pca": [
+     0.331,
+     -0.174
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.43,
+     0.93
+    ],
+    "pca": [
+     0.33,
+     -0.17
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.44,
+     0.96
+    ],
+    "pca": [
+     0.331,
+     -0.173
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.47,
+     0.97
+    ],
+    "pca": [
+     0.33,
+     -0.173
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.44,
+     0.95
+    ],
+    "pca": [
+     0.332,
+     -0.171
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.48,
+     1.04
+    ],
+    "pca": [
+     0.327,
+     -0.172
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2026"
+   },
+   {
+    "tsne": [
+     18.49,
+     1.06
+    ],
+    "pca": [
+     0.324,
+     -0.174
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2026"
+   },
+   {
+    "tsne": [
+     18.41,
+     0.96
+    ],
+    "pca": [
+     0.331,
+     -0.171
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2025"
+   },
+   {
+    "tsne": [
+     18.45,
+     1.05
+    ],
+    "pca": [
+     0.329,
+     -0.167
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2024"
+   },
+   {
+    "tsne": [
+     18.51,
+     1.01
+    ],
+    "pca": [
+     0.327,
+     -0.169
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2026"
+   },
+   {
+    "tsne": [
+     18.4,
+     1.03
+    ],
+    "pca": [
+     0.321,
+     -0.163
+    ],
+    "category": "Administration",
+    "topic": "admin-facilities",
+    "cluster": 4,
+    "title": "Office Facilities and Workspace Guide 2026"
+   },
+   {
+    "tsne": [
+     17.75,
+     -3.46
+    ],
+    "pca": [
+     0.252,
+     -0.09
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.77,
+     -3.38
+    ],
+    "pca": [
+     0.246,
+     -0.097
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2026"
+   },
+   {
+    "tsne": [
+     17.77,
+     -3.41
+    ],
+    "pca": [
+     0.253,
+     -0.092
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.79,
+     -3.34
+    ],
+    "pca": [
+     0.249,
+     -0.095
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2026"
+   },
+   {
+    "tsne": [
+     17.69,
+     -3.43
+    ],
+    "pca": [
+     0.251,
+     -0.097
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.64,
+     -3.48
+    ],
+    "pca": [
+     0.251,
+     -0.088
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.77,
+     -3.41
+    ],
+    "pca": [
+     0.25,
+     -0.092
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.64,
+     -3.32
+    ],
+    "pca": [
+     0.266,
+     -0.105
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2025"
+   },
+   {
+    "tsne": [
+     17.73,
+     -3.45
+    ],
+    "pca": [
+     0.25,
+     -0.091
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2026"
+   },
+   {
+    "tsne": [
+     17.63,
+     -3.43
+    ],
+    "pca": [
+     0.255,
+     -0.102
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2025"
+   },
+   {
+    "tsne": [
+     17.65,
+     -3.32
+    ],
+    "pca": [
+     0.259,
+     -0.106
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2025"
+   },
+   {
+    "tsne": [
+     17.74,
+     -3.44
+    ],
+    "pca": [
+     0.252,
+     -0.09
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.62,
+     -3.35
+    ],
+    "pca": [
+     0.261,
+     -0.106
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2025"
+   },
+   {
+    "tsne": [
+     17.77,
+     -3.43
+    ],
+    "pca": [
+     0.252,
+     -0.091
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     17.64,
+     -3.32
+    ],
+    "pca": [
+     0.253,
+     -0.087
+    ],
+    "category": "Administration",
+    "topic": "admin-travel",
+    "cluster": 3,
+    "title": "Business Travel and Booking Standard 2024"
+   },
+   {
+    "tsne": [
+     0.44,
+     13.04
+    ],
+    "pca": [
+     0.02,
+     0.284
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2026"
+   },
+   {
+    "tsne": [
+     0.33,
+     13.05
+    ],
+    "pca": [
+     0.018,
+     0.286
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2026"
+   },
+   {
+    "tsne": [
+     0.37,
+     13.1
+    ],
+    "pca": [
+     0.035,
+     0.275
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.36,
+     13.04
+    ],
+    "pca": [
+     0.035,
+     0.28
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.4,
+     13.13
+    ],
+    "pca": [
+     0.02,
+     0.275
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2024"
+   },
+   {
+    "tsne": [
+     0.32,
+     13.03
+    ],
+    "pca": [
+     0.03,
+     0.279
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.37,
+     13.07
+    ],
+    "pca": [
+     0.032,
+     0.276
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.41,
+     13.11
+    ],
+    "pca": [
+     0.038,
+     0.273
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.42,
+     13.01
+    ],
+    "pca": [
+     0.022,
+     0.287
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2024"
+   },
+   {
+    "tsne": [
+     0.43,
+     13.01
+    ],
+    "pca": [
+     0.016,
+     0.291
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2024"
+   },
+   {
+    "tsne": [
+     0.34,
+     13.11
+    ],
+    "pca": [
+     0.026,
+     0.273
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.34,
+     13.0
+    ],
+    "pca": [
+     0.02,
+     0.292
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2024"
+   },
+   {
+    "tsne": [
+     0.47,
+     13.09
+    ],
+    "pca": [
+     0.023,
+     0.274
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2024"
+   },
+   {
+    "tsne": [
+     0.43,
+     13.06
+    ],
+    "pca": [
+     0.033,
+     0.275
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   },
+   {
+    "tsne": [
+     0.4,
+     13.01
+    ],
+    "pca": [
+     0.03,
+     0.284
+    ],
+    "category": "Administration",
+    "topic": "admin-security",
+    "cluster": 5,
+    "title": "Information Security Awareness Standard 2025"
+   }
+  ]
+ }
+}

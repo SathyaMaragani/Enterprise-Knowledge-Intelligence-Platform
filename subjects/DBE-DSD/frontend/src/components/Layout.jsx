@@ -5,6 +5,7 @@ import { can, roleLabel } from '../auth/roles.js';
 import { initials } from '../pages/dashboardData.js';
 import BrandMark from './BrandMark.jsx';
 import {
+  BarChartIcon,
   ChevronDownIcon,
   FileTextIcon,
   HomeIcon,
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   // A document belongs to the repository, so its viewer keeps Repository lit.
   { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
   { label: 'TextHack', to: '/texthack', Icon: TypeIcon },
+  { label: 'ML insights', to: '/insights', Icon: BarChartIcon },
   { label: 'Administration', to: '/admin', Icon: ShieldIcon, requiresPermission: 'USER_MANAGE' },
 ];
 

@@ -28,7 +28,8 @@ for why, and for the full dataset/model decision record.
 |---|---|---|
 | 1.7B-1 | Dataset, preprocessing, chunking, evaluation framework, TF-IDF baseline | Done |
 | 1.7B-2 | Embedding models, dense retrieval, model comparison, significance testing | Done |
-| 1.7B-3 | Qdrant ingestion, Spring integration, hybrid search | Not started |
+| 1.7B-3 | Qdrant ingestion, Spring integration, hybrid search | Done (see `TASK_STATUS.md`) |
+| 1.7D | Feature engineering, document classification and clustering, each evaluated | Done |
 
 No Qdrant vector has been written or replaced, and no Spring code has changed.
 The collection stays 384-dimensional cosine. See
@@ -129,17 +130,40 @@ src/evaluation/compare.py        three-way comparison harness
 src/evaluation/significance.py   paired bootstrap significance tests
 tests/test_pipeline.py           15 checks (no network)
 tests/test_embeddings.py         4 structural + 2 behavioural checks
+src/embeddings/onnx_minilm.py    MiniLM via ONNX Runtime, identical to the backend's encoder
+src/features/documents.py        text normalization and the four feature sets
+src/classification/categories.py category classification and its evaluation
+src/clustering/documents.py      clustering, choosing k, DBSCAN, PCA, t-SNE, themes
+src/insights.py                  runs both and writes results/document_insights.json
+tests/test_document_insights.py  6 checks
 ```
+
+## Classify and cluster the demo documents (1.7D)
+
+```bash
+python -m src.insights --frontend ../DBE-DSD/frontend/src/data/mlInsights.json
+python tests/test_document_insights.py
+```
+
+Needs `onnxruntime`, `tokenizers` and the model files in `models/minilm/`; no
+sentence-transformers. Every split is by topic, because the corpus has 15
+near-identical versions of each topic and a random split scores 100% by
+memorising them.
+
+| Result | Value |
+|---|---|
+| Category accuracy, 6 locked unseen topics (char TF-IDF + Naive Bayes) | 0.83 (macro-F1 0.78) |
+| Category accuracy, each of 21 topics held out | 0.57 (12 of 21 topics) |
+| Random split, for comparison | 1.00 |
+| DBSCAN, no k given | 21 clusters, one per topic |
+| Best category match, k = 6 (k-means on PCA) | ARI 0.60 |
+
+Details: [docs/DOCUMENT_CLASSIFICATION_AND_CLUSTERING.md](docs/DOCUMENT_CLASSIFICATION_AND_CLUSTERING.md).
 
 ## Planned capabilities
 
-- Document classification
-- Document clustering
-- Feature engineering
 - Search result ranking
-- Model evaluation
-- Hyperparameter optimization
-- Machine Learning model serving
+- Machine Learning model serving (for example, suggesting a category on upload)
 
 ## Attribution
 

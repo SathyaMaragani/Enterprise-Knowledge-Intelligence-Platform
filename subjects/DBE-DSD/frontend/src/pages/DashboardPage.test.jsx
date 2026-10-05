@@ -138,6 +138,7 @@ describe('dashboard', () => {
       'Search',
       'Repository',
       'TextHack',
+      'ML insights',
     ]);
     // Unbuilt pages are not advertised in the navigation.
     expect(within(nav).queryByText('Soon')).toBeNull();
