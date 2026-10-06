@@ -226,12 +226,14 @@ sequenceDiagram
     U->>A: POST /api/search {query, mode, filters, page}
     par keyword leg
         A->>P: candidates (title, description)
+        A->>M: which query words each body contains
         A->>A: TextHack: KMP, Aho-Corasick, Damerau-Levenshtein
     and vector leg
         A->>A: embed query (MiniLM)
         A->>Q: nearest chunks (cosine, HNSW)
     end
     A->>P: permission filter (before ranking)
+    A->>A: drop meaning-only hits below the similarity floor
     A->>A: fuse: (0.4·keyword + 0.6·(cos+1)/2) ÷ weights that ran
     A->>P: hydrate titles and owners
     A->>M: best chunk text
@@ -333,7 +335,7 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **191 pass**: 187 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **203 pass**: 199 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | DBE-DSD frontend | 16 Vitest files: pages, session, API client | **149 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
@@ -354,7 +356,7 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>187 tests on a Compose stack]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>199 tests on a Compose stack]
     GH --> CI2[GitHub Actions<br/>Frontend: 149 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
@@ -414,7 +416,7 @@ flowchart LR
 
 ## 15. Limitations and roadmap
 
-- **Keyword search covers titles and descriptions.** Document bodies are reached by semantic search; the MongoDB text index could extend keyword matching to them.
+- **Body matching is exact and unindexed.** Typo tolerance covers titles and descriptions only, and each keyword search scans every body in MongoDB; the `content.raw_text` text index or Atlas Search would take over as the corpus grows.
 - **Vector hits are filtered after Qdrant's top-K,** so restricted users can get fewer than K semantic hits. Passing readable ids as a Qdrant payload filter would fix this.
 - **No OCR** for scanned PDFs; Word headers, footers and footnotes are not extracted.
 - **Embedding runs inside the upload request;** large files would be better served by a background job.

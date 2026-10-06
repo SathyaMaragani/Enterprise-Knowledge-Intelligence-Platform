@@ -691,6 +691,30 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.totalHits").value(0));
     }
 
+    @Test
+    void testKeywordSearchFindsAWordOnlyInTheBody() throws Exception {
+        // "Kafka" is in document 3's extracted text in MongoDB, not in its title or description.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"kafka\",\"mode\":\"KEYWORD\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(1))
+                .andExpect(jsonPath("$.hits[0].documentId").value(3))
+                .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")))
+                .andExpect(jsonPath("$.hits[0].score").value(com.eip.backend.service.LexicalScorer.BODY_PHRASE_SCORE));
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testBodyMatchesAreStillPermissionFiltered() throws Exception {
+        // dave_tmp may not read document 3, so its body must not surface it either.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"kafka\",\"mode\":\"KEYWORD\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalHits").value(0));
+    }
+
     // ---------------------------------------------------------
     // DOCUMENT LIST AND RAW VECTOR SEARCH PERMISSION TESTS
     // ---------------------------------------------------------

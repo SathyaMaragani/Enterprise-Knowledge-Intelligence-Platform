@@ -73,10 +73,22 @@ public class LexicalScorer {
         static final Match NONE = new Match(0.0, false, 0, 0);
     }
 
+    /**
+     * What the document body contains, found in MongoDB by {@link BodyTextMatcher}:
+     * the whole query as a phrase, and each of {@link #terms} as a whole word.
+     * Exact only; typo tolerance stays on the title and description.
+     */
+    public record BodyEvidence(boolean phrase, boolean[] terms) {
+    }
+
     public static final double TITLE_PHRASE_SCORE = 1.0;
     public static final double DESCRIPTION_PHRASE_SCORE = 0.75;
+    /** Just below a description phrase: a summary says more about a document than one line of its text. */
+    public static final double BODY_PHRASE_SCORE = 0.7;
     public static final double COVERAGE_CEILING = 0.9;
     public static final double DESCRIPTION_WEIGHT = 0.6;
+    /** Weight of a term found only in the body; every term there clears {@link #MIN_SCAN_SCORE}. */
+    public static final double BODY_WEIGHT = 0.6;
     public static final double ONE_EDIT_CREDIT = 0.7;
     public static final double TWO_EDIT_CREDIT = 0.5;
 
@@ -113,10 +125,18 @@ public class LexicalScorer {
      * when {@code allowFuzzy} is false only exact whole-token terms earn credit.
      */
     public Match score(String query, String title, String description, boolean allowFuzzy) {
+        return score(query, title, description, null, allowFuzzy);
+    }
+
+    /**
+     * As {@link #score(String, String, String, boolean)}, also crediting what the
+     * document body contains. {@code body} is null for a body with no query term.
+     */
+    public Match score(String query, String title, String description, BodyEvidence body, boolean allowFuzzy) {
         if (query == null) {
             return Match.NONE;
         }
-        String phrase = collapseWhitespace(query.toLowerCase(Locale.ROOT));
+        String phrase = normalise(query);
         if (phrase.isEmpty()) {
             return Match.NONE;
         }
@@ -128,7 +148,9 @@ public class LexicalScorer {
         if (contains(titleText, phrase)) {
             return new Match(TITLE_PHRASE_SCORE, false, terms.size(), terms.size());
         }
-        double phraseScore = contains(descriptionText, phrase) ? DESCRIPTION_PHRASE_SCORE : 0.0;
+        double phraseScore = contains(descriptionText, phrase) ? DESCRIPTION_PHRASE_SCORE
+                : body != null && body.phrase() ? BODY_PHRASE_SCORE
+                : 0.0;
 
         if (terms.isEmpty()) {
             return new Match(phraseScore, false, 0, 0);
@@ -153,6 +175,10 @@ public class LexicalScorer {
             } else {
                 best = descriptionCredit;
                 bestWasFuzzy = fromDescription.fuzzy[i];
+            }
+            if (body != null && i < body.terms().length && body.terms()[i] && BODY_WEIGHT > best) {
+                best = BODY_WEIGHT; // e.g. an exact word in the body beats a typo in the description
+                bestWasFuzzy = false;
             }
 
             if (best > 0.0) {
@@ -291,6 +317,11 @@ public class LexicalScorer {
             out.add(current.toString());
         }
         return out;
+    }
+
+    /** The query as every matcher sees it: lowercased, whitespace collapsed. */
+    static String normalise(String query) {
+        return collapseWhitespace(query.toLowerCase(Locale.ROOT));
     }
 
     /** Trims and collapses internal runs of whitespace to single spaces. */

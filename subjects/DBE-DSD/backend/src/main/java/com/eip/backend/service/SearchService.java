@@ -67,22 +67,36 @@ public class SearchService {
     private static final double KEYWORD_WEIGHT = 0.4;
     private static final double VECTOR_WEIGHT = 0.6;
 
+    /*
+     * Qdrant returns the nearest chunks for any query, related or not, so a hit
+     * found by meaning alone must clear both bars below. Calibrated for MiniLM on
+     * the demo corpus: relevant documents scored cosine 0.39-0.68, unrelated ones
+     * mostly under 0.33 ("chocolate cake recipe" peaks at 0.09). The cut is
+     * relative to the best match the caller can see, so a restricted document
+     * never decides what else is shown. Tune both here if the model changes.
+     */
+    static final double MIN_VECTOR_SIMILARITY = 0.33;
+    static final double MAX_VECTOR_GAP = 0.15;
+
     private final DocumentRepository documentRepository;
     private final QdrantService qdrantService;
     private final DocumentAccessService documentAccessService;
     private final EmbeddingService embeddingService;
     private final LexicalScorer lexicalScorer;
+    private final BodyTextMatcher bodyTextMatcher;
 
     public SearchService(DocumentRepository documentRepository,
                          QdrantService qdrantService,
                          DocumentAccessService documentAccessService,
                          EmbeddingService embeddingService,
-                         LexicalScorer lexicalScorer) {
+                         LexicalScorer lexicalScorer,
+                         BodyTextMatcher bodyTextMatcher) {
         this.documentRepository = documentRepository;
         this.qdrantService = qdrantService;
         this.documentAccessService = documentAccessService;
         this.embeddingService = embeddingService;
         this.lexicalScorer = lexicalScorer;
+        this.bodyTextMatcher = bodyTextMatcher;
     }
 
     @Transactional(readOnly = true)
@@ -100,11 +114,14 @@ public class SearchService {
             sources.add("KEYWORD");
         }
 
-        // Server-side query embedding
+        // Server-side query embedding. Only these vectors have the MiniLM similarity
+        // scale the relevance floor is calibrated for; a caller's own vector does not.
+        boolean embeddedHere = false;
         if (request.hasQuery() && mode.usesVector() && !request.hasVector()) {
             List<Float> generatedVector = embeddingService.embedQuery(request.getQuery());
             if (generatedVector != null) {
                 request.setVector(generatedVector);
+                embeddedHere = true;
             }
         }
         if (mode == SearchMode.SEMANTIC && !request.hasVector()) {
@@ -132,6 +149,9 @@ public class SearchService {
         String status = blankIfNull(request.getStatus());
         if (!status.isEmpty()) {
             hits.values().removeIf(hit -> !status.equals(hit.getStatus()));
+        }
+        if (vectorRan && embeddedHere) {
+            dropWeakVectorOnlyHits(hits);
         }
 
         List<SearchHit> ranked = new ArrayList<>(hits.values());
@@ -178,11 +198,12 @@ public class SearchService {
         String query = request.getQuery().trim();
         String category = blankIfNull(request.getCategory());
         String status = blankIfNull(request.getStatus());
+        Map<Integer, LexicalScorer.BodyEvidence> bodies = bodyMatches(query);
 
         for (Document document : documentRepository.searchByKeyword(
                 query, category, status, PageRequest.of(0, CANDIDATE_LIMIT))) {
-            addKeywordHit(hits, document,
-                          lexicalScorer.score(query, document.getTitle(), document.getDescription(), allowFuzzy));
+            addKeywordHit(hits, document, lexicalScorer.score(query, document.getTitle(), document.getDescription(),
+                                                              bodies.get(document.getId()), allowFuzzy));
         }
 
         for (Document document : documentRepository.findForLexicalScan(
@@ -190,12 +211,38 @@ public class SearchService {
             if (hits.containsKey(document.getId())) {
                 continue; // already scored identically by the phrase pass
             }
-            LexicalScorer.Match match =
-                    lexicalScorer.score(query, document.getTitle(), document.getDescription(), allowFuzzy);
+            LexicalScorer.Match match = lexicalScorer.score(query, document.getTitle(), document.getDescription(),
+                                                            bodies.get(document.getId()), allowFuzzy);
             if (match.score() >= LexicalScorer.MIN_SCAN_SCORE) {
                 addKeywordHit(hits, document, match);
             }
         }
+    }
+
+    /** Body matches from MongoDB. If MongoDB is down, search still answers from titles and descriptions. */
+    private Map<Integer, LexicalScorer.BodyEvidence> bodyMatches(String query) {
+        String phrase = LexicalScorer.normalise(query);
+        try {
+            return bodyTextMatcher.match(phrase, LexicalScorer.terms(phrase));
+        } catch (RuntimeException e) {
+            logger.warn("Body text matching unavailable, searching titles and descriptions only: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    /**
+     * Removes hits found by meaning alone that fall below the relevance floor
+     * (see {@link #MIN_VECTOR_SIMILARITY}). Runs after permission filtering. Hits
+     * with keyword evidence stay whatever their vector score.
+     */
+    private static void dropWeakVectorOnlyHits(Map<Integer, SearchHit> hits) {
+        double best = hits.values().stream()
+                .filter(hit -> hit.getVectorScore() != null)
+                .mapToDouble(SearchHit::getVectorScore)
+                .max().orElse(MIN_VECTOR_SIMILARITY);
+        double floor = Math.max(MIN_VECTOR_SIMILARITY, best - MAX_VECTOR_GAP);
+        hits.values().removeIf(hit -> hit.getKeywordScore() == null
+                && hit.getVectorScore() != null && hit.getVectorScore() < floor);
     }
 
     private static void addKeywordHit(Map<Integer, SearchHit> hits, Document document,

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,6 +42,11 @@ class SearchServiceTest {
     private RuntimeException qdrantFailure;
     /** Ids the current user may read; null means "all of them". */
     private Set<Integer> readable;
+    /** What MongoDB reports about document bodies, by document id. */
+    private Map<Integer, LexicalScorer.BodyEvidence> bodyMatches = Map.of();
+    private RuntimeException bodyFailure;
+    /** The server-side query embedding; null means the model is not loaded. */
+    private List<Float> queryEmbedding;
 
     private SearchService searchService;
 
@@ -73,12 +79,22 @@ class SearchServiceTest {
         EmbeddingService embeddingService = new EmbeddingService(null) {
             @Override
             public List<Float> embedQuery(String query) {
-                return null;
+                return queryEmbedding;
+            }
+        };
+
+        BodyTextMatcher bodies = new BodyTextMatcher(null) {
+            @Override
+            public Map<Integer, LexicalScorer.BodyEvidence> match(String phrase, List<String> terms) {
+                if (bodyFailure != null) {
+                    throw bodyFailure;
+                }
+                return bodyMatches;
             }
         };
 
         searchService = new SearchService(repository, qdrant, access, embeddingService,
-                                          new LexicalScorer());
+                                          new LexicalScorer(), bodies);
     }
 
     /**
@@ -490,5 +506,115 @@ class SearchServiceTest {
         SearchRequest r = request("policy", null);
         r.setMode(null);
         assertEquals(SearchMode.HYBRID, r.getMode());
+    }
+
+    // ---------------------------------------------------------------- document bodies
+
+    private static LexicalScorer.BodyEvidence body(boolean phrase, boolean... terms) {
+        return new LexicalScorer.BodyEvidence(phrase, terms);
+    }
+
+    @Test
+    void aWordOnlyInTheBodyIsAKeywordHit() {
+        Document handbook = doc(1, "Onboarding", "first week");
+        doc(2, "Travel", "flights");
+        scanReturns(handbook, known.get(1));
+        bodyMatches = Map.of(1, body(true, true));
+
+        SearchResponse response = searchService.search(request("laptop", null, SearchMode.KEYWORD));
+
+        assertEquals(List.of(1), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+        assertEquals(Set.of("KEYWORD"), response.getHits().get(0).getMatchedBy());
+        assertEquals(LexicalScorer.BODY_PHRASE_SCORE, response.getHits().get(0).getScore(), 1e-6);
+    }
+
+    @Test
+    void bodyMatchesRankBelowTitleAndDescriptionMatches() {
+        Document inTitle = doc(1, "Laptop Policy", "x");
+        Document inDescription = doc(2, "Equipment", "laptop policy and returns");
+        Document inBody = doc(3, "Onboarding", "first week");
+        keywordReturns(inTitle, inDescription);
+        scanReturns(inTitle, inDescription, inBody);
+        bodyMatches = Map.of(3, body(true, true, true));
+
+        SearchResponse response = searchService.search(request("laptop policy", null, SearchMode.KEYWORD));
+
+        assertEquals(List.of(1, 2, 3), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+    }
+
+    @Test
+    void searchStillAnswersWhenBodyMatchingFails() {
+        Document only = doc(1, "Leave Policy", "x");
+        keywordReturns(only);
+        bodyFailure = new IllegalStateException("MongoDB is down");
+
+        SearchResponse response = searchService.search(request("leave policy", null, SearchMode.KEYWORD));
+
+        assertEquals(List.of(1), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+    }
+
+    // ---------------------------------------------------------------- relevance floor for meaning-only hits
+
+    @Test
+    void weakMeaningOnlyHitsAreDropped() {
+        queryEmbedding = List.of(0.1f, 0.2f);
+        for (int id = 1; id <= 4; id++) {
+            doc(id, "Doc " + id, "x");
+        }
+        // Best 0.55, so the floor is max(0.33, 0.55 - 0.15) = 0.40.
+        vectorReturns(vectorItem(1, 0.55f, "a"), vectorItem(2, 0.45f, "b"),
+                      vectorItem(3, 0.38f, "c"), vectorItem(4, 0.20f, "d"));
+
+        SearchResponse response = searchService.search(request("zzz", null));
+
+        assertEquals(List.of(1, 2), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+        assertEquals(2, response.getTotalHits());
+    }
+
+    @Test
+    void anUnrelatedQueryFindsNothingByMeaning() {
+        queryEmbedding = List.of(0.1f, 0.2f);
+        doc(1, "Expense Policy", "x");
+        vectorReturns(vectorItem(1, 0.09f, "a")); // "chocolate cake recipe" against the demo corpus
+
+        SearchResponse response = searchService.search(request("chocolate cake recipe", null, SearchMode.SEMANTIC));
+
+        assertEquals(0, response.getTotalHits());
+    }
+
+    @Test
+    void keywordHitsStayWhateverTheirVectorScore() {
+        queryEmbedding = List.of(0.1f, 0.2f);
+        Document titled = doc(1, "Leave Policy", "x");
+        doc(2, "Sabbaticals", "y");
+        keywordReturns(titled);
+        vectorReturns(vectorItem(1, 0.10f, "a"), vectorItem(2, 0.60f, "b"));
+
+        SearchResponse response = searchService.search(request("leave policy", null));
+
+        assertEquals(Set.of(1, 2), Set.copyOf(response.getHits().stream().map(SearchHit::getDocumentId).toList()));
+    }
+
+    @Test
+    void theRelativeCutIgnoresDocumentsTheUserCannotRead() {
+        queryEmbedding = List.of(0.1f, 0.2f);
+        doc(1, "Exec Comp Review", "x");
+        doc(2, "Pay Bands", "y");
+        // Measured against the restricted 0.90, the visible 0.50 would fall below the cut.
+        vectorReturns(vectorItem(1, 0.90f, "a"), vectorItem(2, 0.50f, "b"));
+        readable = Set.of(2);
+
+        SearchResponse response = searchService.search(request("pay", null, SearchMode.SEMANTIC));
+
+        assertEquals(List.of(2), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+    }
+
+    @Test
+    void aCallersOwnVectorIsNotFiltered() {
+        // The floor is calibrated for the server's MiniLM embeddings only.
+        doc(1, "Doc", "x");
+        vectorReturns(vectorItem(1, 0.05f, "a"));
+
+        assertEquals(1, searchService.search(request(null, List.of(0.1f, 0.2f))).getTotalHits());
     }
 }

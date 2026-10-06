@@ -199,7 +199,7 @@ The same `run-tests.sh` runs in the Backend GitHub Actions workflow before the b
   - text containing `\u0000`, which breaks any implementation that relies on a NUL sentinel.
 - **Nested patterns.** The `{he, she, his, hers}` over `"ushers"` case catches broken Aho-Corasick output links: `he` is found only through the output-link chain.
 - **In the platform.**
-  - `LexicalScorerTest` (15 tests) and the search integration tests check the scorer.
+  - `LexicalScorerTest` (17 tests) and the search integration tests check the scorer.
   - The workbench has its own backend and frontend tests.
   - Two deliberate code breakages were each caught: keeping the wrong citations in the cut, and failing to merge touching highlights.
 
@@ -231,5 +231,5 @@ The same `run-tests.sh` runs in the Backend GitHub Actions workflow before the b
 ## 6. Limitations
 
 - **No Wikipedia corpus.** The syllabus's Indian-language Wikipedia corpus was deliberately not imported. It is a data-acquisition and licensing task (dump selection, licence review, storage), not an algorithm. In the platform, TextHack runs over the documents users upload instead.
-- **Titles and descriptions only.** Search scoring scans titles and descriptions, not the full document text; the body is covered by semantic search.
+- **Typo tolerance stops at the description.** The scorer also credits exact words in the document body, found by MongoDB; Damerau-Levenshtein runs only on titles and descriptions.
 - **Stale layout section.** The folder's own [README](../../subjects/DSA-3/README.md) still labels some packages "not yet implemented" in its layout section. Its status table is the current one: all packages are implemented.

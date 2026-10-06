@@ -127,7 +127,7 @@ It is one integrated project built across four courses. Each course owns a part 
 
 <img src="docs/readme/search-pipeline.svg" alt="Search pipeline: a keyword leg scored by TextHack and a vector leg in Qdrant are filtered by permission, then fused and ranked" width="100%">
 
-Each result's score is `(0.4 × keyword + 0.6 × (cosine + 1) / 2)`, divided by the weights of the legs that ran. Restricted documents are removed **before** ranking, so they never affect a count or a position.
+Keyword matching reads the title, the description and the document's full text, so a word that appears only in the body still counts. Each result's score is `(0.4 × keyword + 0.6 × (cosine + 1) / 2)`, divided by the weights of the legs that ran. A document found by meaning alone must reach a minimum similarity, so unrelated documents are left out instead of being listed with a low score. Restricted documents are removed **before** ranking, so they never affect a count or a position.
 
 | Mode | Finds documents by |
 |---|---|
@@ -148,7 +148,7 @@ The upload is a small saga: if any step after the first database write fails, th
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **191 pass** (187 in GitHub Actions on every change) |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **203 pass** (199 in GitHub Actions on every change) |
 | Frontend | 16 Vitest files: pages, session, API client | **149 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |

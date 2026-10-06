@@ -152,4 +152,30 @@ class LexicalScorerTest {
         assertEquals(1, exact.matchedTerms());
         assertEquals(LexicalScorer.COVERAGE_CEILING / 2, exact.score(), EPS);
     }
+
+    @Test
+    void theBodyCountsBelowTheTitleAndDescription() {
+        LexicalScorer.BodyEvidence phraseInBody = new LexicalScorer.BodyEvidence(true, new boolean[]{true, true});
+        LexicalScorer.BodyEvidence termsInBody = new LexicalScorer.BodyEvidence(false, new boolean[]{true, true});
+
+        assertEquals(LexicalScorer.BODY_PHRASE_SCORE,
+                scorer.score("leave policy", "Onboarding", "x", phraseInBody, true).score(), EPS);
+        // Every term somewhere in the body is enough to be a hit on its own.
+        double coverage = scorer.score("leave policy", "Onboarding", "x", termsInBody, true).score();
+        assertEquals(LexicalScorer.COVERAGE_CEILING * LexicalScorer.BODY_WEIGHT, coverage, EPS);
+        assertTrue(coverage >= LexicalScorer.MIN_SCAN_SCORE);
+        // The title and description still win.
+        assertEquals(LexicalScorer.TITLE_PHRASE_SCORE,
+                scorer.score("leave policy", "Leave Policy", "x", phraseInBody, true).score(), EPS);
+        assertEquals(LexicalScorer.DESCRIPTION_PHRASE_SCORE,
+                scorer.score("leave policy", "x", "the leave policy", phraseInBody, true).score(), EPS);
+    }
+
+    @Test
+    void anExactWordInTheBodyBeatsATypoInTheDescription() {
+        LexicalScorer.BodyEvidence inBody = new LexicalScorer.BodyEvidence(false, new boolean[]{true});
+        LexicalScorer.Match match = scorer.score("policy", "Notes", "the polcy notes", inBody, true);
+        assertFalse(match.fuzzy());
+        assertEquals(LexicalScorer.COVERAGE_CEILING * LexicalScorer.BODY_WEIGHT, match.score(), EPS);
+    }
 }
