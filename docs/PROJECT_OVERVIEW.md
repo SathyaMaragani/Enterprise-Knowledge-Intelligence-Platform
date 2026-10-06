@@ -379,7 +379,7 @@ flowchart LR
   - semantic search 0.4–0.9 s (6.5–9.4 s before tuning);
   - hybrid search 0.5–0.6 s;
   - memory 446 MiB steady, 485 MiB peak.
-- **Cold starts.** The free backend sleeps after 15 minutes without traffic. The frontend shows a "starting the server" screen until it answers.
+- **Cold starts.** The free backend sleeps after 15 minutes without traffic, so a scheduled GitHub Actions workflow requests `/api/health` every 5 minutes to keep it running. After a deploy or a restart, the frontend shows a "starting the server" screen until the backend answers.
 
 ---
 

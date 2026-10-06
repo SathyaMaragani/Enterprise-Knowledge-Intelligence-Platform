@@ -141,9 +141,9 @@ The Hobby plan is for personal, non-commercial use, which fits this academic pro
 |---|---|---|
 | 512 MB memory | The untuned image was OOM-killed while loading the model. | 391 MiB after startup, levelling off at 446 MiB after repeated searches, 16 concurrent searches and a 950 KB upload. No OOM. |
 | 0.1 CPU | Everything is slow compared with a laptop. | Semantic search 0.4–0.9 s, hybrid 0.5–0.6 s, keyword 0.2–0.4 s, sign-in about 0.8 s. |
-| Sleeps after 15 minutes without traffic | The next visit starts the JVM and loads the model again. | Locally: healthy after 101 s on AC power and 158–167 s on battery. **On Render:** Spring started in 85–90 s, and the first request to a sleeping service answered after 103–104 s. `ServerGate` shows "Starting the server" and continues by itself. |
+| Sleeps after 15 minutes without traffic | The next visit starts the JVM and loads the model again. | Locally: healthy after 101 s on AC power and 158–167 s on battery. **On Render:** Spring started in 85–90 s, and the first request to a sleeping service answered after 103–104 s. `ServerGate` shows "Starting the server" and continues by itself. The `Keep backend awake` workflow (`.github/workflows/keep-alive.yml`) requests `/api/health` every 5 minutes, so the service no longer sleeps; a cold start now happens only after a deploy or a restart. |
 | Vercel's proxy waits at most 120 s | A request that takes longer gets a 504, although the backend finishes it. While Render is waking, Vercel answers `/api/*` with a 502 within about a second; `ServerGate` treats that as "not ready yet" and retries. | A 50 KB text upload (45 chunks) took 13.4 s locally, so uploads above roughly 400 KB can show an error and still appear in the repository. |
-| 750 free instance hours a month | Enough for this one service running all month. | — |
+| 750 free instance hours a month | Enough for this one service running all month (at most 744 hours), which the keep-alive workflow now does. Another free web service in the same Render workspace would share the 750 hours. | — |
 | Qdrant Cloud free cluster | Suspended after a week without use. | — |
 
 If memory ever runs short on Render (the logs say "Ran out of memory"), the next

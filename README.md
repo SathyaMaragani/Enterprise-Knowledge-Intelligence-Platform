@@ -198,7 +198,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 ## Getting started
 
-**Try it online:** open **[ekipsearch.vercel.app](https://ekipsearch.vercel.app)**. The free backend sleeps after 15 minutes without traffic, so the first visit can take up to two minutes while it wakes up. There is no self sign-up: an administrator creates accounts.
+**Try it online:** open **[ekipsearch.vercel.app](https://ekipsearch.vercel.app)**. A scheduled workflow keeps the free backend awake, so it normally answers at once; just after a deploy, the first visit can take up to two minutes while it starts. There is no self sign-up: an administrator creates accounts.
 
 **Run the whole stack locally** (needs Docker):
 

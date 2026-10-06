@@ -1,0 +1,24 @@
+name: Keep backend awake
+
+# Render's free plan stops the backend after 15 minutes without inbound traffic,
+# and a cold start takes about 100 s. A request every 5 minutes keeps it running.
+# GitHub may delay scheduled runs under load, hence 5 minutes rather than 14.
+# /api/health returns a fixed response and touches no database.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the backend
+        # The retries cover a deploy or a cold start in progress.
+        run: >
+          curl --fail --silent --show-error
+          --retry 6 --retry-delay 20 --retry-all-errors --max-time 150
+          https://enterprise-knowledge-intelligence-0hg2.onrender.com/api/health
