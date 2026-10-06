@@ -701,7 +701,8 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.totalHits").value(1))
                 .andExpect(jsonPath("$.hits[0].documentId").value(3))
                 .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")))
-                .andExpect(jsonPath("$.hits[0].score").value(com.eip.backend.service.LexicalScorer.BODY_PHRASE_SCORE));
+                // 0.4 * 0.7 / 0.4 is not exactly 0.7 in floating point.
+                .andExpect(jsonPath("$.hits[0].score", closeTo(com.eip.backend.service.LexicalScorer.BODY_PHRASE_SCORE, 1e-9)));
     }
 
     @Test
