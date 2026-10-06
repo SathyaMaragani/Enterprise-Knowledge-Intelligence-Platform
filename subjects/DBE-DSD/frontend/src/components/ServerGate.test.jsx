@@ -42,4 +42,22 @@ describe('ServerGate', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/health');
   });
+
+  it('abandons a hung health request and asks again', async () => {
+    vi.useFakeTimers();
+    // The first request never answers on its own; it only ends when aborted.
+    const hung = (path, { signal } = {}) =>
+      new Promise((resolve, reject) => signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))));
+    const fetchMock = vi.fn().mockImplementationOnce(hung).mockResolvedValueOnce(jsonResponse(200, { status: 'UP' }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderGate();
+
+    await act(() => vi.advanceTimersByTimeAsync(14_000));
+    expect(screen.getByRole('heading', { name: 'Starting the server' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(1_000 + 5_000));
+    expect(screen.getByText('app content')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

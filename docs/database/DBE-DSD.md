@@ -376,7 +376,7 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 | Suite | Result |
 |---|---|
 | Backend (JUnit 5, MockMvc, Spring Security test) | **191 tests pass**: 187 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| Frontend (Vitest + Testing Library, 16 files) | **148 tests pass** |
+| Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
 | Render free-tier limits | Healthy after 101 s; semantic search 0.4–0.9 s (was 6.5–9.4 s before tuning); hybrid 0.5–0.6 s; memory 446 MiB steady, 485 MiB peak |

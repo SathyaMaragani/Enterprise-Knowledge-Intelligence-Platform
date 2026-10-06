@@ -6,14 +6,21 @@ import { useEffect, useState } from 'react';
 const RETRY_MS = 5000;
 // A healthy backend answers well within this, so a normal load shows no wake-up screen.
 const QUIET_MS = 1500;
+// A request made while Render is restarting the instance can hang for many minutes and
+// would hold the gate shut after the backend is up, so each attempt is abandoned after this.
+const ATTEMPT_MS = 15000;
 
 async function isHealthy() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ATTEMPT_MS);
   try {
-    const response = await fetch('/api/health', { headers: { Accept: 'application/json' } });
+    const response = await fetch('/api/health', { headers: { Accept: 'application/json' }, signal: controller.signal });
     return response.ok && JSON.parse(await response.text()).status === 'UP';
   } catch {
-    // Unreachable, or a proxy's error or wake-up page instead of our JSON.
+    // Unreachable, timed out, or a proxy's error or wake-up page instead of our JSON.
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
