@@ -283,10 +283,3 @@ enterprise-knowledge-intelligence/
 | Aneeq | 2510080005 |
 | Abhinav | 2510080002 |
 
-**Guide:** Anitha. P &nbsp;·&nbsp; Department of Artificial Intelligence and Data Science, KLH University
-
-<br>
-
-<div align="center">
-<sub>Built for DBE-DSD (25CS1302E), DSA-3 (25CS2103E), ML (25SC2107E) and OSSP (25CS2104E), 2026.</sub>
-</div>
