@@ -93,7 +93,7 @@ It is one integrated project built across four courses. Each course owns a part 
   <tr>
     <td valign="top">
       <img src="docs/screenshots/texthack-workbench.png" alt="TextHack workbench, pattern search tab">
-      <p align="center"><b>TextHack workbench</b><br><sub>Pattern search, similarity, citation flow and complexity, run on your own input.</sub></p>
+      <p align="center"><b>TextHack workbench</b><br><sub>Aho-Corasick finds all 11 matches of three patterns in one pass; similarity, citation flow and complexity sit alongside.</sub></p>
     </td>
     <td valign="top">
       <img src="docs/screenshots/ml-insights.png" alt="ML insights page with classification results">
@@ -141,6 +141,35 @@ Keyword matching reads the title, the description and the document's full text, 
 <img src="docs/readme/upload-pipeline.svg" alt="Upload pipeline: validate and extract, write PostgreSQL, chunk, write MongoDB, version, embed into Qdrant; any failure is undone in reverse order" width="100%">
 
 The upload is a small saga: if any step after the first database write fails, the earlier writes are undone in reverse order, so no store is left with half a document.
+
+### Data model
+
+<img src="docs/readme/polyglot.svg" alt="One document across three stores: its PostgreSQL row, its MongoDB text and chunks, and its Qdrant vectors, all keyed by PostgreSQL id 44" width="100%">
+
+Every document has one identity: its PostgreSQL id. MongoDB stores it as `postgres_document_id` and every Qdrant point carries it in its payload, so the three stores join on the same key.
+
+<details>
+<summary><b>PostgreSQL schema: 12 tables</b></summary>
+
+<br>
+
+<img src="docs/readme/er-diagram.svg" alt="Entity-relationship diagram of the 12 PostgreSQL tables: users, roles, permissions, documents, categories, versions, grants, tags and search history" width="100%">
+
+Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/postgresql/docs/DATA_DICTIONARY.md).
+
+</details>
+
+### Security
+
+<p align="center">
+  <img src="docs/readme/security.svg" alt="Every request passes the JWT filter, the endpoint's permission check and the single document read rule before reaching a controller" width="80%">
+</p>
+
+- **Passwords** are BCrypt hashes, and a failed sign-in never reveals whether the account exists.
+- **Tokens** are HS256 JWTs valid for 24 hours and only while the account is enabled. The signing secret has no default.
+- **Permissions, not role names,** guard every endpoint: ADMIN holds all six, MANAGER create, read and update, EMPLOYEE read.
+- **Uploads** are capped at 10 MB, with XML external entities disabled and a 64 MB unzip limit for Word files.
+- **No secrets in the repository:** every credential comes from environment variables.
 
 ## Results
 
@@ -215,6 +244,17 @@ enterprise-knowledge-intelligence/
 ├── .github/workflows/            Backend and Frontend CI
 └── render.yaml                   Render Blueprint for the backend
 ```
+
+## Limitations and roadmap
+
+| Today | Next step |
+|---|---|
+| Body matching is exact (no typo tolerance) and scans every body in MongoDB | Take candidates from the `content.raw_text` text index or Atlas Search |
+| Restricted users can get fewer semantic hits, because permissions are applied after Qdrant's top-K | Pass the readable ids to Qdrant as a payload filter |
+| No OCR for scanned PDFs | Add an OCR step to text extraction |
+| Embedding runs inside the upload request | Move it to a background job for large files |
+| ML results are displayed, not served | Suggest a category when a document is uploaded |
+| ShellForge runs on its own | Job control, FIFOs, shared memory and threads from the rest of the OSSP syllabus |
 
 ## Documentation and reviews
 
