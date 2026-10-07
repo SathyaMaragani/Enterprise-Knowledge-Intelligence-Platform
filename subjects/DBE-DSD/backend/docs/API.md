@@ -281,7 +281,7 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
 
 | Field | Required | Notes |
 |---|---|---|
-| `query` | one of `query`/`vector` | Lexical match on title and description, tolerant of reordered terms and typos (see **Keyword scoring**). |
+| `query` | one of `query`/`vector` | Lexical match on title, description and document text, tolerant of reordered terms, partly typed words and typos (see **Keyword scoring**). |
 | `vector` | one of `query`/`vector` | Must be exactly 384 floats. When omitted and the embedding model is enabled, the server embeds `query` itself. |
 | `category` | no | Applied to both backends. |
 | `department` | no | Qdrant payload filter; ignored by keyword search. |
@@ -295,8 +295,8 @@ ranked, so `totalHits` is always the caller's own view of the corpus.
 | Mode | Runs | `sources` |
 |---|---|---|
 | `HYBRID` | Typo-tolerant keyword search fused with semantic search. If semantic search cannot run (no embedding model, Qdrant down) it answers from keywords alone. | `KEYWORD`, `VECTOR`, or `KEYWORD` when degraded |
-| `KEYWORD` | Keyword search on exact whole terms: phrases and reordered words, no typo tolerance. | `KEYWORD` |
-| `FUZZY` | Keyword search that also credits terms within one or two edits. | `KEYWORD` |
+| `KEYWORD` | Keyword search on exact whole terms: phrases and reordered words, no typo or prefix tolerance. | `KEYWORD` |
+| `FUZZY` | Keyword search that also credits partly typed words and terms within one or two edits. | `KEYWORD` |
 | `SEMANTIC` | Semantic search alone. With no embedding model it returns 503 rather than an empty list. | `VECTOR` |
 
 `KEYWORD` and `FUZZY` need a `query`; a supplied `vector` is ignored. In the
@@ -333,43 +333,52 @@ longer exists there (a vector chunk outliving its document) are dropped, and
 `status` is enforced on the document's current status, since Qdrant has no
 status filter.
 
-**Ranking**: `score` is a 0..1 blend of `keywordScore` (weight 0.4) and
-`vectorScore` (weight 0.6), normalised over whichever backends actually ran — a
-keyword-only search still scores on the full 0..1 range. When several chunks of
-one document match, the document takes its single best chunk, reported as
-`chunkId`.
+**Ranking**: `score` (0..1) is the stronger of the keyword and meaning scores
+plus half the weaker's share of what remains: `max + 0.5 × min × (1 − max)`. An
+exact word therefore shows 90-100% whatever its meaning score, agreement between
+the two lifts a result, and nothing passes 1.0. A backend that did not run
+contributes 0. When several chunks of one document match, the document takes its
+single best chunk, reported as `chunkId`.
 
-`vectorScore` is the raw cosine similarity Qdrant returned, so it runs -1..1:
-1 is identical, 0 orthogonal, negative values point away from the query. Fusion
-maps it to 0..1 as `(vectorScore + 1) / 2` before weighting, which is monotonic
-and so never reorders vector results. `score` is therefore not reconstructible
-from `keywordScore` and `vectorScore` without applying that transform.
+`vectorScore` is the raw cosine similarity Qdrant returned, so it runs -1..1.
+For the server's own MiniLM embeddings, fusion maps it to a meaning score with
+`(vectorScore − 0.10) / 0.60`, clamped to 0..0.95: unrelated text sits near 0.10,
+relevant documents at 0.3-0.7, and meaning alone never claims 100%. A caller's
+own vector is mapped with `(vectorScore + 1) / 2`. Both maps are monotonic and
+never reorder vector results.
 
 **Keyword scoring** (Phase 1.7C) uses the DSA-3 TextHack engine. The keyword leg
 has two passes that report as one `KEYWORD` source:
 
 1. PostgreSQL finds documents containing the whole query as a phrase.
 2. A TextHack scan over the documents passing `category`/`status` finds what a
-   phrase match cannot: query terms in another order, or misspelled.
+   phrase match cannot: query terms in another order, partly typed, or misspelled.
+
+MongoDB reports which terms each document's text contains, whole or as the start
+of a word, and whether it contains the whole query.
 
 Each candidate's `keywordScore` (0..1) is:
 
 | Evidence | Score |
 |---|---|
-| Whole query in the title (KMP) | 1.0 |
-| Whole query in the description | 0.75 |
-| Term coverage (Aho-Corasick, whole tokens) | up to 0.9 |
+| Whole query in the title, at word boundaries (KMP) | 1.0 |
+| Whole query in the description | 0.95 |
+| Whole query in the document text | 0.9 |
+| Any of those with the last word only begun | 0.85 × that |
+| Term coverage (Aho-Corasick) | up to 0.95 |
 
-Coverage averages a credit per query term: 1.0 exact, 0.7 one edit away, 0.5 two
-edits away (Damerau-Levenshtein, optimal string alignment). Terms found only in
-the description count at 0.6 of that. The result is the larger of the phrase
-score and coverage, except that a title phrase match always scores 1.0. Allowed
-edits scale with term length: none up to 3 characters, 1 for 4-7, 2 for 8 or
-more. Stopwords and single characters are ignored. Documents found only by the
-scan must score at least 0.5.
+Coverage averages a credit per query term: 1.0 for the whole word; for a word it
+begins (3+ letters typed), 0.5 + 0.5 × typed ÷ word length; for a misspelling,
+1 − edits ÷ longer length (Damerau-Levenshtein, optimal string alignment).
+Description terms count 0.95 and text terms 0.9 of that. The result is the
+larger of the phrase score and coverage. A query inside a longer word is not a
+match (`port` does not find "Report"). Allowed edits scale with term length:
+none up to 3 characters, 1 for 4-5, 2 for 6 or more. Stopwords and single
+characters are ignored. A hit must match every term of a one- or two-term
+query, or 60% of a longer one.
 
 **`matchedBy`** lists the signals that found a hit: `KEYWORD`, `VECTOR`, and
-`FUZZY` when the keyword score depended on a misspelled term. A query for
+`FUZZY` when the keyword score depended on a misspelled or partly typed term. A query for
 `Finacial` returns "Q1 Financial Report" with `["KEYWORD", "FUZZY"]`.
 
 **`sources`** names the backends that answered. If Qdrant is unavailable but a

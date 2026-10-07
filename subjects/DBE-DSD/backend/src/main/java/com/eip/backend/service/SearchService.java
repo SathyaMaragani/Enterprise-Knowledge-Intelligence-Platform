@@ -64,9 +64,6 @@ public class SearchService {
     // LexicalScorer for ranking only.
     private static final int SCAN_LIMIT = 5000;
 
-    private static final double KEYWORD_WEIGHT = 0.4;
-    private static final double VECTOR_WEIGHT = 0.6;
-
     /*
      * Qdrant returns the nearest chunks for any query, related or not, so a hit
      * found by meaning alone must clear both bars below. Calibrated for MiniLM:
@@ -173,9 +170,8 @@ public class SearchService {
         }
 
         List<SearchHit> ranked = new ArrayList<>(hits.values());
-        double activeWeight = (keywordRan ? KEYWORD_WEIGHT : 0) + (vectorRan ? VECTOR_WEIGHT : 0);
         for (SearchHit hit : ranked) {
-            hit.setScore(combinedScore(hit, activeWeight));
+            hit.setScore(combinedScore(hit.getKeywordScore(), hit.getVectorScore(), embeddedHere));
         }
         ranked.sort(Comparator.comparingDouble(SearchHit::getScore).reversed()
                 .thenComparing(SearchHit::getDocumentId));
@@ -203,14 +199,15 @@ public class SearchService {
      *
      * <ol>
      *   <li>PostgreSQL phrase candidates ({@code ILIKE}). Not bound by the scan
-     *       cap, so phrase matches are found across the whole table. Always kept:
-     *       they contain the query and so score at least
-     *       {@value LexicalScorer#DESCRIPTION_PHRASE_SCORE}.</li>
-     *   <li>The TextHack scan, adding what the SQL phrase match cannot express --
-     *       reordered terms and near-miss spellings. Kept only when it matches
-     *       enough of the query's terms ({@link LexicalScorer#coversEnough}), so a
-     *       document sharing one incidental word with a long query is not a hit.</li>
+     *       cap, so phrase matches are found across the whole table.</li>
+     *   <li>The TextHack scan, adding what the SQL phrase match cannot express:
+     *       reordered terms, partly typed words and misspellings.</li>
      * </ol>
+     *
+     * <p>Either way a document is kept only when it matches enough of the query's
+     * terms ({@link LexicalScorer#coversEnough}): a document sharing one incidental
+     * word with a long query is not a hit, and neither is one where the query
+     * appears only inside a longer word ("port" in "report").
      *
      * <p>{@code typoCredit} is below 1 when the query was corrected: every hit is
      * then a typo-level match, discounted and marked FUZZY.
@@ -220,24 +217,29 @@ public class SearchService {
         query = query.trim();
         String category = blankIfNull(request.getCategory());
         String status = blankIfNull(request.getStatus());
-        Map<Integer, LexicalScorer.BodyEvidence> bodies = bodyMatches(query);
+        Map<Integer, LexicalScorer.BodyEvidence> bodies = bodyMatches(query, allowFuzzy);
+        Set<Integer> scored = new HashSet<>();
 
         for (Document document : documentRepository.searchByKeyword(
                 query, category, status, PageRequest.of(0, CANDIDATE_LIMIT))) {
-            addKeywordHit(hits, document, lexicalScorer.score(query, document.getTitle(), document.getDescription(),
-                                                              bodies.get(document.getId()), allowFuzzy), typoCredit);
+            scoreKeywordCandidate(hits, scored, document, query, bodies, allowFuzzy, typoCredit);
         }
-
         for (Document document : documentRepository.findForLexicalScan(
                 category, status, PageRequest.of(0, SCAN_LIMIT))) {
-            if (hits.containsKey(document.getId())) {
-                continue; // already scored identically by the phrase pass
-            }
-            LexicalScorer.Match match = lexicalScorer.score(query, document.getTitle(), document.getDescription(),
-                                                            bodies.get(document.getId()), allowFuzzy);
-            if (LexicalScorer.coversEnough(match)) {
-                addKeywordHit(hits, document, match, typoCredit);
-            }
+            scoreKeywordCandidate(hits, scored, document, query, bodies, allowFuzzy, typoCredit);
+        }
+    }
+
+    private void scoreKeywordCandidate(Map<Integer, SearchHit> hits, Set<Integer> scored, Document document,
+                                       String query, Map<Integer, LexicalScorer.BodyEvidence> bodies,
+                                       boolean allowFuzzy, double typoCredit) {
+        if (!scored.add(document.getId())) {
+            return; // already scored identically by the phrase pass
+        }
+        LexicalScorer.Match match = lexicalScorer.score(query, document.getTitle(), document.getDescription(),
+                                                        bodies.get(document.getId()), allowFuzzy);
+        if (LexicalScorer.coversEnough(match)) {
+            addKeywordHit(hits, document, match, typoCredit);
         }
     }
 
@@ -252,10 +254,10 @@ public class SearchService {
     }
 
     /** Body matches from MongoDB. If MongoDB is down, search still answers from titles and descriptions. */
-    private Map<Integer, LexicalScorer.BodyEvidence> bodyMatches(String query) {
+    private Map<Integer, LexicalScorer.BodyEvidence> bodyMatches(String query, boolean allowPrefix) {
         String phrase = LexicalScorer.normalise(query);
         try {
-            return bodyTextMatcher.match(phrase, LexicalScorer.terms(phrase));
+            return bodyTextMatcher.match(phrase, LexicalScorer.terms(phrase), allowPrefix);
         } catch (RuntimeException e) {
             logger.warn("Body text matching unavailable, searching titles and descriptions only: {}", e.getMessage());
             return Map.of();
@@ -349,30 +351,34 @@ public class SearchService {
         return present;
     }
 
-    private double combinedScore(SearchHit hit, double activeWeight) {
-        if (activeWeight <= 0) {
-            return 0;
-        }
-        double total = 0;
-        if (hit.getKeywordScore() != null) {
-            total += KEYWORD_WEIGHT * hit.getKeywordScore();
-        }
-        if (hit.getVectorScore() != null) {
-            total += VECTOR_WEIGHT * normaliseCosine(hit.getVectorScore());
-        }
-        return total / activeWeight;
+    /**
+     * The score a user sees, 0..1. Each leg's score already reads as "how well this
+     * matches": keyword is how completely the document contains what was typed,
+     * meaning is the calibrated similarity. The result is the stronger of the two,
+     * plus half the other's share of what remains, so an exact word in a document
+     * shows 90-100% whatever its meaning score, and agreement between the legs
+     * lifts a result without ever passing a perfect match.
+     */
+    static double combinedScore(Double keywordScore, Double vectorScore, boolean calibrated) {
+        double keyword = keywordScore == null ? 0.0 : keywordScore;
+        double meaning = vectorScore == null ? 0.0 : semanticScore(vectorScore, calibrated);
+        double strong = Math.max(keyword, meaning);
+        double weak = Math.min(keyword, meaning);
+        return strong + 0.5 * weak * (1.0 - strong);
     }
 
     /**
-     * The knowledge_chunks collection uses cosine distance, so Qdrant returns
-     * similarities in [-1, 1] -- orthogonal chunks score 0 and opposed chunks
-     * score negative. Map that onto the [0, 1] the fused score promises. The
-     * transform is monotonic, so it never reorders vector results; `vectorScore`
-     * on the response stays the raw value Qdrant reported.
+     * Turns a cosine similarity into a 0..1 score. For the server's own MiniLM
+     * embeddings the useful range is narrow: unrelated text sits near 0, relevant
+     * documents at 0.3-0.7. That range is stretched to 0-0.95; meaning alone never
+     * reaches 100%, which is kept for literal matches. A caller's own vector has an
+     * unknown scale, so it is only mapped from [-1, 1] onto [0, 1]. Both transforms
+     * are monotonic, so they never reorder vector results; `vectorScore` on the
+     * response stays the raw value Qdrant reported.
      */
-    private static double normaliseCosine(double similarity) {
-        double normalised = (similarity + 1.0) / 2.0;
-        return Math.max(0.0, Math.min(1.0, normalised));
+    static double semanticScore(double cosine, boolean calibrated) {
+        double score = calibrated ? (cosine - 0.10) / 0.60 : (cosine + 1.0) / 2.0;
+        return Math.max(0.0, Math.min(calibrated ? 0.95 : 1.0, score));
     }
 
     // ponytail: paging over the fused list in memory, capped at CANDIDATE_LIMIT

@@ -524,9 +524,10 @@ class EipApplicationTests {
 
     @Test
     void testUnifiedSearchPagination() throws Exception {
+        // A vector search returns all 10 seeded documents: enough for two full pages.
         String firstPage = mockMvc.perform(post("/api/search")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(unifiedSearch("e", null, 0, 2)))
+                        .content(unifiedSearch(null, generateTestVector(384), 0, 2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(2))
@@ -536,7 +537,7 @@ class EipApplicationTests {
 
         String secondPage = mockMvc.perform(post("/api/search")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(unifiedSearch("e", null, 1, 2)))
+                        .content(unifiedSearch(null, generateTestVector(384), 1, 2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.hits", hasSize(2)))
@@ -701,7 +702,7 @@ class EipApplicationTests {
                 .andExpect(jsonPath("$.totalHits").value(1))
                 .andExpect(jsonPath("$.hits[0].documentId").value(3))
                 .andExpect(jsonPath("$.hits[0].matchedBy", contains("KEYWORD")))
-                // 0.4 * 0.7 / 0.4 is not exactly 0.7 in floating point.
+                // An exact word in the text alone reads as 90%.
                 .andExpect(jsonPath("$.hits[0].score", closeTo(com.eip.backend.service.LexicalScorer.BODY_PHRASE_SCORE, 1e-9)));
     }
 

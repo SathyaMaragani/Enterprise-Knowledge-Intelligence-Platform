@@ -12,56 +12,41 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Phase 1.7C -- lexical relevance scoring backed by the DSA-3 TextHack engine.
+ * Lexical relevance scoring backed by the DSA-3 TextHack engine.
  *
- * <p>Replaces the 1.7A placeholder, which scored a keyword hit 1.0 if the whole
- * query appeared in the title and 0.5 otherwise. That could not tell a document
- * using every query term from one using a single term, and a one-character typo
- * scored nothing at all. This scorer uses three TextHack algorithms, each for
- * the job it is actually suited to:
+ * <p>Three TextHack algorithms, each for the job it suits:
  *
  * <ul>
- *   <li><b>KMP</b> ({@link KmpSearch}) detects the whole query as a phrase. That
- *       is a single-pattern search, where KMP's guaranteed linear bound is the
- *       right tool.</li>
+ *   <li><b>KMP</b> ({@link KmpSearch}) finds the whole query as a phrase: a
+ *       single-pattern search, where KMP's linear bound is the right tool.</li>
  *   <li><b>Aho-Corasick</b> ({@link AhoCorasick}) finds every query term in a
- *       field in one pass. Running a single-pattern matcher once per term would
- *       rescan the field k times.</li>
+ *       field in one pass, instead of rescanning the field once per term.</li>
  *   <li><b>Damerau-Levenshtein, OSA variant</b>
- *       ({@link DamerauLevenshtein#optimalStringAlignment}) credits terms that
- *       are near-misses. OSA rather than plain Levenshtein because transposed
- *       letters ("recieve") are among the most common typing errors, and plain
- *       Levenshtein charges them two edits instead of one.</li>
+ *       ({@link DamerauLevenshtein#optimalStringAlignment}) credits misspelled
+ *       terms. OSA counts a swapped pair ("recieve") as one edit, not two.</li>
  * </ul>
  *
  * <h2>Score, 0..1</h2>
- * <ol>
- *   <li>Whole query contained in the title: {@value #TITLE_PHRASE_SCORE}. This
- *       is deliberately unchanged from 1.7A, so an exact title match still
- *       normalises to the top of the range.</li>
- *   <li>Otherwise the larger of: whole query contained in the description
- *       ({@value #DESCRIPTION_PHRASE_SCORE}), or term coverage scaled to at most
- *       {@value #COVERAGE_CEILING}.</li>
- * </ol>
+ * The larger of a phrase score and a term-coverage score, so a score reads as how
+ * completely the document contains what was typed:
+ * <ul>
+ *   <li><b>Phrase:</b> the whole query, at word boundaries, in the title
+ *       ({@value #TITLE_PHRASE_SCORE}), description ({@value #DESCRIPTION_PHRASE_SCORE})
+ *       or text ({@value #BODY_PHRASE_SCORE}). A phrase whose last word is only
+ *       begun ("remote work" in "remote working") earns {@value #PARTIAL_PHRASE_FACTOR}
+ *       of that. "port" inside "report" is not a phrase match.</li>
+ *   <li><b>Coverage:</b> the average per-term credit, at most
+ *       {@value #COVERAGE_CEILING} so reordered terms rank just below the exact
+ *       phrase. A term earns 1.0 as a whole word; a word it begins (3+ letters
+ *       typed) earns {@link #prefixCredit}; a misspelling earns {@link #typoCredit}.
+ *       Description terms count {@value #DESCRIPTION_WEIGHT} and text terms
+ *       {@value #BODY_WEIGHT}, so the title ranks first among equal matches.</li>
+ * </ul>
  *
- * <p>Term coverage averages a per-term credit: 1.0 for an exact whole-token
- * match, {@value #ONE_EDIT_CREDIT} one edit away, {@value #TWO_EDIT_CREDIT} two
- * edits away. Description matches are weighted by {@value #DESCRIPTION_WEIGHT},
- * since a term in a title says more about a document than one in its summary.
- *
- * <p>The coverage ceiling sits below 1.0 so that "all terms, reordered" never
- * ties with "the exact phrase in the title".
- *
- * <h2>Phrase containment versus term matching</h2>
- * Phrase detection is substring-based, matching PostgreSQL's {@code ILIKE}
- * semantics so both keyword paths agree on what a phrase match is. Term matching
- * is whole-token: "policy" does not exactly match inside "policyholder".
- *
- * <h2>Fuzzy thresholds</h2>
+ * <h2>Typo budget</h2>
  * Allowed edits scale with term length, as in Elasticsearch's AUTO fuzziness:
- * none for terms of up to 3 characters, 1 for 4-7, 2 for 8 or more. Short terms
- * get no tolerance because at that length one edit is most of the word -- "nba"
- * is one edit from "nda", but they are not the same query.
+ * none up to 3 letters, 1 for 4-5, 2 for 6 or more. At 3 letters one edit is most
+ * of the word: "nba" is one edit from "nda", but they are not the same query.
  *
  * <p>Stateless and thread-safe.
  */
@@ -74,38 +59,47 @@ public class LexicalScorer {
     }
 
     /**
-     * What the document body contains, found in MongoDB by {@link BodyTextMatcher}:
-     * the whole query as a phrase, and each of {@link #terms} as a whole word.
-     * Exact only; typo tolerance stays on the title and description.
+     * What the document text contains, found in MongoDB by {@link BodyTextMatcher}:
+     * whether it holds the whole query as a phrase, and a credit per term of
+     * {@link #terms}: 1.0 for the whole word, {@value #BODY_PREFIX_CREDIT} for a word
+     * the term begins, 0 for neither.
      */
-    public record BodyEvidence(boolean phrase, boolean[] terms) {
+    public record BodyEvidence(boolean phrase, double[] credits) {
     }
 
     public static final double TITLE_PHRASE_SCORE = 1.0;
-    public static final double DESCRIPTION_PHRASE_SCORE = 0.75;
-    /** Just below a description phrase: a summary says more about a document than one line of its text. */
-    public static final double BODY_PHRASE_SCORE = 0.7;
-    public static final double COVERAGE_CEILING = 0.9;
-    public static final double DESCRIPTION_WEIGHT = 0.6;
-    /** Weight of a term found only in the body. */
-    public static final double BODY_WEIGHT = 0.6;
-    public static final double ONE_EDIT_CREDIT = 0.7;
-    public static final double TWO_EDIT_CREDIT = 0.5;
+    public static final double DESCRIPTION_PHRASE_SCORE = 0.95;
+    public static final double BODY_PHRASE_SCORE = 0.9;
+    public static final double PARTIAL_PHRASE_FACTOR = 0.85;
+    public static final double COVERAGE_CEILING = 0.95;
+    public static final double DESCRIPTION_WEIGHT = 0.95;
+    public static final double BODY_WEIGHT = 0.9;
+    /** A word the term begins, in the text; the full word's length is not known there. */
+    public static final double BODY_PREFIX_CREDIT = 0.8;
+    /** Fewer letters than this match only whole words: "re" begins too many. */
+    public static final int MIN_PREFIX_LENGTH = 3;
 
     /**
      * Share of a long query's terms a document found only by the TextHack scan
      * must match to count as a hit; queries of one or two terms need every term.
-     * This used to be a minimum score of 0.5, which mixed up how many terms
-     * matched with where: a one-word typo matching a description scored 0.38 and
-     * was dropped. Documents found by the SQL phrase match are always kept.
      */
     public static final double MIN_TERM_COVERAGE = 0.6;
 
-    /** Whether a scan match covers enough of the query to be a hit. */
+    /** Whether a match covers enough of the query to be a hit. */
     public static boolean coversEnough(Match match) {
         int total = match.totalTerms();
         int required = total <= 2 ? total : (int) Math.ceil(MIN_TERM_COVERAGE * total);
         return match.score() > 0 && match.matchedTerms() >= required;
+    }
+
+    /** Credit for a misspelling: how much of the longer word is right, e.g. 1 edit in 6 letters = 0.83. */
+    public static double typoCredit(int distance, int termLength, int wordLength) {
+        return 1.0 - (double) distance / Math.max(termLength, wordLength);
+    }
+
+    /** Credit for a word begun but not finished: 0.5 plus half the share typed, e.g. "secur" of "security" = 0.81. */
+    public static double prefixCredit(int typedLength, int wordLength) {
+        return 0.5 + 0.5 * typedLength / wordLength;
     }
 
     private static final int MIN_TERM_LENGTH = 2;
@@ -116,6 +110,8 @@ public class LexicalScorer {
             "my", "of", "on", "or", "our", "should", "so", "that", "the", "their",
             "then", "there", "these", "this", "to", "was", "we", "what", "when",
             "where", "which", "who", "why", "will", "with", "you", "your");
+
+    private enum PhraseFit { NONE, PARTIAL, EXACT }
 
     private final KmpSearch phraseMatcher = new KmpSearch();
 
@@ -131,7 +127,8 @@ public class LexicalScorer {
 
     /**
      * As {@link #score(String, String, String)}, with typo tolerance switchable:
-     * when {@code allowFuzzy} is false only exact whole-token terms earn credit.
+     * when {@code allowFuzzy} is false only whole words earn credit (no
+     * misspellings, no partly typed words).
      */
     public Match score(String query, String title, String description, boolean allowFuzzy) {
         return score(query, title, description, null, allowFuzzy);
@@ -139,7 +136,7 @@ public class LexicalScorer {
 
     /**
      * As {@link #score(String, String, String, boolean)}, also crediting what the
-     * document body contains. {@code body} is null for a body with no query term.
+     * document text contains. {@code body} is null for a text with no query term.
      */
     public Match score(String query, String title, String description, BodyEvidence body, boolean allowFuzzy) {
         if (query == null) {
@@ -154,15 +151,17 @@ public class LexicalScorer {
         String descriptionText = description == null ? "" : description.toLowerCase(Locale.ROOT);
         List<String> terms = terms(phrase);
 
-        if (contains(titleText, phrase)) {
-            return new Match(TITLE_PHRASE_SCORE, false, terms.size(), terms.size());
-        }
-        double phraseScore = contains(descriptionText, phrase) ? DESCRIPTION_PHRASE_SCORE
-                : body != null && body.phrase() ? BODY_PHRASE_SCORE
-                : 0.0;
-
-        if (terms.isEmpty()) {
-            return new Match(phraseScore, false, 0, 0);
+        PhraseFit inTitle = phraseFit(titleText, phrase, allowFuzzy);
+        PhraseFit inDescription = phraseFit(descriptionText, phrase, allowFuzzy);
+        double titlePhrase = phraseScore(inTitle, TITLE_PHRASE_SCORE);
+        double descriptionPhrase = phraseScore(inDescription, DESCRIPTION_PHRASE_SCORE);
+        double bodyPhrase = body != null && body.phrase() ? BODY_PHRASE_SCORE : 0.0;
+        double phraseScore = Math.max(titlePhrase, Math.max(descriptionPhrase, bodyPhrase));
+        // A phrase whose last word is only begun is an inexact match.
+        boolean phraseInexact = phraseScore > 0 && phraseScore > bodyPhrase
+                && (titlePhrase >= descriptionPhrase ? inTitle : inDescription) == PhraseFit.PARTIAL;
+        if (phraseScore == TITLE_PHRASE_SCORE || terms.isEmpty()) {
+            return new Match(phraseScore, phraseInexact, phraseScore > 0 ? terms.size() : 0, terms.size());
         }
 
         TermCredits fromTitle = credit(terms, titleText, allowFuzzy);
@@ -173,21 +172,17 @@ public class LexicalScorer {
         boolean fuzzyUsed = false;
 
         for (int i = 0; i < terms.size(); i++) {
-            double titleCredit = fromTitle.credit[i];
+            double best = fromTitle.credit[i];
+            boolean bestWasFuzzy = fromTitle.fuzzy[i];
             double descriptionCredit = DESCRIPTION_WEIGHT * fromDescription.credit[i];
-
-            double best;
-            boolean bestWasFuzzy;
-            if (titleCredit >= descriptionCredit) {
-                best = titleCredit;
-                bestWasFuzzy = fromTitle.fuzzy[i];
-            } else {
+            if (descriptionCredit > best) {
                 best = descriptionCredit;
                 bestWasFuzzy = fromDescription.fuzzy[i];
             }
-            if (body != null && i < body.terms().length && body.terms()[i] && BODY_WEIGHT > best) {
-                best = BODY_WEIGHT; // e.g. an exact word in the body beats a typo in the description
-                bestWasFuzzy = false;
+            double bodyCredit = body != null && i < body.credits().length ? body.credits()[i] : 0.0;
+            if (BODY_WEIGHT * bodyCredit > best) {
+                best = BODY_WEIGHT * bodyCredit;
+                bestWasFuzzy = bodyCredit < 1.0;
             }
 
             if (best > 0.0) {
@@ -199,15 +194,51 @@ public class LexicalScorer {
 
         double coverageScore = COVERAGE_CEILING * (total / terms.size());
 
-        // A phrase match is exact evidence; it is only reported as fuzzy when the
-        // term route both won and actually needed an inexact match to do so.
         if (phraseScore >= coverageScore) {
-            return new Match(phraseScore, false, matched, terms.size());
+            return new Match(phraseScore, phraseInexact, terms.size(), terms.size());
         }
         return new Match(coverageScore, fuzzyUsed, matched, terms.size());
     }
 
-    /** Per-term credit within one field, and whether it came from a fuzzy match. */
+    private static double phraseScore(PhraseFit fit, double exactScore) {
+        return switch (fit) {
+            case EXACT -> exactScore;
+            case PARTIAL -> exactScore * PARTIAL_PHRASE_FACTOR;
+            case NONE -> 0.0;
+        };
+    }
+
+    /**
+     * Where the phrase occurs in the text: at word boundaries (EXACT), starting at
+     * one and ending inside a word (PARTIAL, only when inexact matches are allowed
+     * and enough was typed), or not as a phrase at all.
+     */
+    private PhraseFit phraseFit(String text, String phrase, boolean allowPartial) {
+        if (text.isEmpty()) {
+            return PhraseFit.NONE;
+        }
+        PhraseFit best = PhraseFit.NONE;
+        for (int start : phraseMatcher.findAll(text, phrase)) {
+            int end = start + phrase.length();
+            if (!startsWord(text, start)) {
+                continue; // "port" inside "report"
+            }
+            if (endsWord(text, end)) {
+                return PhraseFit.EXACT;
+            }
+            if (allowPartial && lastWordLength(phrase) >= MIN_PREFIX_LENGTH) {
+                best = PhraseFit.PARTIAL;
+            }
+        }
+        return best;
+    }
+
+    private static int lastWordLength(String phrase) {
+        List<String> words = tokens(phrase);
+        return words.isEmpty() ? 0 : words.get(words.size() - 1).length();
+    }
+
+    /** Per-term credit within one field, and whether it came from an inexact match. */
     private static final class TermCredits {
         final double[] credit;
         final boolean[] fuzzy;
@@ -225,62 +256,54 @@ public class LexicalScorer {
         }
 
         // Exact matches for every term in a single Aho-Corasick pass, kept only
-        // where the occurrence is a whole token.
+        // where the occurrence is a whole word.
         AhoCorasick automaton = new AhoCorasick(terms.toArray(new String[0]));
         for (AhoCorasick.Match occurrence : automaton.findAll(field)) {
-            if (isWholeToken(field, occurrence.start(), occurrence.end())) {
+            if (startsWord(field, occurrence.start()) && endsWord(field, occurrence.end())) {
                 result.credit[occurrence.patternIndex()] = 1.0;
             }
         }
+        if (!allowFuzzy) {
+            return result;
+        }
 
-        List<String> fieldTokens = null;
+        List<String> fieldTokens = tokens(field);
         for (int i = 0; i < terms.size(); i++) {
             if (result.credit[i] == 1.0) {
                 continue;
             }
             String term = terms.get(i);
-            int threshold = allowFuzzy ? fuzzyThreshold(term.length()) : 0;
-            if (threshold == 0) {
-                continue;
-            }
-            if (fieldTokens == null) {
-                fieldTokens = tokens(field);
-            }
-
-            int best = Integer.MAX_VALUE;
+            int budget = fuzzyThreshold(term.length());
+            double best = 0.0;
             for (String token : fieldTokens) {
-                // Each edit changes the length by at most one, so a larger length
-                // gap cannot be within the threshold. Skipping it avoids the
-                // O(n*m) distance computation for most tokens.
-                if (Math.abs(token.length() - term.length()) > threshold) {
-                    continue;
+                // A word the term begins: "secur" in "security".
+                if (term.length() >= MIN_PREFIX_LENGTH && token.length() > term.length() && token.startsWith(term)) {
+                    best = Math.max(best, prefixCredit(term.length(), token.length()));
                 }
-                int distance = DamerauLevenshtein.optimalStringAlignment(term, token);
-                if (distance < best) {
-                    best = distance;
+                // A misspelling. Each edit changes the length by at most one, so a
+                // larger gap cannot be within budget; skipping it avoids the O(n*m)
+                // distance computation for most tokens.
+                if (budget > 0 && Math.abs(token.length() - term.length()) <= budget) {
+                    int distance = DamerauLevenshtein.optimalStringAlignment(term, token);
+                    if (distance <= budget) {
+                        best = Math.max(best, typoCredit(distance, term.length(), token.length()));
+                    }
                 }
             }
-
-            if (best == 1) {
-                result.credit[i] = ONE_EDIT_CREDIT;
-                result.fuzzy[i] = true;
-            } else if (best == 2 && threshold >= 2) {
-                result.credit[i] = TWO_EDIT_CREDIT;
+            if (best > 0.0) {
+                result.credit[i] = best;
                 result.fuzzy[i] = true;
             }
         }
-
         return result;
     }
 
-    private boolean contains(String text, String pattern) {
-        return !text.isEmpty() && phraseMatcher.findAll(text, pattern).length > 0;
+    private static boolean startsWord(String text, int start) {
+        return start == 0 || !Character.isLetterOrDigit(text.charAt(start - 1));
     }
 
-    private static boolean isWholeToken(String text, int start, int end) {
-        boolean leftEdge = start == 0 || !Character.isLetterOrDigit(text.charAt(start - 1));
-        boolean rightEdge = end == text.length() || !Character.isLetterOrDigit(text.charAt(end));
-        return leftEdge && rightEdge;
+    private static boolean endsWord(String text, int end) {
+        return end == text.length() || !Character.isLetterOrDigit(text.charAt(end));
     }
 
     /** Allowed edits for a term of the given length. */
@@ -288,7 +311,7 @@ public class LexicalScorer {
         if (length <= 3) {
             return 0;
         }
-        if (length <= 7) {
+        if (length <= 5) {
             return 1;
         }
         return 2;

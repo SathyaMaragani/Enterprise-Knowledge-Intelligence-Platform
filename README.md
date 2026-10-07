@@ -127,7 +127,7 @@ It is one integrated project built across four courses. Each course owns a part 
 
 <img src="docs/readme/search-pipeline.svg" alt="Search pipeline: a keyword leg scored by TextHack and a vector leg in Qdrant are filtered by permission, then fused and ranked" width="100%">
 
-Keyword matching reads the title, the description and the document's full text, so a word that appears only in the body still counts, and a misspelled word is first corrected to the nearest word the documents contain. Each result's score is `(0.4 × keyword + 0.6 × (cosine + 1) / 2)`, divided by the weights of the legs that ran. A document found by meaning alone must reach a minimum similarity, so unrelated documents are left out instead of being listed with a low score. Restricted documents are removed **before** ranking, so they never affect a count or a position.
+Keyword matching reads the title, the description and the document's full text, so a word that appears only in the body still counts. A few letters are enough (`secur` finds *Security*, `quart fin` finds *Quarterly Financial*), and a word may have one typing mistake at 4–5 letters or two at 6 or more. The percentage says how completely the document matches: an exact word scores 90–100% (title 100%, description 95%, text 90%), a part-typed or misspelled word less, in proportion to how much of it is right. The stronger of the keyword and meaning scores sets the result, and the other adds half of what remains, so agreement lifts a result without ever passing 100%. A document found by meaning alone must reach a minimum similarity, so unrelated documents are left out instead of being listed with a low score. Restricted documents are removed **before** ranking, so they never affect a count or a position.
 
 | Mode | Finds documents by |
 |---|---|
@@ -177,7 +177,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **214 pass** (210 in GitHub Actions on every change) |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **220 pass** (216 in GitHub Actions on every change) |
 | Frontend | 16 Vitest files: pages, session, API client | **149 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |

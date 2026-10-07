@@ -19,10 +19,13 @@ import java.util.regex.Pattern;
  * contain, so a typo still finds a word that appears only in a document's text
  * ("dynmo" finds "dynamo"), and the semantic leg embeds what the user meant.
  *
- * <p>A word is corrected only when no document contains it and a document word
- * lies within the edit budget {@link LexicalScorer} uses for typos: one edit for
- * 4-7 letters, two for 8 or more, measured with Damerau-Levenshtein (OSA). The
- * nearest word wins, then the one found in more documents.
+ * <p>A word is corrected only when no document contains it, no document word
+ * starts with it (then it is a word still being typed, which the scorer matches as
+ * a prefix), and a document word lies within the edit budget {@link LexicalScorer}
+ * uses for typos: one edit for 4-5 letters, two for 6 or more, measured with
+ * Damerau-Levenshtein (OSA). The word the typo gets most of right wins
+ * ({@link LexicalScorer#typoCredit}: "awarnes" is nearer "awareness" than "aware"),
+ * then the one found in more documents.
  */
 @Component
 public class QueryCorrector {
@@ -59,31 +62,29 @@ public class QueryCorrector {
         Set<String> terms = new HashSet<>(LexicalScorer.terms(phrase)); // no stopwords
         Matcher m = WORD.matcher(phrase);
         StringBuilder out = new StringBuilder();
-        int worst = 0;
+        double credit = 1.0;
         while (m.find()) {
             String word = m.group();
             // Numbers are left alone: "2024" is not a typo for "2025".
             String fix = terms.contains(word) && word.chars().noneMatch(Character::isDigit)
                     ? closest(word, vocabulary) : null;
             if (fix != null) {
-                worst = Math.max(worst, DamerauLevenshtein.optimalStringAlignment(word, fix));
+                int distance = DamerauLevenshtein.optimalStringAlignment(word, fix);
+                credit = Math.min(credit, LexicalScorer.typoCredit(distance, word.length(), fix.length()));
             }
             m.appendReplacement(out, Matcher.quoteReplacement(fix != null ? fix : word));
         }
         m.appendTail(out);
-        if (worst == 0) {
-            return null;
-        }
-        return new Correction(out.toString(), worst == 1 ? LexicalScorer.ONE_EDIT_CREDIT : LexicalScorer.TWO_EDIT_CREDIT);
+        return credit < 1.0 ? new Correction(out.toString(), credit) : null;
     }
 
     private static String closest(String word, Map<String, Integer> vocabulary) {
         int budget = LexicalScorer.fuzzyThreshold(word.length());
-        if (budget == 0 || vocabulary.containsKey(word)) {
+        if (budget == 0 || vocabulary.containsKey(word) || beginsSomeWord(word, vocabulary)) {
             return null;
         }
         String best = null;
-        int bestDistance = 0;
+        double bestCredit = 0.0;
         int bestCount = 0;
         for (Map.Entry<String, Integer> entry : vocabulary.entrySet()) {
             String candidate = entry.getKey();
@@ -95,17 +96,31 @@ public class QueryCorrector {
             if (distance > budget) {
                 continue;
             }
-            // Nearest first, then the word in more documents, then alphabetical so ties are stable.
-            boolean better = best == null || distance < bestDistance
-                    || distance == bestDistance && (count > bestCount
+            // Highest credit first, then the word in more documents, then alphabetical so ties are stable.
+            double credit = LexicalScorer.typoCredit(distance, word.length(), candidate.length());
+            boolean better = best == null || credit > bestCredit
+                    || credit == bestCredit && (count > bestCount
                         || count == bestCount && candidate.compareTo(best) < 0);
             if (better) {
                 best = candidate;
-                bestDistance = distance;
+                bestCredit = credit;
                 bestCount = count;
             }
         }
         return best;
+    }
+
+    /** Whether some document word starts with {@code word}: then it is being typed, not misspelled. */
+    private static boolean beginsSomeWord(String word, Map<String, Integer> vocabulary) {
+        if (word.length() < LexicalScorer.MIN_PREFIX_LENGTH) {
+            return false;
+        }
+        for (String candidate : vocabulary.keySet()) {
+            if (candidate.length() > word.length() && candidate.startsWith(word)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private synchronized Map<String, Integer> vocabulary() {

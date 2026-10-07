@@ -298,7 +298,7 @@ flowchart LR
     Q --> V[Vector leg<br/>MiniLM embeds query<br/>Qdrant top-K]
     K --> P[Permission filter]
     V --> P
-    P --> F["Fuse:<br/>(0.4·kw + 0.6·(cos+1)/2)<br/>÷ weights that ran"]
+    P --> F["Fuse:<br/>max(kw, sem) +<br/>½·min·(1 − max)"]
     F --> H[Hydrate from PostgreSQL<br/>+ best chunk from MongoDB]
 ```
 
@@ -308,20 +308,20 @@ flowchart LR
 |---|---|
 | `HYBRID` (default) | Typo-tolerant keyword search plus semantic search |
 | `KEYWORD` | Exact whole terms |
-| `FUZZY` | Keyword search that also credits terms one or two edits away |
+| `FUZZY` | Keyword search that also credits part-typed words and terms one or two edits away |
 | `SEMANTIC` | Vectors only; returns 503 if the model is unavailable |
 
 **Keyword leg:**
 
 - PostgreSQL finds documents whose title or description contains the whole query.
-- A TextHack scan finds reordered and misspelled queries: KMP for the phrase, Aho-Corasick for all terms in one pass, Damerau-Levenshtein for typos. A scan match counts when it covers every term of a one- or two-word query, or 60% of a longer one.
-- Before searching, a word that appears in no document is corrected to the nearest word that does (Damerau-Levenshtein, one edit for 4–7 letters, two for 8 or more; `QueryCorrector`), so a misspelled name found only in a document's text still matches, and the semantic leg embeds the corrected query. Such hits are discounted and marked FUZZY; KEYWORD mode searches exactly what was typed.
-- MongoDB reports which query words each document body contains (`BodyTextMatcher`, a regex aggregation that returns flags, not text). A phrase in the body scores 0.7, just under a phrase in the description (0.75); exact words only.
+- A TextHack scan finds reordered, part-typed and misspelled queries: KMP for the phrase, Aho-Corasick for all terms in one pass, a prefix check for words still being typed (3+ letters), Damerau-Levenshtein for typos. A match counts when it covers every term of a one- or two-word query, or 60% of a longer one.
+- Before searching, a word that appears in no document is corrected to the nearest word that does (Damerau-Levenshtein, one edit for 4–5 letters, two for 6 or more; `QueryCorrector`). A word that begins some document word is left alone: it is still being typed, so a misspelled name found only in a document's text still matches, and the semantic leg embeds the corrected query. Such hits are discounted and marked FUZZY; KEYWORD mode searches exactly what was typed.
+- MongoDB reports which query words each document body contains, whole or as the start of a word (`BodyTextMatcher`, a regex aggregation that returns credits, not text). An exact phrase scores 1.0 in the title, 0.95 in the description and 0.9 in the body, so an exact word reads as 90–100%.
 
 **Fusion:**
 
-- Cosine similarity runs from −1 to 1, so it is mapped to 0–1 before weighting.
-- Dividing by the weights of the legs that actually ran keeps scores on the same 0–1 scale when one leg is down.
+- MiniLM cosine similarity is calibrated to 0–0.95 as `(cos − 0.10) / 0.60`: unrelated text sits near 0.10, relevant documents at 0.3–0.7. A caller's own vector is mapped with `(cos + 1) / 2`.
+- The score is the stronger of the keyword and meaning scores plus half the weaker's share of the remainder: `max + ½·min·(1 − max)`. An exact word stays at 90–100% whatever its meaning score, agreement lifts a result, and nothing passes 100%. A leg that did not run contributes 0.
 - Each hit reports `matchedBy` (KEYWORD, FUZZY, VECTOR).
 - A hit found by meaning alone must reach cosine 0.20 and lie within 0.15 of the best match the user can see. Calibrated for MiniLM: relevant demo documents scored 0.39–0.68, a short query on a topic a long PDF covers can score as low as 0.22, and nonsense stays under 0.10. This drops the unrelated documents that the nearest-neighbour search always returns. It applies only to queries the server embedded itself.
 
@@ -378,7 +378,7 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **214 tests pass**: 210 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **220 tests pass**: 216 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
@@ -424,7 +424,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 214 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 220 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |

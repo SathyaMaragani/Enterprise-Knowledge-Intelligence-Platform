@@ -92,7 +92,7 @@ class SearchServiceTest {
 
         BodyTextMatcher bodies = new BodyTextMatcher(null) {
             @Override
-            public Map<Integer, LexicalScorer.BodyEvidence> match(String phrase, List<String> terms) {
+            public Map<Integer, LexicalScorer.BodyEvidence> match(String phrase, List<String> terms, boolean allowPrefix) {
                 if (bodyFailure != null) {
                     throw bodyFailure;
                 }
@@ -229,13 +229,13 @@ class SearchServiceTest {
         assertEquals("chunk-b", top.getChunkId());
         // vectorScore stays the raw cosine Qdrant reported...
         assertEquals(0.9, top.getVectorScore(), 1e-6);
-        // ...while fusion uses it normalised: 0.4*1.0 + 0.6*((0.9+1)/2).
-        assertEquals(0.97, top.getScore(), 1e-6);
+        // ...while fusion maps it to (0.9+1)/2 = 0.95; the perfect keyword match leaves no room to add.
+        assertEquals(1.0, top.getScore(), 1e-6);
 
         SearchHit second = response.getHits().get(1);
         assertEquals(2, second.getDocumentId());
         assertEquals(Set.of("VECTOR"), second.getMatchedBy());
-        assertEquals(0.54, second.getScore(), 1e-6); // 0.6*((0.8+1)/2)
+        assertEquals(0.9, second.getScore(), 1e-6); // (0.8+1)/2
     }
 
     @Test
@@ -257,8 +257,7 @@ class SearchServiceTest {
         // Orthogonal (0.0) still outranks opposed (-0.5).
         assertEquals(orthogonal.getId(), response.getHits().get(0).getDocumentId());
         assertEquals(opposed.getId(), response.getHits().get(1).getDocumentId());
-        // Vector-only, so the weight normalises over VECTOR_WEIGHT alone:
-        // (0.6 * normalised) / 0.6 == normalised.
+        // Vector-only: the score is the mapped similarity itself.
         assertEquals(0.5, response.getHits().get(0).getScore(), 1e-6);  // (0.0+1)/2
         assertEquals(0.25, response.getHits().get(1).getScore(), 1e-6); // (-0.5+1)/2
     }
@@ -525,8 +524,8 @@ class SearchServiceTest {
 
     // ---------------------------------------------------------------- document bodies
 
-    private static LexicalScorer.BodyEvidence body(boolean phrase, boolean... terms) {
-        return new LexicalScorer.BodyEvidence(phrase, terms);
+    private static LexicalScorer.BodyEvidence body(boolean phrase, double... credits) {
+        return new LexicalScorer.BodyEvidence(phrase, credits);
     }
 
     @Test
@@ -534,7 +533,7 @@ class SearchServiceTest {
         Document handbook = doc(1, "Onboarding", "first week");
         doc(2, "Travel", "flights");
         scanReturns(handbook, known.get(1));
-        bodyMatches = Map.of(1, body(true, true));
+        bodyMatches = Map.of(1, body(true, 1.0));
 
         SearchResponse response = searchService.search(request("laptop", null, SearchMode.KEYWORD));
 
@@ -550,7 +549,7 @@ class SearchServiceTest {
         Document inBody = doc(3, "Onboarding", "first week");
         keywordReturns(inTitle, inDescription);
         scanReturns(inTitle, inDescription, inBody);
-        bodyMatches = Map.of(3, body(true, true, true));
+        bodyMatches = Map.of(3, body(true, 1.0, 1.0));
 
         SearchResponse response = searchService.search(request("laptop policy", null, SearchMode.KEYWORD));
 
@@ -654,8 +653,8 @@ class SearchServiceTest {
     void aMisspelledNameOnlyInTheBodyIsFoundThroughTheCorrectedQuery() {
         Document handbook = doc(1, "New Joiner Onboarding Handbook", "First week");
         scanReturns(handbook);
-        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.ONE_EDIT_CREDIT));
-        bodyMatches = Map.of(1, body(true, true));
+        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.typoCredit(1, 5, 6)));
+        bodyMatches = Map.of(1, body(true, 1.0));
 
         SearchResponse response = searchService.search(request("Dynmo", null, SearchMode.FUZZY));
 
@@ -664,13 +663,13 @@ class SearchServiceTest {
         assertEquals(1, hit.getDocumentId());
         assertEquals(Set.of("KEYWORD", "FUZZY"), hit.getMatchedBy());
         // A typo-level match: the body phrase score, discounted.
-        assertEquals(LexicalScorer.BODY_PHRASE_SCORE * LexicalScorer.ONE_EDIT_CREDIT, hit.getScore(), 1e-9);
+        assertEquals(LexicalScorer.BODY_PHRASE_SCORE * LexicalScorer.typoCredit(1, 5, 6), hit.getScore(), 1e-9);
     }
 
     @Test
     void theSemanticLegEmbedsTheCorrectedQuery() {
         queryEmbedding = List.of(0.1f, 0.2f);
-        corrections = Map.of("Evrest", new QueryCorrector.Correction("everest", LexicalScorer.ONE_EDIT_CREDIT));
+        corrections = Map.of("Evrest", new QueryCorrector.Correction("everest", LexicalScorer.typoCredit(1, 5, 6)));
 
         searchService.search(request("Evrest", null, SearchMode.SEMANTIC));
 
@@ -681,8 +680,8 @@ class SearchServiceTest {
     void keywordModeSearchesExactlyWhatWasTyped() {
         doc(1, "New Joiner Onboarding Handbook", "First week");
         scanReturns(known.get(0));
-        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.ONE_EDIT_CREDIT));
-        bodyMatches = Map.of(1, body(true, true));
+        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.typoCredit(1, 5, 6)));
+        bodyMatches = Map.of(1, body(true, 1.0));
 
         searchService.search(request("Dynmo", null, SearchMode.KEYWORD));
 

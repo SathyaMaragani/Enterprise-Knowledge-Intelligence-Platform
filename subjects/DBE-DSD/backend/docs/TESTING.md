@@ -47,7 +47,7 @@ their stacks, so start them first.
 **In CI** (`.github/workflows/backend.yml`), the same suite runs against the test
 stack started with Compose and seeded with `seed_vectors.py`. The model is fetched
 by `backend/model/fetch-model.sh`. `DemoSemanticSearchIntegrationTest` is excluded
-because it needs the demo corpus: 187 tests.
+because it needs the demo corpus: 216 tests.
 
 The deployed stack, meaning the built images behind nginx, is verified separately by
 `docker/smoke-test.mjs` and `docker/load-test.mjs`. See `../../docker/README.md`.

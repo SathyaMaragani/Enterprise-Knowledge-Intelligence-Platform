@@ -7,7 +7,7 @@ export const SEARCH_MODES = [
   { id: 'hybrid', title: 'Hybrid', text: 'Matches meaning and keywords together.', Icon: LayersIcon },
   { id: 'semantic', title: 'Semantic', text: 'Matches by meaning, even without shared words.', Icon: BrainIcon },
   { id: 'keyword', title: 'Keyword', text: 'Matches the exact words only.', Icon: TypeIcon },
-  { id: 'fuzzy', title: 'Fuzzy', text: 'Matches words even when they are misspelled.', Icon: WavesIcon },
+  { id: 'fuzzy', title: 'Fuzzy', text: 'Matches misspelled and half-typed words.', Icon: WavesIcon },
 ];
 
 /** Display name for a mode as the API reports it (`FUZZY`), including the legacy `TEXTHACK`. */

@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
  *
  * <p>The matching runs inside MongoDB, which returns a few flags per matching
  * document and never the text itself: a search does not pull every body across
- * the network. Matching follows {@link LexicalScorer}: the phrase is a
- * case-insensitive substring, each term a whole word.
+ * the network. Matching follows {@link LexicalScorer}: case-insensitive, the
+ * phrase at word boundaries, each term as a whole word or as the start of one.
  */
 @Component
 public class BodyTextMatcher {
@@ -36,30 +36,38 @@ public class BodyTextMatcher {
     }
 
     /**
-     * @param phrase the query, {@link LexicalScorer#normalise normalised}
-     * @param terms  its terms, as {@link LexicalScorer#terms} gives them
-     * @return evidence for each document whose body holds at least one term, by PostgreSQL id
+     * @param phrase      the query, {@link LexicalScorer#normalise normalised}
+     * @param terms       its terms, as {@link LexicalScorer#terms} gives them
+     * @param allowPrefix whether a term may match a word it only begins ("secur" in "security")
+     * @return evidence for each document whose text holds at least one term, by PostgreSQL id
      */
-    public Map<Integer, LexicalScorer.BodyEvidence> match(String phrase, List<String> terms) {
+    public Map<Integer, LexicalScorer.BodyEvidence> match(String phrase, List<String> terms, boolean allowPrefix) {
         if (terms.isEmpty()) {
             return Map.of();
         }
-        List<String> words = terms.stream().map(BodyTextMatcher::escape).toList();
-        List<Document> termTests = new ArrayList<>();
-        for (String word : words) {
-            termTests.add(regexMatch("\\b" + word + "\\b"));
+        List<String> anyTerm = new ArrayList<>();
+        List<Document> wholeWord = new ArrayList<>();
+        List<Object> wordStart = new ArrayList<>();
+        for (String term : terms) {
+            String word = escape(term);
+            boolean prefix = allowPrefix && term.length() >= LexicalScorer.MIN_PREFIX_LENGTH;
+            anyTerm.add(prefix ? "\\b" + word : "\\b" + word + "\\b");
+            wholeWord.add(regexMatch("\\b" + word + "\\b"));
+            wordStart.add(prefix ? regexMatch("\\b" + word) : new Document("$literal", false));
         }
-        String phraseRegex = Arrays.stream(phrase.split(" ")).map(BodyTextMatcher::escape)
-                .collect(Collectors.joining("\\s+"));
+        // The phrase must sit at word boundaries: "port" inside "report" is not the phrase "port".
+        String phraseRegex = "(?<!\\w)" + Arrays.stream(phrase.split(" ")).map(BodyTextMatcher::escape)
+                .collect(Collectors.joining("\\s+")) + "(?!\\w)";
 
         List<Document> pipeline = List.of(
                 new Document("$match", new Document("content.raw_text",
-                        new Document("$regex", "\\b(?:" + String.join("|", words) + ")\\b").append("$options", "i"))),
+                        new Document("$regex", String.join("|", anyTerm)).append("$options", "i"))),
                 new Document("$limit", LIMIT),
                 new Document("$project", new Document("_id", 0)
                         .append("id", "$postgres_document_id")
                         .append("phrase", regexMatch(phraseRegex))
-                        .append("terms", termTests)));
+                        .append("whole", wholeWord)
+                        .append("start", wordStart)));
 
         Map<Integer, LexicalScorer.BodyEvidence> found = new HashMap<>();
         String collection = mongoTemplate.getCollectionName(KnowledgeDocument.class);
@@ -67,12 +75,17 @@ public class BodyTextMatcher {
             if (!(row.get("id") instanceof Number id)) {
                 continue;
             }
-            List<?> flags = row.getList("terms", Object.class);
-            boolean[] present = new boolean[terms.size()];
-            for (int i = 0; i < present.length && i < flags.size(); i++) {
-                present[i] = Boolean.TRUE.equals(flags.get(i));
+            List<?> whole = row.getList("whole", Object.class);
+            List<?> start = row.getList("start", Object.class);
+            double[] credits = new double[terms.size()];
+            for (int i = 0; i < credits.length; i++) {
+                if (i < whole.size() && Boolean.TRUE.equals(whole.get(i))) {
+                    credits[i] = 1.0;
+                } else if (i < start.size() && Boolean.TRUE.equals(start.get(i))) {
+                    credits[i] = LexicalScorer.BODY_PREFIX_CREDIT;
+                }
             }
-            found.put(id.intValue(), new LexicalScorer.BodyEvidence(Boolean.TRUE.equals(row.get("phrase")), present));
+            found.put(id.intValue(), new LexicalScorer.BodyEvidence(Boolean.TRUE.equals(row.get("phrase")), credits));
         }
         return found;
     }

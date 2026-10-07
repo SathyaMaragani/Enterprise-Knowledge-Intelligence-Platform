@@ -84,21 +84,25 @@ flowchart LR
 The keyword leg of `POST /api/search` has two passes, which report together as the `KEYWORD` source:
 
 1. **Phrase pass.** PostgreSQL finds documents whose title or description contains the whole query.
-2. **TextHack scan.** A scan over the documents that pass the category and status filters finds what a phrase match cannot: query terms in a different order, or misspelled.
+2. **TextHack scan.** A scan over the documents that pass the category and status filters finds what a phrase match cannot: query terms in a different order, only partly typed, or misspelled.
 
 Each candidate gets a `keywordScore` from 0 to 1:
 
 | Evidence | Algorithm | Score |
 |---|---|---|
-| Whole query in the title | KMP | 1.0 |
-| Whole query in the description | KMP | 0.75 |
-| Whole query in the document text | Phrase match in MongoDB | 0.7 |
-| Term coverage, whole tokens only | Aho-Corasick (all terms in one pass) | up to 0.9 |
-| A term within one or two edits | Damerau-Levenshtein, optimal string alignment | credit 0.7 (one edit) or 0.5 (two edits) instead of 1.0 |
+| Whole query in the title, at word boundaries | KMP | 1.0 |
+| Whole query in the description | KMP | 0.95 |
+| Whole query in the document text | Phrase match in MongoDB | 0.9 |
+| Whole query whose last word is only begun (`remote work` in *Remote Working*) | KMP | 0.85 × the above |
+| Term coverage | Aho-Corasick (all terms in one pass) | up to 0.95 |
+| A term that begins a word (`secur` in *Security*, 3+ letters) | Prefix check | credit 0.5 + 0.5 × typed ÷ word length |
+| A term within one or two edits | Damerau-Levenshtein, optimal string alignment | credit 1 − edits ÷ longer length |
 
-- **Coverage.** Coverage averages a credit per query term. Terms found only in the description or the document text count at 0.6 of their credit.
-- **Final score.** The result is the larger of the phrase score and the coverage, but a title phrase match always scores 1.0.
-- **Edit allowance.** Allowed edits scale with term length, like Elasticsearch's AUTO fuzziness: none up to 3 characters, 1 edit for 4–7, 2 for 8 or more.
+- **Scale.** A score reads as how completely the document contains what was typed, so an exact word scores 0.9–1.0.
+- **Coverage.** Coverage averages a credit per query term: 1.0 for the whole word, less for a word begun or misspelled, in proportion to how much of it is right. Description terms count 0.95 and text terms 0.9 of their credit, so the title ranks first among equal matches.
+- **Final score.** The result is the larger of the phrase score and the coverage.
+- **Whole words.** A query inside a longer word is not a match: `port` does not find *Report*.
+- **Edit allowance.** Allowed edits scale with term length, like Elasticsearch's AUTO fuzziness: none up to 3 characters, 1 edit for 4–5, 2 for 6 or more.
 - **Ignored terms.** Stopwords and single characters are ignored.
 - **Scan-only hits.** A document found only by the scan must cover every term of a one- or two-word query, or 60% of a longer one.
 
@@ -113,9 +117,12 @@ Each candidate gets a `keywordScore` from 0 to 1:
 | Query | Mode | Result |
 |---|---|---|
 | `Finacial` | Fuzzy | Finds *Q1 Financial Report* (keyword mode finds nothing) |
-| `remte workng standrd` (three misspellings) | Fuzzy | 15 hits on the 315-document demo corpus, led by versions of the *Hybrid and Remote Working Standard*, scored 0.63 and matched by Keyword + Fuzzy |
+| `remte workng standrd` (three misspellings) | Fuzzy | Led by the 15 versions of the *Hybrid and Remote Working Standard* on the 315-document demo corpus, scored 0.83 and matched by Keyword + Fuzzy; documents sharing only two of the words follow at 0.45–0.6 |
+| `secrity awarnes` (two mistakes in each word) | Fuzzy | *Information Security Awareness Standard*, 0.78 |
+| `quart fin` (two partly typed words) | Fuzzy | *Quarterly Financial Report*, 0.70 |
+| `laptops` (only in the document text) | Hybrid | 0.92, where the old weighted blend showed 0.67 |
 
-Hits that needed typo tolerance carry `FUZZY` in `matchedBy`. The same OSA distance also corrects whole queries: `QueryCorrector` replaces a word that no document contains with the nearest word one does, so a typo reaches document text too.
+Hits that needed typo tolerance carry `FUZZY` in `matchedBy`. The same OSA distance also corrects whole queries: `QueryCorrector` replaces a word that no document contains with the document word it gets most of right (`awarnes` → *awareness*, not *aware*), so a typo reaches document text too. A word that begins some document word is left alone, because it is still being typed.
 
 **Why the keyword leg was upgraded instead of adding a new source.** A separate `FUZZY` source would have changed the `sources` list on every search and broken the API contract (`["KEYWORD"]` / `["KEYWORD","VECTOR"]`). Fuzzy matching is still lexical search, so it belongs in the lexical signal, with per-hit provenance saying when it was needed.
 
