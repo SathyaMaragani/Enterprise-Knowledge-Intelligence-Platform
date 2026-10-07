@@ -232,7 +232,7 @@ enterprise-knowledge-intelligence/
 ├── docs/
 │   ├── PROJECT_OVERVIEW.md       the whole project in one document
 │   ├── database/  algorithms/  ml/  ossp/   one document per subject
-│   ├── presentations/            review decks and the DB final report
+│   ├── presentations/            review decks (PPTX + PDF) and final reports
 │   ├── screenshots/  readme/     images used on this page
 │   └── architecture/             architecture and ONNX notes
 ├── subjects/
@@ -265,14 +265,14 @@ enterprise-knowledge-intelligence/
 | [REST API](subjects/DBE-DSD/backend/docs/API.md) · [Backend tests](subjects/DBE-DSD/backend/docs/TESTING.md) | Endpoint reference and how to run the backend suite |
 | [Deployment](subjects/DBE-DSD/deploy/README.md) | Free-tier deployment on Vercel, Render, Neon, Atlas and Qdrant Cloud |
 
-**Review presentations** ([index with dates](docs/PROJECT_OVERVIEW.md#review-presentations-and-reports)):
+**Review presentations** ([all decks, PDFs and reports, with dates](docs/presentations/README.md)):
 
-| Subject | Files |
+| Subject | Reviews (PDF; the `.pptx` sits beside each) |
 |---|---|
-| DBE-DSD | [Review 1](docs/presentations/DBE-DSD/DBE-DSD-Review-1.pptx) · [Review 2](docs/presentations/DBE-DSD/DBE-DSD-Review-2.pptx) · Final report ([PDF](docs/presentations/DBE-DSD/DBE-DSD-Final-Review-Report.pdf), [Word](docs/presentations/DBE-DSD/DBE-DSD-Final-Review-Report.docx)) |
-| DSA-3 | [Review 1](docs/presentations/DSA-3/DSA-3-Review-1.pptx) · [Review 2: TextHack](docs/presentations/DSA-3/DSA-3-Review-2-TextHack.pptx) · Final report ([PDF](docs/presentations/DSA-3/DSA-3-Final-Review-Report.pdf), [Word](docs/presentations/DSA-3/DSA-3-Final-Review-Report.docx)) |
-| ML | [Project review](docs/presentations/ML/ML-Review.pptx) |
-| OSSP | [Review 1](docs/presentations/OSSP/OSSP-Review-1-ShellForge.pptx) · [Review 2: Weeks 1–6](docs/presentations/OSSP/OSSP-Review-2-ShellForge-Weeks1-6.pptx) |
+| DBE-DSD | [Review 1](docs/presentations/DBE-DSD/01-Review-1/DBE-DSD-Review-1.pdf) · [Review 2](docs/presentations/DBE-DSD/02-Review-2/DBE-DSD-Review-2.pdf) · [Final review](docs/presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review.pdf) · [Final report](docs/presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review-Report.pdf) |
+| DSA-3 | [Review 1](docs/presentations/DSA-3/01-Review-1/DSA-3-Review-1.pdf) · [Review 2: TextHack](docs/presentations/DSA-3/02-Review-2/DSA-3-Review-2-TextHack.pdf) · [Final review](docs/presentations/DSA-3/03-Final-Review/DSA-3-Final-Review.pdf) · [Final report](docs/presentations/DSA-3/03-Final-Review/DSA-3-Final-Review-Report.pdf) |
+| ML | [Project review](docs/presentations/ML/01-Review/ML-Review.pdf) |
+| OSSP | [Review 1](docs/presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf) · [Review 2: Weeks 1–6](docs/presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf) |
 
 ## Team
 

@@ -7,7 +7,7 @@
 | **Repository** | https://github.com/SathyaMaragani/Enterprise-Knowledge-Intelligence-Platform |
 | **Institution** | Department of Artificial Intelligence and Data Science, KL University (Koneru Lakshmaiah Education Foundation), Aziz Nagar, Hyderabad; odd semester 2026–27 |
 | **Team** | M. Sathya Krishna (2510080006), Yashwanth (2510080001), Aneeq (2510080005), Abhinav (2510080002) |
-| **Guide** | Anitha. P |
+| **Guides** | DBE-DSD: Laiphangbam Melinda · DSA-3: Dr. P. Anitha · OSSP: Dr. P. Kalpana |
 
 This is one integrated project built across four courses. Each course owns a part of the system, and the parts meet in one running product.
 
@@ -301,7 +301,7 @@ enterprise-knowledge-intelligence/
 │   ├── algorithms/DSA-3.md
 │   ├── ml/ML.md
 │   ├── ossp/OSSP.md
-│   ├── presentations/<subject>/                   review decks and the DB final report
+│   ├── presentations/<subject>/<review>/         review decks (PPTX + PDF) and final reports
 │   └── architecture/                              architecture and ONNX notes
 ├── models/minilm/                                 ONNX model + tokenizer (fetched by script)
 └── subjects/
@@ -448,16 +448,18 @@ flowchart LR
 
 ### Review presentations and reports
 
-The decks are kept as they were presented, so earlier ones describe plans that later changed. For example, DBE-DSD Review 2 lists Node.js/FastAPI and Pinecone as candidates, and OSSP Review 2 covers Weeks 1–6 only. The sections above describe what was actually built.
+The decks are kept as they were presented, so earlier ones describe plans that later changed. For example, DBE-DSD Review 2 lists Node.js/FastAPI and Pinecone as candidates, and OSSP Review 2 covers Weeks 1–6 only. The sections above describe what was actually built. The folder has its own [index](presentations/README.md).
 
-| Subject | Review | File | Prepared (2026) |
+| Subject | Review | Files | Prepared (2026) |
 |---|---|---|---|
-| DBE-DSD | Review 1: problem, objectives, hybrid architecture | [DBE-DSD-Review-1.pptx](presentations/DBE-DSD/DBE-DSD-Review-1.pptx) | 1 Aug |
-| DBE-DSD | Review 2: literature review, gap analysis, proposed system | [DBE-DSD-Review-2.pptx](presentations/DBE-DSD/DBE-DSD-Review-2.pptx) | 18 Aug |
-| DBE-DSD | Final review report (PBL documentation) | [PDF](presentations/DBE-DSD/DBE-DSD-Final-Review-Report.pdf), [Word](presentations/DBE-DSD/DBE-DSD-Final-Review-Report.docx) | 6 Oct |
-| DSA-3 | Review 1: TextHack plan, modules, timeline | [DSA-3-Review-1.pptx](presentations/DSA-3/DSA-3-Review-1.pptx) | 5 Aug |
-| DSA-3 | Review 2: TextHack implementation, results, testing | [DSA-3-Review-2-TextHack.pptx](presentations/DSA-3/DSA-3-Review-2-TextHack.pptx) | 29 Sep |
-| DSA-3 | Final review report (PBL documentation) | [PDF](presentations/DSA-3/DSA-3-Final-Review-Report.pdf), [Word](presentations/DSA-3/DSA-3-Final-Review-Report.docx) | 7 Oct |
-| ML | Project review: literature, gaps, method, evaluation plan | [ML-Review.pptx](presentations/ML/ML-Review.pptx) | 28 Aug |
-| OSSP | Review 1: ShellForge plan, modules, timeline | [OSSP-Review-1-ShellForge.pptx](presentations/OSSP/OSSP-Review-1-ShellForge.pptx) | 7 Aug |
-| OSSP | Review 2: ShellForge Weeks 1–6 | [OSSP-Review-2-ShellForge-Weeks1-6.pptx](presentations/OSSP/OSSP-Review-2-ShellForge-Weeks1-6.pptx) | 24 Sep |
+| DBE-DSD | Review 1: problem, objectives, hybrid architecture | [PDF](presentations/DBE-DSD/01-Review-1/DBE-DSD-Review-1.pdf), [PPTX](presentations/DBE-DSD/01-Review-1/DBE-DSD-Review-1.pptx) | 1 Aug |
+| DBE-DSD | Review 2: literature review, gap analysis, proposed system | [PDF](presentations/DBE-DSD/02-Review-2/DBE-DSD-Review-2.pdf), [PPTX](presentations/DBE-DSD/02-Review-2/DBE-DSD-Review-2.pptx) | 18 Aug |
+| DBE-DSD | Final review (Review 4): implementation, testing, performance | [PDF](presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review.pdf), [PPTX](presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review.pptx) | 6 Oct |
+| DBE-DSD | Final review report (PBL documentation) | [PDF](presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review-Report.pdf), [Word](presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review-Report.docx) | 6 Oct |
+| DSA-3 | Review 1: TextHack plan, modules, timeline | [PDF](presentations/DSA-3/01-Review-1/DSA-3-Review-1.pdf), [PPTX](presentations/DSA-3/01-Review-1/DSA-3-Review-1.pptx) | 5 Aug |
+| DSA-3 | Review 2: TextHack implementation, results, testing | [PDF](presentations/DSA-3/02-Review-2/DSA-3-Review-2-TextHack.pdf), [PPTX](presentations/DSA-3/02-Review-2/DSA-3-Review-2-TextHack.pptx) | 29 Sep |
+| DSA-3 | Final review: the whole platform | [PDF](presentations/DSA-3/03-Final-Review/DSA-3-Final-Review.pdf), [PPTX](presentations/DSA-3/03-Final-Review/DSA-3-Final-Review.pptx) | 7 Oct |
+| DSA-3 | Final review report (PBL documentation) | [PDF](presentations/DSA-3/03-Final-Review/DSA-3-Final-Review-Report.pdf), [Word](presentations/DSA-3/03-Final-Review/DSA-3-Final-Review-Report.docx) | 7 Oct |
+| ML | Project review: literature, gaps, method, evaluation plan | [PDF](presentations/ML/01-Review/ML-Review.pdf), [PPTX](presentations/ML/01-Review/ML-Review.pptx) | 28 Aug |
+| OSSP | Review 1: ShellForge plan, modules, timeline | [PDF](presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf), [PPTX](presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pptx) | 7 Aug |
+| OSSP | Review 2: ShellForge Weeks 1–6 | [PDF](presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf), [PPTX](presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pptx) | 24 Sep |
