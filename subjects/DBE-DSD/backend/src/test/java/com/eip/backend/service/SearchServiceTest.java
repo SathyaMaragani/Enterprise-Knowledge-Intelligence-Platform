@@ -561,7 +561,7 @@ class SearchServiceTest {
         for (int id = 1; id <= 4; id++) {
             doc(id, "Doc " + id, "x");
         }
-        // Best 0.55, so the floor is max(0.33, 0.55 - 0.15) = 0.40.
+        // Best 0.55, so the floor is max(0.20, 0.55 - 0.15) = 0.40.
         vectorReturns(vectorItem(1, 0.55f, "a"), vectorItem(2, 0.45f, "b"),
                       vectorItem(3, 0.38f, "c"), vectorItem(4, 0.20f, "d"));
 
@@ -569,6 +569,19 @@ class SearchServiceTest {
 
         assertEquals(List.of(1, 2), response.getHits().stream().map(SearchHit::getDocumentId).toList());
         assertEquals(2, response.getTotalHits());
+    }
+
+    @Test
+    void aWeakButRealMatchInALongDocumentStays() {
+        // "security" against the DB report PDF: the report covers it, yet the best chunk scores 0.23.
+        queryEmbedding = List.of(0.1f, 0.2f);
+        doc(1, "EIP_DB_Final_Review_Report", "");
+        doc(2, "Handbook", "");
+        vectorReturns(vectorItem(1, 0.23f, "a"), vectorItem(2, 0.12f, "b"));
+
+        SearchResponse response = searchService.search(request("security", null, SearchMode.SEMANTIC));
+
+        assertEquals(List.of(1), response.getHits().stream().map(SearchHit::getDocumentId).toList());
     }
 
     @Test

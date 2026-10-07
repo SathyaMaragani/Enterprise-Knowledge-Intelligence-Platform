@@ -335,7 +335,7 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **204 pass**: 200 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **205 pass**: 201 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | DBE-DSD frontend | 16 Vitest files: pages, session, API client | **149 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
@@ -356,7 +356,7 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>200 tests on a Compose stack]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>201 tests on a Compose stack]
     GH --> CI2[GitHub Actions<br/>Frontend: 149 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]

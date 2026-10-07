@@ -69,13 +69,16 @@ public class SearchService {
 
     /*
      * Qdrant returns the nearest chunks for any query, related or not, so a hit
-     * found by meaning alone must clear both bars below. Calibrated for MiniLM on
-     * the demo corpus: relevant documents scored cosine 0.39-0.68, unrelated ones
-     * mostly under 0.33 ("chocolate cake recipe" peaks at 0.09). The cut is
-     * relative to the best match the caller can see, so a restricted document
+     * found by meaning alone must clear both bars below. Calibrated for MiniLM:
+     * on the demo corpus relevant documents scored cosine 0.39-0.68, but against
+     * long uploaded PDFs a short query on a topic the document covers can score
+     * as low as 0.22 ("security" in the DB report). Nonsense stays near zero
+     * ("chocolate cake recipe": 0.09 on the demo corpus, 0.05 on the PDFs), so
+     * the absolute floor sits at 0.20 and the relative cut does the trimming. It
+     * is relative to the best match the caller can see, so a restricted document
      * never decides what else is shown. Tune both here if the model changes.
      */
-    static final double MIN_VECTOR_SIMILARITY = 0.33;
+    static final double MIN_VECTOR_SIMILARITY = 0.20;
     static final double MAX_VECTOR_GAP = 0.15;
 
     private final DocumentRepository documentRepository;

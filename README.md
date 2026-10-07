@@ -177,7 +177,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **204 pass** (200 in GitHub Actions on every change) |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **205 pass** (201 in GitHub Actions on every change) |
 | Frontend | 16 Vitest files: pages, session, API client | **149 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |

@@ -322,7 +322,7 @@ flowchart LR
 - Cosine similarity runs from −1 to 1, so it is mapped to 0–1 before weighting.
 - Dividing by the weights of the legs that actually ran keeps scores on the same 0–1 scale when one leg is down.
 - Each hit reports `matchedBy` (KEYWORD, FUZZY, VECTOR).
-- A hit found by meaning alone must reach cosine 0.33 and lie within 0.15 of the best match the user can see. Calibrated for MiniLM on the demo corpus (relevant documents scored 0.39–0.68), this drops unrelated documents that the nearest-neighbour search always returns. It applies only to queries the server embedded itself.
+- A hit found by meaning alone must reach cosine 0.20 and lie within 0.15 of the best match the user can see. Calibrated for MiniLM: relevant demo documents scored 0.39–0.68, a short query on a topic a long PDF covers can score as low as 0.22, and nonsense stays under 0.10. This drops the unrelated documents that the nearest-neighbour search always returns. It applies only to queries the server embedded itself.
 
 **Every search** is recorded in `search_history` and shown on the user's dashboard.
 
@@ -377,7 +377,7 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **204 tests pass**: 200 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **205 tests pass**: 201 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
@@ -388,7 +388,7 @@ Backend test classes:
 | Class | Tests | Needs databases? |
 |---|---|---|
 | `EipApplicationTests` (integration) | 107 | Test stack |
-| `SearchServiceTest` | 33 | No |
+| `SearchServiceTest` | 34 | No |
 | `LexicalScorerTest` | 17 | No |
 | `TextExtractorTest` | 9 | No |
 | `TextChunkerTest` | 8 | No |
@@ -422,7 +422,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 204 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 205 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |
