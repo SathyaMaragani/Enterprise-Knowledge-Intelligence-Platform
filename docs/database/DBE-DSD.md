@@ -377,7 +377,7 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **203 tests pass**: 199 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **204 tests pass**: 200 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
@@ -396,6 +396,7 @@ Backend test classes:
 | `SearchActivityServiceTest` | 6 | No |
 | `MiniLmOnnxEncoderTest` | 6 | Model files |
 | `BootstrapAdminTest` | 5 | No |
+| `KeepAwakeTest` | 1 | No |
 | `DemoSemanticSearchIntegrationTest` | 4 | Demo stack |
 | `ProdProfileTest` | 2 | Test stack |
 
@@ -421,7 +422,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 203 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 204 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |

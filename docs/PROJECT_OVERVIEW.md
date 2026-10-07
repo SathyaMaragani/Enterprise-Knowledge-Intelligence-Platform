@@ -335,7 +335,7 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **203 pass**: 199 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **204 pass**: 200 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | DBE-DSD frontend | 16 Vitest files: pages, session, API client | **149 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
@@ -356,7 +356,7 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>199 tests on a Compose stack]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>200 tests on a Compose stack]
     GH --> CI2[GitHub Actions<br/>Frontend: 149 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
@@ -379,7 +379,7 @@ flowchart LR
   - semantic search 0.4–0.9 s (6.5–9.4 s before tuning);
   - hybrid search 0.5–0.6 s;
   - memory 446 MiB steady, 485 MiB peak.
-- **Cold starts.** The free backend sleeps after 15 minutes without traffic, so a scheduled GitHub Actions workflow requests `/api/health` every 5 minutes to keep it running. After a deploy or a restart, the frontend shows a "starting the server" screen until the backend answers.
+- **Cold starts.** The free backend sleeps after 15 minutes without traffic, so the backend requests its own public `/api/health` every 10 minutes to keep itself running. After a deploy or a restart, the frontend shows a "starting the server" screen until the backend answers.
 
 ---
 
