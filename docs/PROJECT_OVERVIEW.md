@@ -335,7 +335,7 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **205 pass**: 201 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **214 pass**: 210 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | DBE-DSD frontend | 16 Vitest files: pages, session, API client | **149 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
@@ -356,7 +356,7 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>201 tests on a Compose stack]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>210 tests on a Compose stack]
     GH --> CI2[GitHub Actions<br/>Frontend: 149 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
@@ -404,7 +404,7 @@ flowchart LR
 | Result | Value |
 |---|---|
 | Semantic search | "working from home rules" ranks the *Hybrid and Remote Working Standard* first; keyword search alone finds nothing |
-| Fuzzy search | "remte workng standrd" (three typos) recovers the remote-working standard (score 0.63) |
+| Fuzzy search | "remte workng standrd" (three typos) recovers the remote-working standard (0.70 in fuzzy mode); "Dynmo", a misspelled name that appears only in document text, finds the documents that mention Dynamo |
 | Embedding model choice | MiniLM vs TF-IDF: nDCG@10 0.624 vs 0.371 (p < 0.0001); MiniLM vs BGE not significantly different, and MiniLM embeds 2.5× faster |
 | Uploads | A 20-page Word-made PDF: 5,005 words, 36 chunks, searchable in 2.1 s; the same as .docx in 1.2 s; every malformed file gets a specific error |
 | Classification | 0.83 accuracy on 6 locked unseen topics; 0.57 with every topic held out (chance 0.19; a leaky random split would claim 1.00) |
@@ -416,7 +416,7 @@ flowchart LR
 
 ## 15. Limitations and roadmap
 
-- **Body matching is exact and unindexed.** Typo tolerance covers titles and descriptions only, and each keyword search scans every body in MongoDB; the `content.raw_text` text index or Atlas Search would take over as the corpus grows.
+- **Body matching is unindexed.** Each keyword search scans every body in MongoDB, and the typo vocabulary is rebuilt from them every 5 minutes; the `content.raw_text` text index or Atlas Search would take over as the corpus grows.
 - **Vector hits are filtered after Qdrant's top-K,** so restricted users can get fewer than K semantic hits. Passing readable ids as a Qdrant payload filter would fix this.
 - **No OCR** for scanned PDFs; Word headers, footers and footnotes are not extracted.
 - **Embedding runs inside the upload request;** large files would be better served by a background job.

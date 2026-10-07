@@ -114,7 +114,7 @@ Each candidate gets a `keywordScore` from 0 to 1:
 | `Finacial` | Fuzzy | Finds *Q1 Financial Report* (keyword mode finds nothing) |
 | `remte workng standrd` (three misspellings) | Fuzzy | 15 hits on the 315-document demo corpus, led by versions of the *Hybrid and Remote Working Standard*, scored 0.63 and matched by Keyword + Fuzzy |
 
-Hits that needed typo tolerance carry `FUZZY` in `matchedBy`.
+Hits that needed typo tolerance carry `FUZZY` in `matchedBy`. The same OSA distance also corrects whole queries: `QueryCorrector` replaces a word that no document contains with the nearest word one does, so a typo reaches document text too.
 
 **Why the keyword leg was upgraded instead of adding a new source.** A separate `FUZZY` source would have changed the `sources` list on every search and broken the API contract (`["KEYWORD"]` / `["KEYWORD","VECTOR"]`). Fuzzy matching is still lexical search, so it belongs in the lexical signal, with per-hit provenance saying when it was needed.
 
@@ -199,7 +199,7 @@ The same `run-tests.sh` runs in the Backend GitHub Actions workflow before the b
   - text containing `\u0000`, which breaks any implementation that relies on a NUL sentinel.
 - **Nested patterns.** The `{he, she, his, hers}` over `"ushers"` case catches broken Aho-Corasick output links: `he` is found only through the output-link chain.
 - **In the platform.**
-  - `LexicalScorerTest` (17 tests) and the search integration tests check the scorer.
+  - `LexicalScorerTest` (18 tests), `QueryCorrectorTest` (4) and the search integration tests check the scorer.
   - The workbench has its own backend and frontend tests.
   - Two deliberate code breakages were each caught: keeping the wrong citations in the cut, and failing to merge touching highlights.
 
@@ -231,5 +231,5 @@ The same `run-tests.sh` runs in the Backend GitHub Actions workflow before the b
 ## 6. Limitations
 
 - **No Wikipedia corpus.** The syllabus's Indian-language Wikipedia corpus was deliberately not imported. It is a data-acquisition and licensing task (dump selection, licence review, storage), not an algorithm. In the platform, TextHack runs over the documents users upload instead.
-- **Typo tolerance stops at the description.** The scorer also credits exact words in the document body, found by MongoDB; Damerau-Levenshtein runs only on titles and descriptions.
+- **Corrections are word by word.** A misspelling is corrected to the nearest word in the documents, so a real word that happens to be absent but close to a present one ("cart" next to "card") is corrected too; such hits are marked FUZZY.
 - **Stale layout section.** The folder's own [README](../../subjects/DSA-3/README.md) still labels some packages "not yet implemented" in its layout section. Its status table is the current one: all packages are implemented.

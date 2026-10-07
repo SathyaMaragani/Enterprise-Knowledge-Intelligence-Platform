@@ -161,14 +161,31 @@ class LexicalScorerTest {
         assertEquals(LexicalScorer.BODY_PHRASE_SCORE,
                 scorer.score("leave policy", "Onboarding", "x", phraseInBody, true).score(), EPS);
         // Every term somewhere in the body is enough to be a hit on its own.
-        double coverage = scorer.score("leave policy", "Onboarding", "x", termsInBody, true).score();
-        assertEquals(LexicalScorer.COVERAGE_CEILING * LexicalScorer.BODY_WEIGHT, coverage, EPS);
-        assertTrue(coverage >= LexicalScorer.MIN_SCAN_SCORE);
+        LexicalScorer.Match inBody = scorer.score("leave policy", "Onboarding", "x", termsInBody, true);
+        assertEquals(LexicalScorer.COVERAGE_CEILING * LexicalScorer.BODY_WEIGHT, inBody.score(), EPS);
+        assertTrue(LexicalScorer.coversEnough(inBody));
         // The title and description still win.
         assertEquals(LexicalScorer.TITLE_PHRASE_SCORE,
                 scorer.score("leave policy", "Leave Policy", "x", phraseInBody, true).score(), EPS);
         assertEquals(LexicalScorer.DESCRIPTION_PHRASE_SCORE,
                 scorer.score("leave policy", "x", "the leave policy", phraseInBody, true).score(), EPS);
+    }
+
+    @Test
+    void enoughTermsDecidesAHitNotWhereTheyMatched() {
+        // A one-word typo matching only the description scores 0.9 * 0.6 * 0.7 = 0.378,
+        // below the old 0.5 floor, yet the query is fully covered.
+        LexicalScorer.Match typo = scorer.score("phising", "Security Standard", "phishing reporting", true);
+        assertTrue(typo.fuzzy());
+        assertTrue(LexicalScorer.coversEnough(typo));
+        // Two-term queries need both terms; longer ones 60% of them.
+        assertFalse(LexicalScorer.coversEnough(scorer.score("leave policy", "Policy Notes", "x", true)));
+        assertTrue(LexicalScorer.coversEnough(
+                scorer.score("annual leave days carry", "Annual Leave Policy", "days off", true)));
+        assertFalse(LexicalScorer.coversEnough(
+                scorer.score("annual leave days carry over", "Annual Notes", "x", true)));
+        // Nothing to match is never enough.
+        assertFalse(LexicalScorer.coversEnough(scorer.score("the of and", "x", "y", true)));
     }
 
     @Test

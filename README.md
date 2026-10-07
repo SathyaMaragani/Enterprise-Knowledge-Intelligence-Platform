@@ -127,7 +127,7 @@ It is one integrated project built across four courses. Each course owns a part 
 
 <img src="docs/readme/search-pipeline.svg" alt="Search pipeline: a keyword leg scored by TextHack and a vector leg in Qdrant are filtered by permission, then fused and ranked" width="100%">
 
-Keyword matching reads the title, the description and the document's full text, so a word that appears only in the body still counts. Each result's score is `(0.4 × keyword + 0.6 × (cosine + 1) / 2)`, divided by the weights of the legs that ran. A document found by meaning alone must reach a minimum similarity, so unrelated documents are left out instead of being listed with a low score. Restricted documents are removed **before** ranking, so they never affect a count or a position.
+Keyword matching reads the title, the description and the document's full text, so a word that appears only in the body still counts, and a misspelled word is first corrected to the nearest word the documents contain. Each result's score is `(0.4 × keyword + 0.6 × (cosine + 1) / 2)`, divided by the weights of the legs that ran. A document found by meaning alone must reach a minimum similarity, so unrelated documents are left out instead of being listed with a low score. Restricted documents are removed **before** ranking, so they never affect a count or a position.
 
 | Mode | Finds documents by |
 |---|---|
@@ -177,7 +177,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **205 pass** (201 in GitHub Actions on every change) |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **214 pass** (210 in GitHub Actions on every change) |
 | Frontend | 16 Vitest files: pages, session, API client | **149 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |
@@ -249,7 +249,7 @@ enterprise-knowledge-intelligence/
 
 | Today | Next step |
 |---|---|
-| Body matching is exact (no typo tolerance) and scans every body in MongoDB | Take candidates from the `content.raw_text` text index or Atlas Search |
+| Each keyword search scans every body in MongoDB, and the typo vocabulary is rebuilt from them every 5 minutes | Take candidates from the `content.raw_text` text index or Atlas Search |
 | Restricted users can get fewer semantic hits, because permissions are applied after Qdrant's top-K | Pass the readable ids to Qdrant as a payload filter |
 | No OCR for scanned PDFs | Add an OCR step to text extraction |
 | Embedding runs inside the upload request | Move it to a background job for large files |

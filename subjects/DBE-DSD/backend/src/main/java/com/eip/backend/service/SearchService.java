@@ -87,19 +87,22 @@ public class SearchService {
     private final EmbeddingService embeddingService;
     private final LexicalScorer lexicalScorer;
     private final BodyTextMatcher bodyTextMatcher;
+    private final QueryCorrector queryCorrector;
 
     public SearchService(DocumentRepository documentRepository,
                          QdrantService qdrantService,
                          DocumentAccessService documentAccessService,
                          EmbeddingService embeddingService,
                          LexicalScorer lexicalScorer,
-                         BodyTextMatcher bodyTextMatcher) {
+                         BodyTextMatcher bodyTextMatcher,
+                         QueryCorrector queryCorrector) {
         this.documentRepository = documentRepository;
         this.qdrantService = qdrantService;
         this.documentAccessService = documentAccessService;
         this.embeddingService = embeddingService;
         this.lexicalScorer = lexicalScorer;
         this.bodyTextMatcher = bodyTextMatcher;
+        this.queryCorrector = queryCorrector;
     }
 
     @Transactional(readOnly = true)
@@ -107,12 +110,24 @@ public class SearchService {
         validate(request);
         SearchMode mode = request.getMode();
 
+        // Words no document contains are corrected to the nearest word one does,
+        // except in KEYWORD mode, which promises exact terms.
+        String query = request.getQuery();
+        double typoCredit = 1.0;
+        if (request.hasQuery() && mode != SearchMode.KEYWORD) {
+            QueryCorrector.Correction correction = correct(query);
+            if (correction != null) {
+                query = correction.query();
+                typoCredit = correction.credit();
+            }
+        }
+
         Map<Integer, SearchHit> hits = new LinkedHashMap<>();
         List<String> sources = new ArrayList<>();
 
         boolean keywordRan = false;
         if (request.hasQuery() && mode.usesKeyword()) {
-            collectKeywordHits(request, hits, mode != SearchMode.KEYWORD);
+            collectKeywordHits(query, request, hits, mode != SearchMode.KEYWORD, typoCredit);
             keywordRan = true;
             sources.add("KEYWORD");
         }
@@ -121,7 +136,7 @@ public class SearchService {
         // scale the relevance floor is calibrated for; a caller's own vector does not.
         boolean embeddedHere = false;
         if (request.hasQuery() && mode.usesVector() && !request.hasVector()) {
-            List<Float> generatedVector = embeddingService.embedQuery(request.getQuery());
+            List<Float> generatedVector = embeddingService.embedQuery(query);
             if (generatedVector != null) {
                 request.setVector(generatedVector);
                 embeddedHere = true;
@@ -192,13 +207,17 @@ public class SearchService {
      *       they contain the query and so score at least
      *       {@value LexicalScorer#DESCRIPTION_PHRASE_SCORE}.</li>
      *   <li>The TextHack scan, adding what the SQL phrase match cannot express --
-     *       reordered terms and near-miss spellings. Kept only above
-     *       {@value LexicalScorer#MIN_SCAN_SCORE}, so a document sharing one
-     *       incidental word with a long query does not become a hit.</li>
+     *       reordered terms and near-miss spellings. Kept only when it matches
+     *       enough of the query's terms ({@link LexicalScorer#coversEnough}), so a
+     *       document sharing one incidental word with a long query is not a hit.</li>
      * </ol>
+     *
+     * <p>{@code typoCredit} is below 1 when the query was corrected: every hit is
+     * then a typo-level match, discounted and marked FUZZY.
      */
-    private void collectKeywordHits(SearchRequest request, Map<Integer, SearchHit> hits, boolean allowFuzzy) {
-        String query = request.getQuery().trim();
+    private void collectKeywordHits(String query, SearchRequest request, Map<Integer, SearchHit> hits,
+                                    boolean allowFuzzy, double typoCredit) {
+        query = query.trim();
         String category = blankIfNull(request.getCategory());
         String status = blankIfNull(request.getStatus());
         Map<Integer, LexicalScorer.BodyEvidence> bodies = bodyMatches(query);
@@ -206,7 +225,7 @@ public class SearchService {
         for (Document document : documentRepository.searchByKeyword(
                 query, category, status, PageRequest.of(0, CANDIDATE_LIMIT))) {
             addKeywordHit(hits, document, lexicalScorer.score(query, document.getTitle(), document.getDescription(),
-                                                              bodies.get(document.getId()), allowFuzzy));
+                                                              bodies.get(document.getId()), allowFuzzy), typoCredit);
         }
 
         for (Document document : documentRepository.findForLexicalScan(
@@ -216,9 +235,19 @@ public class SearchService {
             }
             LexicalScorer.Match match = lexicalScorer.score(query, document.getTitle(), document.getDescription(),
                                                             bodies.get(document.getId()), allowFuzzy);
-            if (match.score() >= LexicalScorer.MIN_SCAN_SCORE) {
-                addKeywordHit(hits, document, match);
+            if (LexicalScorer.coversEnough(match)) {
+                addKeywordHit(hits, document, match, typoCredit);
             }
+        }
+    }
+
+    /** The corrected query, or null. If correction fails, search runs on what was typed. */
+    private QueryCorrector.Correction correct(String query) {
+        try {
+            return queryCorrector.correct(query);
+        } catch (RuntimeException e) {
+            logger.warn("Query correction unavailable, searching for the words as typed: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -249,11 +278,11 @@ public class SearchService {
     }
 
     private static void addKeywordHit(Map<Integer, SearchHit> hits, Document document,
-                                      LexicalScorer.Match match) {
+                                      LexicalScorer.Match match, double typoCredit) {
         SearchHit hit = hits.computeIfAbsent(document.getId(), SearchService::newHit);
-        hit.setKeywordScore(match.score());
+        hit.setKeywordScore(match.score() * typoCredit);
         hit.getMatchedBy().add("KEYWORD");
-        if (match.fuzzy()) {
+        if (match.fuzzy() || typoCredit < 1.0) {
             hit.getMatchedBy().add("FUZZY");
         }
     }

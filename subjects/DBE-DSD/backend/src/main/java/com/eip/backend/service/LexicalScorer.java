@@ -87,17 +87,26 @@ public class LexicalScorer {
     public static final double BODY_PHRASE_SCORE = 0.7;
     public static final double COVERAGE_CEILING = 0.9;
     public static final double DESCRIPTION_WEIGHT = 0.6;
-    /** Weight of a term found only in the body; every term there clears {@link #MIN_SCAN_SCORE}. */
+    /** Weight of a term found only in the body. */
     public static final double BODY_WEIGHT = 0.6;
     public static final double ONE_EDIT_CREDIT = 0.7;
     public static final double TWO_EDIT_CREDIT = 0.5;
 
     /**
-     * Minimum score for a document found only by the TextHack scan to count as a
-     * hit. Documents found by the SQL phrase match are always kept; they score at
-     * least {@value #DESCRIPTION_PHRASE_SCORE} by construction.
+     * Share of a long query's terms a document found only by the TextHack scan
+     * must match to count as a hit; queries of one or two terms need every term.
+     * This used to be a minimum score of 0.5, which mixed up how many terms
+     * matched with where: a one-word typo matching a description scored 0.38 and
+     * was dropped. Documents found by the SQL phrase match are always kept.
      */
-    public static final double MIN_SCAN_SCORE = 0.5;
+    public static final double MIN_TERM_COVERAGE = 0.6;
+
+    /** Whether a scan match covers enough of the query to be a hit. */
+    public static boolean coversEnough(Match match) {
+        int total = match.totalTerms();
+        int required = total <= 2 ? total : (int) Math.ceil(MIN_TERM_COVERAGE * total);
+        return match.score() > 0 && match.matchedTerms() >= required;
+    }
 
     private static final int MIN_TERM_LENGTH = 2;
 

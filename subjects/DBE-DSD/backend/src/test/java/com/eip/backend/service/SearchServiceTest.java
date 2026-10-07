@@ -47,6 +47,12 @@ class SearchServiceTest {
     private RuntimeException bodyFailure;
     /** The server-side query embedding; null means the model is not loaded. */
     private List<Float> queryEmbedding;
+    /** The query the embedding service was last asked for. */
+    private String embeddedQuery;
+    /** Corrections the stub corrector applies, by query as typed. */
+    private Map<String, QueryCorrector.Correction> corrections = Map.of();
+    /** What the stub body matcher was last asked about. */
+    private String bodyPhrase;
 
     private SearchService searchService;
 
@@ -79,6 +85,7 @@ class SearchServiceTest {
         EmbeddingService embeddingService = new EmbeddingService(null) {
             @Override
             public List<Float> embedQuery(String query) {
+                embeddedQuery = query;
                 return queryEmbedding;
             }
         };
@@ -89,12 +96,20 @@ class SearchServiceTest {
                 if (bodyFailure != null) {
                     throw bodyFailure;
                 }
+                bodyPhrase = phrase;
                 return bodyMatches;
             }
         };
 
+        QueryCorrector corrector = new QueryCorrector(null, null) {
+            @Override
+            public Correction correct(String query) {
+                return corrections.get(query);
+            }
+        };
+
         searchService = new SearchService(repository, qdrant, access, embeddingService,
-                                          new LexicalScorer(), bodies);
+                                          new LexicalScorer(), bodies, corrector);
     }
 
     /**
@@ -381,7 +396,7 @@ class SearchServiceTest {
         SearchHit hit = response.getHits().get(0);
         assertEquals(9, hit.getDocumentId());
         assertEquals(Set.of("KEYWORD", "FUZZY"), hit.getMatchedBy());
-        assertTrue(hit.getKeywordScore() >= LexicalScorer.MIN_SCAN_SCORE);
+        assertTrue(hit.getKeywordScore() > 0);
     }
 
     @Test
@@ -620,6 +635,58 @@ class SearchServiceTest {
         SearchResponse response = searchService.search(request("pay", null, SearchMode.SEMANTIC));
 
         assertEquals(List.of(2), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+    }
+
+    // ---------------------------------------------------------------- typos
+
+    @Test
+    void aOneWordTypoInTheDescriptionIsAHit() {
+        doc(1, "Security Standard", "Password policy and phishing reporting");
+        scanReturns(known.get(0));
+
+        SearchResponse response = searchService.search(request("phising", null, SearchMode.FUZZY));
+
+        assertEquals(List.of(1), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+        assertEquals(Set.of("KEYWORD", "FUZZY"), response.getHits().get(0).getMatchedBy());
+    }
+
+    @Test
+    void aMisspelledNameOnlyInTheBodyIsFoundThroughTheCorrectedQuery() {
+        Document handbook = doc(1, "New Joiner Onboarding Handbook", "First week");
+        scanReturns(handbook);
+        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.ONE_EDIT_CREDIT));
+        bodyMatches = Map.of(1, body(true, true));
+
+        SearchResponse response = searchService.search(request("Dynmo", null, SearchMode.FUZZY));
+
+        assertEquals("dynamo", bodyPhrase);
+        SearchHit hit = response.getHits().get(0);
+        assertEquals(1, hit.getDocumentId());
+        assertEquals(Set.of("KEYWORD", "FUZZY"), hit.getMatchedBy());
+        // A typo-level match: the body phrase score, discounted.
+        assertEquals(LexicalScorer.BODY_PHRASE_SCORE * LexicalScorer.ONE_EDIT_CREDIT, hit.getScore(), 1e-9);
+    }
+
+    @Test
+    void theSemanticLegEmbedsTheCorrectedQuery() {
+        queryEmbedding = List.of(0.1f, 0.2f);
+        corrections = Map.of("Evrest", new QueryCorrector.Correction("everest", LexicalScorer.ONE_EDIT_CREDIT));
+
+        searchService.search(request("Evrest", null, SearchMode.SEMANTIC));
+
+        assertEquals("everest", embeddedQuery);
+    }
+
+    @Test
+    void keywordModeSearchesExactlyWhatWasTyped() {
+        doc(1, "New Joiner Onboarding Handbook", "First week");
+        scanReturns(known.get(0));
+        corrections = Map.of("Dynmo", new QueryCorrector.Correction("dynamo", LexicalScorer.ONE_EDIT_CREDIT));
+        bodyMatches = Map.of(1, body(true, true));
+
+        searchService.search(request("Dynmo", null, SearchMode.KEYWORD));
+
+        assertEquals("dynmo", bodyPhrase);
     }
 
     @Test

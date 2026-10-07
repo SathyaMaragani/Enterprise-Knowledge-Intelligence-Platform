@@ -314,7 +314,8 @@ flowchart LR
 **Keyword leg:**
 
 - PostgreSQL finds documents whose title or description contains the whole query.
-- A TextHack scan finds reordered and misspelled queries: KMP for the phrase, Aho-Corasick for all terms in one pass, Damerau-Levenshtein for typos.
+- A TextHack scan finds reordered and misspelled queries: KMP for the phrase, Aho-Corasick for all terms in one pass, Damerau-Levenshtein for typos. A scan match counts when it covers every term of a one- or two-word query, or 60% of a longer one.
+- Before searching, a word that appears in no document is corrected to the nearest word that does (Damerau-Levenshtein, one edit for 4–7 letters, two for 8 or more; `QueryCorrector`), so a misspelled name found only in a document's text still matches, and the semantic leg embeds the corrected query. Such hits are discounted and marked FUZZY; KEYWORD mode searches exactly what was typed.
 - MongoDB reports which query words each document body contains (`BodyTextMatcher`, a regex aggregation that returns flags, not text). A phrase in the body scores 0.7, just under a phrase in the description (0.75); exact words only.
 
 **Fusion:**
@@ -377,7 +378,7 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **205 tests pass**: 201 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **214 tests pass**: 210 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
 | Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
@@ -388,8 +389,9 @@ Backend test classes:
 | Class | Tests | Needs databases? |
 |---|---|---|
 | `EipApplicationTests` (integration) | 107 | Test stack |
-| `SearchServiceTest` | 34 | No |
-| `LexicalScorerTest` | 17 | No |
+| `SearchServiceTest` | 38 | No |
+| `LexicalScorerTest` | 18 | No |
+| `QueryCorrectorTest` | 4 | No |
 | `TextExtractorTest` | 9 | No |
 | `TextChunkerTest` | 8 | No |
 | `DocumentIngestionServiceTest` (rollback paths) | 6 | No |
@@ -422,7 +424,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 205 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 214 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |
@@ -433,7 +435,7 @@ The handbook's week-wise schedule also lists FastAPI and Node.js/Express. The ha
 
 ## 11. Limitations and future work
 
-- Body matching is exact (no typo tolerance) and scans every body on each keyword search; the MongoDB text index or Atlas Search would take over as the corpus grows.
+- Body matching scans every body on each keyword search, and the typo vocabulary is rebuilt from every body every 5 minutes; the MongoDB text index or Atlas Search would take over as the corpus grows.
 - Vector hits are filtered after Qdrant applies top-K, so a restricted user can get fewer than K semantic hits. Passing the readable ids to Qdrant as a payload filter would fix this.
 - Embedding runs inside the upload request. Very large files would be better embedded by a background job.
 - There is no OCR for scanned PDFs, and no text from Word headers, footers or footnotes.
