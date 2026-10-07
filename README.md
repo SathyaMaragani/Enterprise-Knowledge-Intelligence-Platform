@@ -270,7 +270,7 @@ enterprise-knowledge-intelligence/
 | Subject | Files |
 |---|---|
 | DBE-DSD | [Review 1](docs/presentations/DBE-DSD/DBE-DSD-Review-1.pptx) · [Review 2](docs/presentations/DBE-DSD/DBE-DSD-Review-2.pptx) · Final report ([PDF](docs/presentations/DBE-DSD/DBE-DSD-Final-Review-Report.pdf), [Word](docs/presentations/DBE-DSD/DBE-DSD-Final-Review-Report.docx)) |
-| DSA-3 | [Review 1](docs/presentations/DSA-3/DSA-3-Review-1.pptx) · [Review 2: TextHack](docs/presentations/DSA-3/DSA-3-Review-2-TextHack.pptx) |
+| DSA-3 | [Review 1](docs/presentations/DSA-3/DSA-3-Review-1.pptx) · [Review 2: TextHack](docs/presentations/DSA-3/DSA-3-Review-2-TextHack.pptx) · Final report ([PDF](docs/presentations/DSA-3/DSA-3-Final-Review-Report.pdf), [Word](docs/presentations/DSA-3/DSA-3-Final-Review-Report.docx)) |
 | ML | [Project review](docs/presentations/ML/ML-Review.pptx) |
 | OSSP | [Review 1](docs/presentations/OSSP/OSSP-Review-1-ShellForge.pptx) · [Review 2: Weeks 1–6](docs/presentations/OSSP/OSSP-Review-2-ShellForge-Weeks1-6.pptx) |
 

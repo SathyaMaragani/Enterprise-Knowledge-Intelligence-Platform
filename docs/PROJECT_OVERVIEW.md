@@ -457,6 +457,7 @@ The decks are kept as they were presented, so earlier ones describe plans that l
 | DBE-DSD | Final review report (PBL documentation) | [PDF](presentations/DBE-DSD/DBE-DSD-Final-Review-Report.pdf), [Word](presentations/DBE-DSD/DBE-DSD-Final-Review-Report.docx) | 6 Oct |
 | DSA-3 | Review 1: TextHack plan, modules, timeline | [DSA-3-Review-1.pptx](presentations/DSA-3/DSA-3-Review-1.pptx) | 5 Aug |
 | DSA-3 | Review 2: TextHack implementation, results, testing | [DSA-3-Review-2-TextHack.pptx](presentations/DSA-3/DSA-3-Review-2-TextHack.pptx) | 29 Sep |
+| DSA-3 | Final review report (PBL documentation) | [PDF](presentations/DSA-3/DSA-3-Final-Review-Report.pdf), [Word](presentations/DSA-3/DSA-3-Final-Review-Report.docx) | 7 Oct |
 | ML | Project review: literature, gaps, method, evaluation plan | [ML-Review.pptx](presentations/ML/ML-Review.pptx) | 28 Aug |
 | OSSP | Review 1: ShellForge plan, modules, timeline | [OSSP-Review-1-ShellForge.pptx](presentations/OSSP/OSSP-Review-1-ShellForge.pptx) | 7 Aug |
 | OSSP | Review 2: ShellForge Weeks 1–6 | [OSSP-Review-2-ShellForge-Weeks1-6.pptx](presentations/OSSP/OSSP-Review-2-ShellForge-Weeks1-6.pptx) | 24 Sep |

@@ -92,14 +92,15 @@ Each candidate gets a `keywordScore` from 0 to 1:
 |---|---|---|
 | Whole query in the title | KMP | 1.0 |
 | Whole query in the description | KMP | 0.75 |
+| Whole query in the document text | Phrase match in MongoDB | 0.7 |
 | Term coverage, whole tokens only | Aho-Corasick (all terms in one pass) | up to 0.9 |
 | A term within one or two edits | Damerau-Levenshtein, optimal string alignment | credit 0.7 (one edit) or 0.5 (two edits) instead of 1.0 |
 
-- **Coverage.** Coverage averages a credit per query term. Terms found only in the description count at 0.6 of their credit.
+- **Coverage.** Coverage averages a credit per query term. Terms found only in the description or the document text count at 0.6 of their credit.
 - **Final score.** The result is the larger of the phrase score and the coverage, but a title phrase match always scores 1.0.
 - **Edit allowance.** Allowed edits scale with term length, like Elasticsearch's AUTO fuzziness: none up to 3 characters, 1 edit for 4–7, 2 for 8 or more.
 - **Ignored terms.** Stopwords and single characters are ignored.
-- **Scan-only hits.** Documents found only by the scan must score at least 0.5.
+- **Scan-only hits.** A document found only by the scan must cover every term of a one- or two-word query, or 60% of a longer one.
 
 **Why these algorithms.**
 
