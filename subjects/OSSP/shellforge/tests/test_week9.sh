@@ -100,10 +100,13 @@ OUT=$(run "echo hi > /nonexistent_dir/f.txt\nexit\n")
 assert_contains "open() failure reported" "/nonexistent_dir/f.txt: No such file or directory" "$OUT"
 
 echo "--- 11. No descriptor leaks ---"
-# The command's own descriptors should be just 0, 1, 2 and the one ls opens
-# to read the directory: the shell's saved copies are close-on-exec.
+# A command run by the shell should see exactly what the same command sees run
+# directly: 0, 1, 2, the one ls opens to read the directory, and anything this
+# script itself inherited (a CI runner passes some down). The shell's saved
+# copies are close-on-exec, so they add nothing.
+BASE=$(ls /proc/self/fd | tr '\n' ' ' | sed 's/ $//')
 run "pwd > leak1.txt\necho x | cat > leak2.txt\nls /proc/self/fd > fds.txt\nexit\n" > /dev/null
-assert_equals "Child sees only fds 0-3" "0 1 2 3" "$(tr '\n' ' ' < "$TMP/fds.txt" | sed 's/ $//')"
+assert_equals "Child sees only the fds it inherited ($BASE)" "$BASE" "$(tr '\n' ' ' < "$TMP/fds.txt" | sed 's/ $//')"
 
 echo "--- 12. Sanitizers ---"
 make clean > /dev/null
