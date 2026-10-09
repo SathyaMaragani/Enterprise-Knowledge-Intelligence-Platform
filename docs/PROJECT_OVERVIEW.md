@@ -16,7 +16,7 @@ This is one integrated project built across four courses. Each course owns a par
 | **DBE-DSD** | Database Systems Engineering and Distributed Backend Development (25CS1302E) | PostgreSQL, MongoDB and Qdrant; the Spring Boot API; security; the React frontend; containers and deployment | [docs/database/DBE-DSD.md](database/DBE-DSD.md) |
 | **DSA-3** | Data Structures and Algorithms – 3 (25CS2103E) | TextHack, the from-scratch algorithm engine that scores keyword search and powers the workbench | [docs/algorithms/DSA-3.md](algorithms/DSA-3.md) |
 | **ML** | Machine Learning (25SC2107E) | Choosing and validating the embedding model, the chunking rules, the demo corpus, document classification and clustering | [docs/ml/ML.md](ml/ML.md) |
-| **OSSP** | Operating Systems and Systems Programming (25CS2104E) | ShellForge, a Unix shell in C (a separate component, not yet called by the platform) | [docs/ossp/OSSP.md](ossp/OSSP.md) |
+| **OSSP** | Operating Systems and Systems Programming (25CS2104E) | ShellForge, a Unix shell in C, compiled into the backend image and run by the ShellForge page | [docs/ossp/OSSP.md](ossp/OSSP.md) |
 
 ---
 
@@ -95,6 +95,7 @@ flowchart TB
         SF[ShellForge shell in C]
     end
     TH -->|"compiled into the backend;<br/>scores keyword search,<br/>runs the workbench"| API
+    SF -->|"compiled into the backend image;<br/>runs preset sessions<br/>for the ShellForge page"| API
     EVAL -->|"model the backend runs<br/>(ONNX, in-process)"| API
     CHUNK -->|"same rule in TextChunker"| API
     DEMO -->|"seeds the demo stack"| PG & MG & QD
@@ -105,7 +106,7 @@ flowchart TB
 - **DBE-DSD is the platform.** All storage, all APIs, all security and the whole user interface are DBE-DSD code.
 - **DSA-3 runs inside it.** The backend compiles the TextHack engine directly, unchanged. One copy of each algorithm is tested by DSA-3's 452-assertion suite and runs every keyword search in production.
 - **ML decided how meaning is represented.** It chose `all-MiniLM-L6-v2` on a public benchmark with significance testing, and proved the backend's Java version gives identical results. It also set the chunking rule, generated the demo data and produced the ML insights page.
-- **OSSP built ShellForge** alongside the platform, following the course handbook from a REPL to signals, pipes and redirection. It runs on its own. The architecture sketch's "API → ShellForge" link is future work. OS-level engineering in the platform itself (memory tuning, thread limits, containers) is described in the OSSP document.
+- **OSSP built ShellForge** alongside the platform, following the course handbook from a REPL to signals, pipes, redirection and threads. The backend image compiles it, and the **ShellForge** page runs it on the server: a Week 10 race-and-mutex lab plus preset sessions, each in a fresh empty directory with a bare environment. Users cannot type their own commands. OS-level engineering in the platform itself (memory tuning, thread limits, containers) is described in the OSSP document.
 
 ---
 
@@ -313,7 +314,7 @@ enterprise-knowledge-intelligence/
     │   └── deploy/     free-tier deployment guides
     ├── DSA-3/          texthack/ engine, tests/, benchmarks/, examples/, docs/COMPLEXITY.md
     ├── ML/             src/ (preprocessing, embeddings, evaluation, demo, features, classification, clustering), tests/, docs/, results/
-    └── OSSP/shellforge/  src/, include/, tests/, docs/WEEK1..9.md, Makefile
+    └── OSSP/shellforge/  src/, include/, tests/, docs/WEEK1..10.md, Makefile
 ```
 
 ---
@@ -335,12 +336,12 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **220 pass**: 216 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| DBE-DSD frontend | 16 Vitest files: pages, session, API client | **149 pass** in GitHub Actions |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **233 pass**: 229 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD frontend | 17 Vitest files: pages, session, API client | **156 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
 | ML | Pipeline, embeddings, classification/clustering consistency, Java/Python parity, retrieval equivalence | 15 + 6 + 4 checks pass; Java and Python top-5 results 100% identical |
-| OSSP | Six weekly suites plus a zombie-reaping check; Valgrind, GDB and sanitizers | **148 checks** pass |
+| OSSP | Seven weekly suites plus a zombie-reaping check; Valgrind, GDB, ThreadSanitizer and sanitizers; run in GitHub Actions | **180 checks** pass |
 
 Each subject's document lists the defects its tests found and how they were fixed. Examples:
 
@@ -356,8 +357,8 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 suite, then<br/>216 tests on a Compose stack]
-    GH --> CI2[GitHub Actions<br/>Frontend: 149 tests + build]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 and ShellForge suites,<br/>then 229 tests on a Compose stack]
+    GH --> CI2[GitHub Actions<br/>Frontend: 156 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
     RD --> LIVE[ekipsearch.vercel.app]
@@ -396,6 +397,8 @@ flowchart LR
 | 18 Sep | Render free-tier deployment prepared and tuned |
 | 5 Oct | Live deployment recorded; document classification and clustering with the ML insights page; ShellForge Weeks 6–9; light green redesign |
 | 6 Oct | PDF and Word (.docx) upload support |
+| 7 Oct | Search: partly typed words, two-typo tolerance, calibrated percentages |
+| 9 Oct | ShellForge Week 10 (POSIX threads, mutex, monitor thread); ShellForge page in the web app |
 
 ---
 
@@ -422,7 +425,7 @@ flowchart LR
 - **Embedding runs inside the upload request;** large files would be better served by a background job.
 - **The backend is a single service.** Splitting search and ingestion behind an API gateway, and adding Prometheus/Grafana monitoring, are the next steps for the DBE course's microservice and observability outcomes.
 - **ML results are displayed, not yet served.** Suggesting a category on upload is the natural next step.
-- **ShellForge is standalone.** Job control, FIFOs, shared memory, `mmap` demonstrations and threads remain from the OSSP syllabus.
+- **ShellForge runs preset sessions only.** Job control, FIFOs, shared memory, `mmap` demonstrations and semaphores remain from the OSSP syllabus.
 
 ---
 

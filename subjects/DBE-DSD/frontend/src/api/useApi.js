@@ -30,3 +30,18 @@ export function useApi(path) {
   const reload = useCallback(() => setVersion((current) => current + 1), []);
   return { ...state, reload };
 }
+
+/** POSTs to `path` on demand and keeps the latest result or error: [state, run, fail]. */
+export function useRun(path) {
+  const [state, setState] = useState({ result: null, error: null, busy: false });
+  async function run(body) {
+    setState((previous) => ({ ...previous, error: null, busy: true }));
+    try {
+      setState({ result: await request(path, { method: 'POST', body }), error: null, busy: false });
+    } catch (err) {
+      setState({ result: null, error: err.message, busy: false });
+    }
+  }
+  const fail = (error) => setState({ result: null, error, busy: false });
+  return [state, run, fail];
+}

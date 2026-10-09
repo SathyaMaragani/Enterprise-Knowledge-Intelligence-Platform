@@ -4,3 +4,6 @@
 !DBE-DSD/backend/pom.xml
 !DBE-DSD/backend/src
 !DBE-DSD/backend/model/fetch-model.sh
+!OSSP/shellforge/Makefile
+!OSSP/shellforge/include
+!OSSP/shellforge/src

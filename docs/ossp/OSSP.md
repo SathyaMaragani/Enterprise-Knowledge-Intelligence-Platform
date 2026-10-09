@@ -5,8 +5,8 @@
 | **Course** | Operating Systems and Systems Programming (25CS2104E) |
 | **Folder** | [`subjects/OSSP/shellforge/`](../../subjects/OSSP/shellforge/) |
 | **Owns** | **ShellForge**, a Unix shell written in C, built week by week through the course handbook |
-| **Status** | Weeks 1–9 implemented (version 9.0). 148 automated checks across Weeks 4–9 pass when built and run in a `gcc:13` Docker container. |
-| **Relationship to the platform** | A separate component in the same repository. It is **not** called by the web platform today (see section 1). |
+| **Status** | Weeks 1–10 implemented (version 10.0). 180 automated checks across Weeks 4–10 pass when built and run in Docker, and in GitHub Actions on every change. |
+| **Relationship to the platform** | Compiled into the backend's Docker image. The web app's **ShellForge** page runs it on the server (see section 1). |
 
 ShellForge is the project's systems-programming part: a working shell that reads commands, parses them, starts processes, runs built-ins, handles signals, connects commands with pipes and redirects input and output. Each feature is built directly on POSIX system calls, which is what the course is about.
 
@@ -14,18 +14,26 @@ ShellForge is the project's systems-programming part: a working shell that reads
 
 ## 1. How OSSP relates to the rest of the platform
 
-The project's original architecture sketch ([`PROJECT_ARCHITECTURE.md`](../architecture/PROJECT_ARCHITECTURE.md)) shows the Spring Boot API calling ShellForge as a Linux administration shell. **That link has not been built.** ShellForge is compiled and tested on its own, and nothing in the backend or frontend calls it. This document describes what ShellForge is, and separately (section 6) where operating-system ideas from the course show up in the platform's own engineering.
+The project's original architecture sketch ([`PROJECT_ARCHITECTURE.md`](../architecture/PROJECT_ARCHITECTURE.md)) shows the Spring Boot API calling ShellForge. That link is now built, as a teaching surface rather than an administration shell:
+
+- **In the image.** The backend's Dockerfile compiles ShellForge in a stage built on the runtime's own Ubuntu base, so the binary's C library matches, and copies it to `/opt/shellforge/shellforge`.
+- **On the server.** `ShellForgeService` starts it with `ProcessBuilder` (itself `fork` + `exec`) for one session at a time.
+- **In the browser.** The **ShellForge** page (`/shellforge`) has a Week 10 race lab and preset sessions for Weeks 4, 5, 7, 9 and 10, and shows each transcript.
 
 ```mermaid
 flowchart LR
-    subgraph Platform["Web platform (DBE-DSD + DSA-3 + ML)"]
-        API[Spring Boot API]
-    end
-    subgraph OSSP["OSSP: ShellForge (C)"]
-        SH[shellforge binary]
-    end
-    API -. "planned in the architecture sketch;<br/>not implemented" .-> SH
+    UI["ShellForge page<br/>(React)"] -- "POST /api/shellforge/run<br/>{session, threads, increments}" --> API[ShellForgeService]
+    API -- "ProcessBuilder: fork + exec<br/>stdin: the session's commands" --> SH["shellforge --echo<br/>fresh empty directory<br/>bare environment, 20 s limit"]
+    SH -- "transcript" --> API
 ```
+
+**Why only preset sessions.** A shell that ran whatever a browser sent would let any signed-in user run programs on the server and read its environment, which holds the database passwords and the JWT secret. So:
+
+- **Fixed commands.** The server defines every session's commands. A request names a session, plus two numbers for the race demo (threads 1–8, increments 1–200,000).
+- **A bare sandbox.** Each run starts in a new empty directory. The shell's environment holds only `PATH`, `HOME`, `PWD`, `USER`, `SHELL` and `LANG`; nothing is inherited from the backend.
+- **Limits.** A run is killed with its children after 20 seconds. Output is capped at 64 KB, and at most two runs execute at once on the 0.1-CPU instance.
+
+Section 6 describes, separately, where operating-system ideas from the course show up in the platform's own engineering.
 
 ---
 
@@ -38,10 +46,11 @@ flowchart TD
     P --> D{"pipe count"}
     D -- "0" --> R["redirect.c<br/>begin_redirection"]
     R --> B{"built-in?<br/>builtin.c"}
-    B -- yes --> BI["cd, pwd, env, clear, help, exit<br/>run in the shell process"]
+    B -- yes --> BI["cd, pwd, env, clear, help, exit,<br/>demo-threads: run in the shell process"]
     B -- no --> EX["executor.c<br/>fork → exec_child → waitpid"]
     D -- "1" --> PI["pipes.c<br/>pipe → fork ×2 → dup2"]
     D -- "2 or more" --> ERR["error: two-stage pipelines only"]
+    TH["thread.c<br/>monitor thread, demo-threads"] -.-> M
     SIG["signals.c<br/>SIGINT, SIGCHLD, SIGTSTP"] -.-> M
     SIG -.-> EX
     SIG -.-> PI
@@ -49,14 +58,15 @@ flowchart TD
 
 | Module | Responsibility |
 |---|---|
-| `main.c` | The REPL: banner, prompt, read, parse, dispatch, free; `--debug-tokens` and `--demo-ipc` flags |
+| `main.c` | The REPL: banner, prompt, read, parse, dispatch, free; starts and joins the monitor thread; `--debug-tokens`, `--demo-ipc` and `--echo` flags |
 | `input.c` | `read_line()`: a heap buffer that doubles with `realloc` as input grows; never truncates |
 | `parser.c` | `parse_line()`: splits the line in place into a NULL-terminated `argv`, recognises `\|`, `<`, `>`, `>>` and `2>` with or without spaces; the vector grows 64 → 128 → … |
 | `executor.c` | `execute_command()`, `exec_child()` (the one place children reset signals, apply redirections and `execvp`), `wait_child()` |
-| `builtin.c` | `cd`, `pwd`, `env`, `clear`, `help`, `exit`, run inside the shell process |
+| `builtin.c` | `cd`, `pwd`, `env`, `clear`, `help`, `exit` and `demo-threads`, run inside the shell process |
 | `signals.c` | `sigaction` handlers, SIGCHLD blocking around foreground waits, child signal reset |
 | `pipes.c` | Two-stage pipelines and the IPC demonstration |
 | `redirect.c` | `apply_redirections()` (in a child) and `begin_/end_redirection()` (in the shell, for built-ins) |
+| `thread.c` | The monitor thread (condition-variable wait, joined at exit) and the race/mutex demo; every thread starts with signals blocked |
 
 ---
 
@@ -73,6 +83,7 @@ flowchart TD
 | 7 | Pipes and IPC | `cmd1 \| cmd2` with `pipe()` and `dup2()`; every unused descriptor closed so the reader sees end-of-file; a `demo-ipc` command shows parent→child and child→parent messages and EOF | CO3 |
 | 8 | Memory, Valgrind and GDB | A full session runs clean under Valgrind and AddressSanitizer; a scripted GDB session; `make asan` and `make valgrind`; review fixes | CO4 |
 | 9 | File descriptors and redirection | `>`, `>>`, `<` and `2>` with `open()` flags and `dup2()`; works on built-ins and inside pipelines | CO5 |
+| 10 | Threads and concurrency | A background monitor thread; `demo-threads` races workers on a shared counter, then repeats under a mutex; `pthread_join()`; threads start with signals blocked | CO6 |
 
 ### Week 6: signals in detail
 
@@ -115,11 +126,18 @@ flowchart TD
 - **Inside pipelines.** Each side's redirections are applied in its own child after the pipe is connected, so `sort < in | head -1 > out` works.
 - **The `2>` rule.** `2>` is recognised only when the `2` stands alone, as in `sh`: `echo a2>f` means the word `a2` written to `f`.
 
+### Week 10: threads in detail
+
+- **Monitor.** It waits on a condition variable with a deadline instead of `sleep(10)`, so `exit` wakes it and joins it at once. The handbook detaches it, which leaves it running mid-sleep at exit.
+- **Race and mutex.** `demo-threads 4 100000` typically loses tens of thousands of the 400,000 increments without a lock and none under the mutex. The mutex run is several times slower, because the threads take turns.
+- **Threads and signals.** `sigprocmask()` blocks SIGCHLD only in the thread that calls it. With a second thread, the kernel delivers SIGCHLD to the monitor, the reaper runs there and steals the foreground command's exit status: 264 of 300 commands in a mutation run. Every thread therefore starts with all signals blocked, and the tests run 100 commands to prove none are lost.
+
 **Where ShellForge deliberately differs from the handbook listings:**
 
 - **Signal handlers** use `write()` instead of `printf()`.
 - **The SIGCHLD reaper** is fenced off from foreground waits, so it can't take their exit status.
 - **Redirection** implements all four operators. The listing implements only `>` and `>>`, and skips built-ins.
+- **The monitor thread** is joined, not detached, and starts with signals blocked.
 
 Each difference is explained in the week's document.
 
@@ -127,7 +145,7 @@ Each difference is explained in the week's document.
 
 ## 4. Testing
 
-The host is Windows, so ShellForge is built and tested in a `gcc:13` container. Valgrind and GDB come from an image that adds them (see [`tests/TESTS.md`](../../subjects/OSSP/shellforge/tests/TESTS.md)).
+The host is Windows, so ShellForge is built and tested in a `gcc:13` container. Valgrind and GDB come from an image that adds them (see [`tests/TESTS.md`](../../subjects/OSSP/shellforge/tests/TESTS.md)). GitHub Actions runs every suite, with Valgrind and GDB, before the backend tests on every change.
 
 ```bash
 cd subjects/OSSP/shellforge
@@ -142,7 +160,8 @@ docker run --rm -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 | `test_week7.sh` | Pipes and IPC | 23 |
 | `test_week8.sh` | Valgrind, GDB and AddressSanitizer | 22 (11 are reported as skipped where Valgrind or GDB is missing) |
 | `test_week9.sh` | File descriptors and redirection | 29 |
-| **Total** | | **148** |
+| `test_week10.sh` | Threads and concurrency | 32 (ThreadSanitizer and Valgrind checks skip where unavailable) |
+| **Total** | | **180** |
 
 - **Simulating Ctrl+C and Ctrl+Z.**
   - The shell runs in its own process group under `setsid`, and the test signals the whole group the way a terminal does.
@@ -151,6 +170,8 @@ docker run --rm -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 - **Zombie reaping.** `tests/sigchld_check.c` shows a child left unreaped is a zombie (`Z` in `/proc`) without the handler, and is gone with it.
 - **Descriptor leaks.** After redirections and a pipe, a child sees only descriptors 0–3. Building with `F_DUPFD` instead of `F_DUPFD_CLOEXEC` makes this test fail, listing the leaked descriptors 10, 11 and 12: proof that the test catches the bug.
 - **Sanitizers.** Every suite also runs under AddressSanitizer and UndefinedBehaviorSanitizer and expects no report.
+- **The race is real.** ThreadSanitizer reports the unprotected `counter++`, and every race it reports is in that worker: the mutex worker and the monitor are clean.
+- **The web runner.** `ShellForgeServiceTest` runs the real binary for each session, checks the sandbox environment, and kills a runaway session at its time limit.
 
 ---
 
@@ -163,7 +184,7 @@ docker run --rm -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 | CO3: IPC with pipes, FIFOs, Unix domain sockets, signals and shared memory | Week 6 signals; Week 7 anonymous pipes and the IPC demo | Named pipes (FIFOs), Unix domain sockets, shared memory |
 | CO4: virtual memory, paging, page faults, copy-on-write | Weeks 2 and 8: heap management and memory debugging with Valgrind, GDB and ASan | Demonstrations of paging, page faults, `mmap` and copy-on-write |
 | CO5: file systems, inodes, directories, file-I/O system calls | Week 9: `open`, `close`, `dup2`, file creation flags and permissions | Directory operations, inodes, `read`/`write`/`lseek` on structured data |
-| CO6: POSIX threads, mutexes, condition variables, semaphores | — | Not started: no handbook chapter has covered threads yet |
+| CO6: POSIX threads, mutexes, condition variables, semaphores | Week 10: `pthread_create`/`pthread_join`, a monitor thread, a race and its mutex fix, a condition variable to stop the monitor, per-thread signal masks | Semaphores; producer-consumer with condition variables |
 
 ---
 
@@ -187,6 +208,8 @@ These are not ShellForge code. They are places where the web platform's own engi
 |---|---|
 | `shellforge/src/*.c`, `shellforge/include/*.h` | The shell |
 | `shellforge/Makefile` | `make`, `make run`, `make test`, `make asan`, `make valgrind` |
-| `shellforge/docs/WEEK1.md` … `WEEK9.md` | One write-up per handbook chapter, including design decisions and differences from the handbook |
+| `shellforge/docs/WEEK1.md` … `WEEK10.md` | One write-up per handbook chapter, including design decisions and differences from the handbook |
 | `shellforge/docs/OSSP_MAPPING.md` | Weeks mapped to course outcomes |
-| `shellforge/tests/` | `test_week4.sh` … `test_week9.sh`, `sigchld_check.c`, `TESTS.md` |
+| `shellforge/tests/` | `test_week4.sh` … `test_week10.sh`, `sigchld_check.c`, `TESTS.md` |
+| `DBE-DSD/backend/.../ShellForgeService.java` | Runs the binary for the web app: preset sessions, sandbox, limits |
+| `DBE-DSD/frontend/src/pages/ShellForgePage.jsx` | The ShellForge page |

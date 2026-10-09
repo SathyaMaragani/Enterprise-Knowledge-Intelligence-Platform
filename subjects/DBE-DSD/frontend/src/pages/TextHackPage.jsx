@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
-import { request } from '../api/client.js';
-import { useApi } from '../api/useApi.js';
+import { useApi, useRun } from '../api/useApi.js';
 
 const SAMPLE_TEXT = 'she sells sea shells by the sea shore; he hears the ushers hush.';
 const SAMPLE_PATTERNS = 'he\nshe\nhers';
@@ -44,21 +43,6 @@ export function parseCitations(input) {
     citations.push({ from: Number(match[1]), to: Number(match[2]) });
   }
   return { citations };
-}
-
-/** POSTs to `path` and keeps the latest result or error. */
-function useRun(path) {
-  const [state, setState] = useState({ result: null, error: null, busy: false });
-  async function run(body) {
-    setState((previous) => ({ ...previous, error: null, busy: true }));
-    try {
-      setState({ result: await request(path, { method: 'POST', body }), error: null, busy: false });
-    } catch (err) {
-      setState({ result: null, error: err.message, busy: false });
-    }
-  }
-  const fail = (error) => setState({ result: null, error, busy: false });
-  return [state, run, fail];
 }
 
 const percent = (value) => `${Math.round(value * 100)}%`;

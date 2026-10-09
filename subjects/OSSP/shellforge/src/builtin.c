@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "builtin.h"
+#include "thread.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -100,6 +101,8 @@ static int builtin_help(void) {
     printf("  clear      clear the screen\n");
     printf("  help       show this list\n");
     printf("  exit       leave the shell\n");
+    printf("  demo-threads [threads] [increments]\n");
+    printf("             race threads on a shared counter, then repeat under a mutex\n");
     printf("\nAnything else is executed as an external program via fork/execvp.\n\n");
     return BUILTIN_HANDLED;
 }
@@ -140,6 +143,11 @@ int execute_builtin(char **args) {
     }
     if (strcmp(args[0], "env") == 0) {
         return builtin_env();
+    }
+    if (strcmp(args[0], "demo-threads") == 0) {
+        /* In the shell process: the threads must share this process's memory. */
+        run_thread_demo(args);
+        return BUILTIN_HANDLED;
     }
 
     return BUILTIN_NOT_FOUND;

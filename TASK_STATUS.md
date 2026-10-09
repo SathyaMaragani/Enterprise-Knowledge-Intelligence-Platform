@@ -271,9 +271,9 @@ The architecture/scaffolding is:
 
 ---
 
-# 🟢 OSSP — ShellForge (Weeks 1-9)
+# 🟢 OSSP — ShellForge (Weeks 1-10)
 
-Weeks 1-9 are implemented, compiled, and verified. The host has
+Weeks 1-10 are implemented, compiled, and verified. The host has
 no gcc/make, so the build runs in a `gcc:13` container.
 
 ### Week 1 — VERIFIED
@@ -390,6 +390,16 @@ once more, to Week 7, and into its own module (`pipes.c`) as that chapter asks.
 * [x] Built-ins redirected in the shell, terminal restored; redirection inside pipelines
 * [x] No descriptor leaks (`F_DUPFD_CLOEXEC`), confirmed by a mutation check
 * [x] Automated test suite (`test_week9.sh`, 29 assertions)
+
+### Week 10 — VERIFIED (Threads and Concurrency)
+
+* [x] `thread.h`, `thread.c`, `-pthread`
+* [x] Monitor thread: condition-variable wait, joined at exit, `SHELLFORGE_MONITOR` interval
+* [x] `demo-threads`: race condition vs mutex, `pthread_join()` on every worker
+* [x] Threads created with all signals blocked (SIGCHLD stays on the main thread)
+* [x] ThreadSanitizer, ASan/UBSan and Valgrind clean apart from the deliberate race
+* [x] Automated test suite (`test_week10.sh`, 32 checks)
+* [x] Web integration: `ShellForgeService` + `/api/shellforge`, ShellForge page with race lab and preset sessions
 
 ### Future OSSP
 
@@ -679,7 +689,7 @@ A comprehensive **development-status view** right now:
 | DSA-3 TextHack (all 20 algos) | 🟢 Verified   |
 | TextHack → Search (1.7C)      | 🟢 Verified   |
 | DSA-3 frontend wiring         | 🟢 Verified   |
-| OSSP ShellForge (Wk 1-9)      | 🟢 Verified   |
+| OSSP ShellForge (Wk 1-10)     | 🟢 Verified   |
 | Frontend 1 (shell + auth)     | 🟢 Verified   |
 | Product UI: sign-in + dashboard | 🟢 Verified |
 | Repository/Search/Admin pages | 🟢 Verified   |
@@ -706,7 +716,7 @@ DBE: In-process Java ONNX MiniLM Query Embedding (1.7B-3C)
 DBE: Spring Boot Real Semantic Search Integration (1.7B-3B)
 DSA-3: TextHack, all 20 algorithms (452 assertions) + engine + benchmarks
 DBE/DSA: TextHack lexical and fuzzy scoring in unified search (1.7C)
-OSSP: Weeks 1–9 ShellForge (REPL, Input, Parser, Processes, Built-ins, Signals, Pipes/IPC, Valgrind/GDB, Redirection)
+OSSP: Weeks 1–10 ShellForge (REPL, Input, Parser, Processes, Built-ins, Signals, Pipes/IPC, Valgrind/GDB, Redirection, Threads), run from the web app
 DBE: React shell + JWT authentication (Frontend 1)
 DBE: Product UI — sign-in and live-data dashboard with threeui scenes
 DBE: Repository, document viewer, search, upload/delete and administration pages
@@ -715,7 +725,7 @@ DBE/DSA: TextHack workbench API and page (pattern, similarity, citation flow)
 Deployment: live on free plans — Vercel + Render + Neon/Atlas/Qdrant Cloud
 
 REMAINING:
-OSSP: Job control and process groups, FIFOs, mmap/virtual memory, directories, threads (no handbook chapters yet)
+OSSP: Job control and process groups, FIFOs, mmap/virtual memory, directories, semaphores (no handbook chapters yet)
 ```
 
-For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–9 and all 20 DSA-3 algorithms verified. Documents can be uploaded and deleted through the API and UI, and the whole stack runs from one Compose file.
+For your immediate academic progress, you now have **three verified databases + a read-side Spring Boot backend with JWT/RBAC + hybrid keyword, fuzzy and semantic search + a verified 315-doc demo corpus**, with OSSP Weeks 1–10 and all 20 DSA-3 algorithms verified. Documents can be uploaded and deleted through the API and UI, and the whole stack runs from one Compose file.

@@ -962,6 +962,44 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // SHELLFORGE (OSSP) TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testShellForgeListsItsSessions() throws Exception {
+        mockMvc.perform(get("/api/shellforge"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").isBoolean())
+                .andExpect(jsonPath("$.sessions", hasSize(6)))
+                .andExpect(jsonPath("$.sessions[?(@.id == 'threads')].week", contains(10)));
+    }
+
+    @Test
+    void testShellForgeRunsOnlyKnownSessionsWithinLimits() throws Exception {
+        String[][] cases = {
+                {"{\"session\":\"cat /etc/passwd\"}", "Unknown session"},
+                {"{\"session\":\"threads\",\"threads\":9}", "threads must be between 1 and 8"},
+                {"{\"session\":\"threads\",\"increments\":0}", "increments must be between 1 and 200000"},
+                {"{}", "Choose a session"},
+        };
+        for (String[] c : cases) {
+            mockMvc.perform(post("/api/shellforge/run")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(c[0]))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message", containsString(c[1])));
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testShellForgeRequiresSignIn() throws Exception {
+        mockMvc.perform(get("/api/shellforge"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------
     // SEARCH ACTIVITY TESTS
     // ---------------------------------------------------------
 

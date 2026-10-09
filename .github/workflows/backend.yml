@@ -10,12 +10,14 @@ on:
       - subjects/DBE-DSD/backend/**
       - subjects/DBE-DSD/database/**
       - subjects/DSA-3/**
+      - subjects/OSSP/shellforge/**
       - .github/workflows/backend.yml
   pull_request:
     paths:
       - subjects/DBE-DSD/backend/**
       - subjects/DBE-DSD/database/**
       - subjects/DSA-3/**
+      - subjects/OSSP/shellforge/**
       - .github/workflows/backend.yml
   workflow_dispatch:
 
@@ -40,6 +42,13 @@ jobs:
 
       - name: TextHack suites (DSA-3)
         run: sh subjects/DSA-3/run-tests.sh
+
+      # Weeks 4-10, with Valgrind and GDB for Week 8. Leaves bin/shellforge built
+      # for the backend tests that run the real shell.
+      - name: ShellForge suites (OSSP)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq valgrind gdb > /dev/null
+          make -C subjects/OSSP/shellforge test
 
       - name: Cache the embedding model
         uses: actions/cache@v6
@@ -68,4 +77,6 @@ jobs:
       # 705 ingested vectors; it runs locally (see backend/docs/TESTING.md).
       - name: Backend tests
         working-directory: subjects/DBE-DSD/backend
+        env:
+          SHELLFORGE_BINARY: ${{ github.workspace }}/subjects/OSSP/shellforge/bin/shellforge
         run: ./mvnw -B test -Duser.timezone=UTC "-Dtest=!DemoSemanticSearchIntegrationTest" -Dsurefire.failIfNoSpecifiedTests=false

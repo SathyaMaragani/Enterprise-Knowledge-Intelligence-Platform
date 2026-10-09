@@ -98,3 +98,15 @@
 - Operators `>`, `>>`, `<`, `2>`, with or without spaces, combined, and inside pipelines
 - Redirecting built-ins in the shell process: saving and restoring fds 0-2
 - Close-on-exec (`F_DUPFD_CLOEXEC`) to stop descriptor leaks into children
+
+## Week 10
+
+**CO-6 — Threads and Concurrency (POSIX threads):**
+- Process vs thread: shared address space, per-thread stack and registers
+- `pthread_create()` and `pthread_join()`; one `/proc/<pid>/task` entry per thread
+- A background monitor thread running alongside the shell's main thread
+- Race conditions: `counter++` as load, add and store; lost updates
+- Critical sections protected by `pthread_mutex_lock()` / `pthread_mutex_unlock()`
+- Condition variables: `pthread_cond_timedwait()` so the monitor can be woken and joined
+- Threads and signals: masks are per thread; new threads block every signal so SIGCHLD stays on the main thread
+- ThreadSanitizer as evidence that the race is real and that the mutex removes it

@@ -100,6 +100,12 @@ It is one integrated project built across four courses. Each course owns a part 
       <p align="center"><b>ML insights</b><br><sub>How well documents can be filed and grouped automatically, measured on the demo corpus.</sub></p>
     </td>
   </tr>
+  <tr>
+    <td colspan="2" valign="top" align="center">
+      <img src="docs/screenshots/shellforge.png" alt="ShellForge page: the race demo lost 448,439 of 800,000 increments without a mutex and none with it" width="70%">
+      <p align="center"><b>ShellForge</b><br><sub>The OSSP shell in C, run on the server. Four threads lose 448,439 of 800,000 increments without a mutex, and none with it.</sub></p>
+    </td>
+  </tr>
 </table>
 
 <sub>Screenshots are from the local demo stack: 315 generated documents and 14 users, plus one uploaded PDF. The live site holds its own data.</sub>
@@ -113,7 +119,7 @@ It is one integrated project built across four courses. Each course owns a part 
 | **DBE-DSD** | Database Systems Engineering and Distributed Backend Development (25CS1302E) | The three databases, the Spring Boot API, security, the React frontend, containers and deployment | [DBE-DSD.md](docs/database/DBE-DSD.md) |
 | **DSA-3** | Data Structures and Algorithms 3 (25CS2103E) | TextHack, compiled into the backend: it scores every keyword and fuzzy search and powers the workbench | [DSA-3.md](docs/algorithms/DSA-3.md) |
 | **ML** | Machine Learning (25SC2107E) | The embedding model choice and its Java parity, the chunking rule, the demo corpus, classification and clustering | [ML.md](docs/ml/ML.md) |
-| **OSSP** | Operating Systems and Systems Programming (25CS2104E) | ShellForge, a Unix shell in C. It is a standalone component, not yet called by the platform | [OSSP.md](docs/ossp/OSSP.md) |
+| **OSSP** | Operating Systems and Systems Programming (25CS2104E) | ShellForge, a Unix shell in C, built into the backend image: the ShellForge page runs it on the server | [OSSP.md](docs/ossp/OSSP.md) |
 
 ## Architecture
 
@@ -177,12 +183,12 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **220 pass** (216 in GitHub Actions on every change) |
-| Frontend | 16 Vitest files: pages, session, API client | **149 pass** |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **233 pass** (229 in GitHub Actions on every change) |
+| Frontend | 17 Vitest files: pages, session, API client | **156 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |
 | ML | Pipeline, embeddings, Java and Python parity, retrieval equivalence | Java and Python top-5 results **100% identical** |
-| OSSP | Weekly suites plus Valgrind, GDB and sanitizers | **148 checks** pass |
+| OSSP | Weekly suites plus Valgrind, GDB, ThreadSanitizer and sanitizers | **180 checks** pass |
 
 ## Tech stack
 
@@ -240,7 +246,7 @@ enterprise-knowledge-intelligence/
 │   │              frontend/ (React), docker/ (full stack, smoke and load tests), deploy/
 │   ├── DSA-3/     texthack/ engine, tests/, benchmarks/, examples/
 │   ├── ML/        src/, tests/, notebooks/, results/, docs/
-│   └── OSSP/      shellforge/ (src/, include/, tests/, docs/WEEK1..9.md)
+│   └── OSSP/      shellforge/ (src/, include/, tests/, docs/WEEK1..10.md)
 ├── .github/workflows/            Backend and Frontend CI
 └── render.yaml                   Render Blueprint for the backend
 ```
@@ -254,7 +260,7 @@ enterprise-knowledge-intelligence/
 | No OCR for scanned PDFs | Add an OCR step to text extraction |
 | Embedding runs inside the upload request | Move it to a background job for large files |
 | ML results are displayed, not served | Suggest a category when a document is uploaded |
-| ShellForge runs on its own | Job control, FIFOs, shared memory and threads from the rest of the OSSP syllabus |
+| ShellForge runs preset sessions only | Job control, FIFOs, shared memory and semaphores from the rest of the OSSP syllabus |
 
 ## Documentation and reviews
 

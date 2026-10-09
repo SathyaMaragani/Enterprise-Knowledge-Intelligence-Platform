@@ -17,6 +17,7 @@ services:
       paths:
         - subjects/DBE-DSD/backend/**
         - subjects/DSA-3/texthack/**
+        - subjects/OSSP/shellforge/**
         - render.yaml
     envVars:
       - key: JWT_SECRET

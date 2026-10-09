@@ -456,3 +456,36 @@ sink must differ. Every citation has unit weight. The response is:
 - `sourceSide` (`[0, 1]`)
 - `bottleneck` (`[{ "from": 1, "to": 2 }]`): the citations crossing the minimum
   cut. There are always as many of them as the influence.
+
+## 7. ShellForge (OSSP)
+The OSSP ShellForge shell, compiled into the backend image at
+`/opt/shellforge/shellforge` (override with `SHELLFORGE_BINARY`), run on preset
+sessions. Any signed-in user may call these; without a token they return 401.
+
+Only sessions defined on the server run: a request names one, and cannot
+supply commands. Each run starts the shell with `--echo` in a fresh empty
+directory, with an environment of only `PATH`, `HOME`, `PWD`, `USER`, `SHELL`,
+`LANG` and `SHELLFORGE_MONITOR`. A run is killed after 20 seconds, output is
+capped at 64 KB, and at most two runs execute at once.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/shellforge` | `available` (whether the binary is installed) and `sessions`: `id`, `week`, `title`, `summary`, `commands`, `monitorSeconds` |
+| `POST /api/shellforge/run` | Runs one session and returns its transcript |
+
+**Sessions:** `processes` (Week 4), `builtins` (5), `pipes` (7), `redirection`
+(9), `monitor` (10: heartbeat every second during `sleep 2.5`) and `threads`
+(10: `demo-threads`).
+
+**Run** accepts `{ "session": "threads", "threads": 4, "increments": 100000 }`.
+`threads` (1–8) and `increments` (1–200000) apply to `threads` only, defaulting
+to 4 and 100000. It returns:
+- `session` and `commands`: what ran
+- `output`: the transcript, each command after its `myshell>` prompt
+- `exitCode` (-1 when stopped), `durationMillis` and `timedOut`
+
+| Code | When |
+|---|---|
+| 200 | The session ran, including one stopped at the time limit (`timedOut: true`) |
+| 400 | Unknown session, missing session, or `threads`/`increments` out of range |
+| 503 | The binary is not installed, or two runs are already in progress |

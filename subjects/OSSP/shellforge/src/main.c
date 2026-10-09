@@ -9,16 +9,21 @@
 #include "pipes.h"
 #include "redirect.h"
 #include "signals.h"
+#include "thread.h"
 
 int main(int argc, char **argv) {
     char *line;
     char **tokens;
     int i;
     int debug_mode = (getenv("SHELLFORGE_DEBUG") != NULL);
+    int echo_input = 0;
 
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--debug-tokens") == 0) {
             debug_mode = 1;
+        } else if (strcmp(argv[i], "--echo") == 0) {
+            /* Print each line after the prompt, so a scripted session reads as a transcript. */
+            echo_input = 1;
         } else if (strcmp(argv[i], "--demo-ipc") == 0) {
             return run_ipc_demo();
         }
@@ -26,6 +31,8 @@ int main(int argc, char **argv) {
 
     /* Before the first prompt, so Ctrl+C can never kill the shell itself. */
     initialize_signals();
+    /* After the handlers are installed; the thread itself starts with every signal blocked. */
+    start_monitor_thread();
 
     printf("=====================================\n");
     printf(" Welcome to %s Version %s\n", SHELL_NAME, VERSION);
@@ -40,6 +47,11 @@ int main(int argc, char **argv) {
             printf("\n");
             free(line);
             break;
+        }
+
+        if (echo_input) {
+            printf("%s\n", line);
+            fflush(stdout); /* ahead of any error the command writes to unbuffered stderr */
         }
 
         if (line[0] == '\0') {
@@ -128,5 +140,6 @@ int main(int argc, char **argv) {
         free(line);
     }
 
+    stop_monitor_thread();
     return 0;
 }

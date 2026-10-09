@@ -68,7 +68,7 @@
 - [x] Docker-based environment validation
 
 
-## OSSP — Weeks 1-9 (ShellForge)
+## OSSP — Weeks 1-10 (ShellForge)
 **Status: VERIFIED**
 (This Windows host has no gcc/make, which is why Weeks 1-2 previously stood
 unverified. Built and executed in a `gcc:13` container instead, which compiles
@@ -151,7 +151,16 @@ vector first and the leak checker stays clean.
 - [x] No descriptor leaks: saved fds are close-on-exec, confirmed by a mutation check
 - [x] 29 assertions passing
 
-**Deviations from the Week 6 and 9 listings**, documented in `WEEK6.md` and `WEEK9.md`:
+### Week 10 — Threads and concurrency (POSIX threads)
+- [x] `include/thread.h`, `src/thread.c`; Makefile links with `-pthread`
+- [x] Background monitor thread (`SHELLFORGE_MONITOR` seconds), woken by a condition variable and joined at exit
+- [x] `demo-threads`: a race on a shared counter, then the same under a mutex; workers joined with `pthread_join()`
+- [x] Threads start with every signal blocked, so SIGCHLD stays on the main thread (mutation check: 264 of 300 exit statuses lost without it)
+- [x] ThreadSanitizer confirms the race is only in the unprotected worker
+- [x] 32 checks passing
+- [x] Integrated into the web app: compiled into the backend image; the ShellForge page runs preset sessions and the race lab
+
+**Deviations from the Week 6, 9 and 10 listings**, documented in `WEEK6.md`, `WEEK9.md` and `WEEK10.md`:
 - **Week 6 signal handlers:** the listing's handlers call `printf()`, which is
   not async-signal-safe; ShellForge's use `write()`.
 - **Week 6 SIGCHLD reaper:** the listing's reaper can take the foreground
@@ -159,10 +168,12 @@ vector first and the leak checker stays clean.
   foreground waits.
 - **Week 9 redirection:** the listing implements only `>` and `>>`, and skips
   built-ins; ShellForge implements all four operators and covers built-ins.
+- **Week 10 monitor:** the listing detaches a thread that sleeps forever;
+  ShellForge joins it at exit and starts it with signals blocked.
 
 ```
 make test (gcc:13 + valgrind + gdb):
-  week4 21 · week5 32 · week6 21 · week7 23 · week8 22 · week9 29  = 148 passed, 0 failed
+  week4 21 · week5 32 · week6 21 · week7 23 · week8 22 · week9 29 · week10 32  = 180 passed, 0 failed
 ```
 
 ## Phase 1.4.3 — Qdrant Vector Integration

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Build context is subjects/, because the backend compiles the TextHack engine
-# from subjects/DSA-3 (see pom.xml). Two targets:
+# from subjects/DSA-3 (see pom.xml) and ships the OSSP ShellForge shell. Two targets:
 #
 #   runtime   the model is mounted at run time (docker/docker-compose.yml)
 #   render    the default: sized for Render's free instance (512 MB, 0.1 CPU),
@@ -21,9 +21,19 @@ RUN apk add --no-cache curl
 COPY DBE-DSD/backend/model/fetch-model.sh /fetch-model.sh
 RUN sh /fetch-model.sh /models/minilm
 
+# ShellForge (OSSP), compiled on the runtime's own base so its glibc matches.
+# The backend runs it for the web app's ShellForge page (ShellForgeService).
+FROM eclipse-temurin:21-jre AS shellforge
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev make \
+ && rm -rf /var/lib/apt/lists/*
+COPY OSSP/shellforge /src
+# clean first: a local checkout may hold object files from another toolchain.
+RUN make -C /src clean all
+
 # glibc base, not Alpine: ONNX Runtime and the DJL tokenizer ship glibc natives.
 FROM eclipse-temurin:21-jre AS runtime
 RUN useradd --system --create-home --uid 10001 eip
+COPY --from=shellforge /src/bin/shellforge /opt/shellforge/shellforge
 WORKDIR /app
 COPY --from=build /src/DBE-DSD/backend/target/*.jar app.jar
 USER eip
@@ -39,6 +49,7 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
 FROM eclipse-temurin:21-jre AS render
 RUN useradd --system --create-home --uid 10001 eip
 COPY --from=model /models/minilm /models/minilm
+COPY --from=shellforge /src/bin/shellforge /opt/shellforge/shellforge
 ENV SPRING_PROFILES_ACTIVE=prod \
     EMBEDDING_ENABLED=true \
     EMBEDDING_MODELPATH=/models/minilm/onnx/model.onnx \

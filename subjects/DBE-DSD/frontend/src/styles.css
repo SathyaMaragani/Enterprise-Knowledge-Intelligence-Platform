@@ -3002,3 +3002,76 @@ input.text-input {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ShellForge (OSSP): sessions run by the real shell on the server. */
+.shellforge-sessions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shellforge-session {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-soft);
+}
+
+.shellforge-session h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.shellforge-session .muted {
+  margin: 0;
+  flex: 1;
+}
+
+.shellforge-session .btn {
+  align-self: flex-start;
+}
+
+.shellforge-session__week {
+  margin: 0;
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shellforge-session__commands,
+.terminal {
+  margin: 0;
+  overflow-x: auto;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  white-space: pre;
+}
+
+.shellforge-session__commands {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-raised);
+  font-size: 0.8rem;
+}
+
+.terminal {
+  max-height: 28rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #0f1b2d;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.shellforge-run .muted {
+  margin-top: 0.4rem;
+}

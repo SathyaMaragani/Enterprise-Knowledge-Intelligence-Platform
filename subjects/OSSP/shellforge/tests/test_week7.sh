@@ -53,7 +53,7 @@ fi
 # 2. Banner test
 echo "--- 2. Banner & Version Test ---"
 OUT=$(printf "exit\n" | ./bin/shellforge)
-assert_contains "Startup banner Version 9.0" "Welcome to ShellForge Version 9.0" "$OUT"
+assert_contains "Startup banner Version 10.0" "Welcome to ShellForge Version 10.0" "$OUT"
 assert_contains "Clean exit message" "Exiting ShellForge..." "$OUT"
 
 # 3. Direct IPC Demonstrations (--demo-ipc)

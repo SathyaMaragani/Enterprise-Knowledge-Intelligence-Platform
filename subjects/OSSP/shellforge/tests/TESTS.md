@@ -9,7 +9,7 @@ container:
 docker run --rm -i -v "$(pwd):/src" -w /src gcc:13 sh -c "make clean && make test"
 ```
 
-`make test` runs all six automated suites in order, Week 4 to Week 9.
+`make test` runs all seven automated suites in order, Week 4 to Week 10.
 
 Week 8's Valgrind and GDB checks need those tools, which the gcc:13 image lacks.
 Build an image that adds them once, then use it in place of `gcc:13`:
@@ -32,6 +32,7 @@ read `/proc` and use `setsid` and `ps`, so they need Linux.
 | `tests/test_week7.sh` | Pipes and IPC | 23 |
 | `tests/test_week8.sh` | Valgrind, GDB and AddressSanitizer | 22 |
 | `tests/test_week9.sh` | File descriptors and I/O redirection | 29 |
+| `tests/test_week10.sh` | Threads and concurrency | 32 |
 
 Run one suite on its own:
 
@@ -51,7 +52,7 @@ actually active — compile a deliberate one-line leak and check it is reported.
    - Expected: Program launches without errors.
 2. **Startup banner appears.**
    - Action: Observe output.
-   - Expected: `Welcome to ShellForge Version 9.0` banner is displayed.
+   - Expected: `Welcome to ShellForge Version 10.0` banner is displayed.
 3. **A command is tokenized into argv[].**
    - Action: Run with `--debug-tokens` and enter `ls -l /home`.
    - Expected: `argv[0] = ls`, `argv[1] = -l`, `argv[2] = /home`, `argv[3] = NULL`.
@@ -214,9 +215,36 @@ group, so the shell and its running child each receive it.
 | ASan / UBSan | 0 reports |
 | **`tests/test_week9.sh`** | **29 passed, 0 failed** |
 
+## Week 10 — Threads and Concurrency
+
+ThreadSanitizer cannot start where the kernel randomises 32 bits of the address
+space (`vm.mmap_rnd_bits = 32`, as in Docker Desktop's WSL 2 kernel) unless
+randomisation is turned off with `setarch -R`, which Docker's default seccomp
+profile blocks. Those two checks are then skipped; to run them:
+
+```bash
+docker run --rm --security-opt seccomp=unconfined -v "$(pwd):/src" -w /src shellforge-dev sh -c "make clean && make test"
+```
+
+| Test category | Result |
+|---|---|
+| Build with `thread.c` and `-pthread` | Passed |
+| Monitor heartbeat, off switch, 2 vs 1 threads in `/proc/<pid>/task` | Passed |
+| `exit` joins the monitor at once | Passed (about 5 ms with a 30 s interval) |
+| 100 commands with the monitor running: no stolen exit status | Passed |
+| `demo-threads`: mutex total exact, workers joined, bad arguments rejected | Passed |
+| `--echo` transcript order | Passed |
+| ThreadSanitizer: race only in `unsafe_worker` | Passed (with seccomp unconfined) |
+| ASan / UBSan; Valgrind all heap blocks freed | 0 reports |
+| **`tests/test_week10.sh`** | **32 passed, 0 failed, 0 skipped** |
+
+The signal-mask check was confirmed against a mutation: without the mask, 264
+of 300 commands lost their exit status to the reaper running on the monitor
+thread.
+
 ## Regression Summary
 
-All three suites pass together via `make test`:
+All seven suites pass together via `make test`:
 
 ```
 tests/test_week4.sh    21 passed, 0 failed
@@ -225,4 +253,5 @@ tests/test_week6.sh    21 passed, 0 failed
 tests/test_week7.sh    23 passed, 0 failed
 tests/test_week8.sh    22 passed, 0 failed, 0 skipped
 tests/test_week9.sh    29 passed, 0 failed
+tests/test_week10.sh   32 passed, 0 failed, 0 skipped
 ```

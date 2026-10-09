@@ -1,8 +1,9 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -Iinclude
+LDFLAGS = -pthread
 
 SRCS = src/main.c src/input.c src/parser.c src/executor.c src/builtin.c \
-       src/signals.c src/pipes.c src/redirect.c
+       src/signals.c src/pipes.c src/redirect.c src/thread.c
 OBJS = $(SRCS:.c=.o)
 TARGET = bin/shellforge
 
@@ -10,7 +11,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	@mkdir -p bin
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -25,6 +26,7 @@ test: all
 	@sh tests/test_week7.sh
 	@sh tests/test_week8.sh
 	@sh tests/test_week9.sh
+	@sh tests/test_week10.sh
 
 # Week 8: rebuild with AddressSanitizer + UndefinedBehaviorSanitizer.
 asan: clean

@@ -17,6 +17,7 @@ import {
   SearchIcon,
   ShieldCheckIcon,
   SlidersIcon,
+  TerminalIcon,
   ZapIcon,
 } from './icons.jsx';
 
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   // A document belongs to the repository, so its viewer keeps Repository lit.
   { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
   { label: 'TextHack', to: '/texthack', Icon: ZapIcon },
+  { label: 'ShellForge', to: '/shellforge', Icon: TerminalIcon },
   { label: 'ML insights', to: '/insights', Icon: BarChartIcon },
   { label: 'Administration', to: '/admin', Icon: ShieldCheckIcon, requiresPermission: 'USER_MANAGE' },
 ];

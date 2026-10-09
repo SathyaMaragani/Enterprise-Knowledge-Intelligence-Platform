@@ -214,7 +214,7 @@ Measured on 6 October 2026 with real files over HTTP:
 
 | Package | Contents |
 |---|---|
-| `controller` | `AuthController`, `DocumentController`, `DocumentGrantController`, `CategoryController`, `SearchController`, `VectorSearchController`, `AdminController`, `TextHackController`, `HealthController` |
+| `controller` | `AuthController`, `DocumentController`, `DocumentGrantController`, `CategoryController`, `SearchController`, `VectorSearchController`, `AdminController`, `TextHackController`, `ShellForgeController`, `HealthController` |
 | `service` | `DocumentAccessService` (the read rule), `DocumentIngestionService`, `TextExtractor`, `TextChunker`, `SearchService`, `LexicalScorer`, `EmbeddingService`, `QdrantService`, `UnifiedDocumentService`, `KnowledgeDocumentService`, `DocumentService`, `DocumentGrantService`, `SearchActivityService`, `UserAdminService`, `UserService`, `CategoryService` |
 | `security` | `SecurityConfig`, `JwtService`, `JwtAuthenticationFilter`, `CustomUserDetailsService`, entry point and access-denied handlers |
 | `ml` | `MiniLmOnnxEncoder`: tokenizer, ONNX inference, attention-mask mean pooling, L2 normalisation |
@@ -287,6 +287,7 @@ flowchart TD
 | `POST /api/documents/search/semantic` | Semantic search returning unified documents | Signed in; filtered |
 | `GET/POST/PATCH /api/admin/users`, `PUT /api/admin/users/{id}/password`, `GET /api/admin/roles` | Account administration | USER_MANAGE |
 | `POST /api/texthack/pattern`, `/similarity`, `/citations`, `GET /api/texthack/complexity` | DSA-3 workbench | Signed in |
+| `GET /api/shellforge`, `POST /api/shellforge/run` | OSSP ShellForge: preset sessions run by the real shell | Signed in |
 
 Full reference: [`backend/docs/API.md`](../../subjects/DBE-DSD/backend/docs/API.md).
 
@@ -343,6 +344,7 @@ flowchart LR
 | Upload (`/upload`) | PDF, DOCX, TXT or MD up to 10 MB; client-side checks mirror the server's |
 | Administration (`/admin`) | Accounts table, role changes, disable, password reset, add user |
 | TextHack (`/texthack`) | DSA-3 workbench: pattern search, similarity and alignment, citation flow, complexity table |
+| ShellForge (`/shellforge`) | OSSP shell run on the server: Week 10 race-and-mutex lab, preset sessions with their transcripts |
 | ML insights (`/insights`) | ML subject's classification and clustering results, in SVG charts |
 
 - **Session.** The JWT is kept in `sessionStorage`. The client signs out when it expires, or on any 401 to a request that carried a token.
@@ -378,8 +380,8 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **220 tests pass**: 216 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| Frontend (Vitest + Testing Library, 16 files) | **149 tests pass** |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **233 tests pass**: 229 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Frontend (Vitest + Testing Library, 17 files) | **156 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
 | Render free-tier limits | Healthy after 101 s; semantic search 0.4–0.9 s (was 6.5–9.4 s before tuning); hybrid 0.5–0.6 s; memory 446 MiB steady, 485 MiB peak |
@@ -424,7 +426,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 220 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 233 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |

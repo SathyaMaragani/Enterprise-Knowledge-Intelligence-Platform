@@ -97,9 +97,19 @@ ShellForge is a Unix-like shell developed as part of the OSSP project.
 - Works with built-ins, inside pipelines, and without spaces (`ls>out`)
 - Automated test suite (`tests/test_week9.sh`)
 
+## Week 10 Features
+
+- POSIX thread support (`include/thread.h`, `src/thread.c`, linked with `-pthread`)
+- Background monitoring thread (`SHELLFORGE_MONITOR` seconds, default 10, `0` off)
+- `pthread_create()` and `pthread_join()`
+- Mutex synchronization and a race condition demonstration: `demo-threads [threads] [increments]`
+- Threads start with signals blocked, so SIGCHLD stays on the main thread
+- `--echo` transcript mode, used by the web app's ShellForge page
+- Automated test suite (`tests/test_week10.sh`)
+
 ## Current Version
 
-ShellForge Version 9.0
+ShellForge Version 10.0
 
 ## Build
 

@@ -159,6 +159,7 @@ describe('dashboard', () => {
       'Search',
       'Repository',
       'TextHack',
+      'ShellForge',
       'ML insights',
     ]);
     // Unbuilt pages are not advertised in the navigation.
