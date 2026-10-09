@@ -70,7 +70,7 @@ fi
 # 2. pwd built-in
 echo "--- 2. pwd Built-in ---"
 OUT=$(printf "pwd\nexit\n" | ./bin/shellforge)
-assert_contains "pwd prints working directory" "/src" "$OUT"
+assert_contains "pwd prints working directory" "$(pwd)" "$OUT"
 
 # 3. cd changes the SHELL's own directory
 #    This is the decisive built-in test. If cd were forked and exec'd, the
@@ -79,7 +79,7 @@ assert_contains "pwd prints working directory" "/src" "$OUT"
 echo "--- 3. cd Persists in the Parent Process ---"
 OUT=$(printf "cd /tmp\npwd\nexit\n" | ./bin/shellforge)
 assert_contains "cd /tmp then pwd shows /tmp" "/tmp" "$OUT"
-assert_not_contains "cd did not silently stay in /src" "/src" "$(printf 'cd /tmp\npwd\nexit\n' | ./bin/shellforge | grep -A1 myshell | tail -2)"
+assert_not_contains "cd did not silently stay in the start directory" "$(pwd)" "$(printf 'cd /tmp\npwd\nexit\n' | ./bin/shellforge | grep -A1 myshell | tail -2)"
 
 OUT=$(printf "cd /tmp\ncd /etc\npwd\nexit\n" | ./bin/shellforge)
 assert_contains "successive cd calls accumulate" "/etc" "$OUT"

@@ -62,7 +62,7 @@ OUT=$(printf "echo Hello ShellForge\nexit\n" | ./bin/shellforge)
 assert_contains "Echo command execution" "Hello ShellForge" "$OUT"
 
 OUT=$(printf "pwd\nexit\n" | ./bin/shellforge)
-assert_contains "Pwd command execution" "/src" "$OUT"
+assert_contains "Pwd command execution" "$(pwd)" "$OUT"
 
 # 4. Multi-argument execution
 echo "--- 4. Multi-argument Execution ---"
