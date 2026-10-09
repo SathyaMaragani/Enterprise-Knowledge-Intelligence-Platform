@@ -109,7 +109,7 @@ and requires no `waitpid` error.
 
 | Handbook | ShellForge | Why |
 |---|---|---|
-| `sleep(10)` in an endless loop; `pthread_detach()` | `pthread_cond_timedwait()` on a condition variable; `pthread_join()` at exit | A detached, sleeping thread cannot be stopped. Exit has to wait up to 10 s or end with the thread mid-sleep, and Valgrind then reports its stack. `stop_monitor_thread()` wakes it at once and joins it. |
+| `sleep(10)` in an endless loop; `pthread_detach()` | `pthread_cond_timedwait()` on a condition variable; `pthread_join()` at exit | A detached, sleeping thread cannot be stopped. The process ends with the thread mid-sleep, and Valgrind reports 272 bytes of its thread storage as possibly lost. `stop_monitor_thread()` wakes it at once and joins it. |
 | Thread created with the inherited signal mask | All signals blocked in new threads | The SIGCHLD problem above |
 | Fixed 10 s interval | `SHELLFORGE_MONITOR` seconds, `0` for off | Tests and the web page need a 1 s heartbeat or none |
 | Race and mutex shown as snippets | `demo-threads` built-in | Shows both totals side by side, and runs from the web page |

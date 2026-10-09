@@ -466,3 +466,4 @@ The decks are kept as they were presented, so earlier ones describe plans that l
 | ML | Project review: literature, gaps, method, evaluation plan | [PDF](presentations/ML/01-Review/ML-Review.pdf), [PPTX](presentations/ML/01-Review/ML-Review.pptx) | 28 Aug |
 | OSSP | Review 1: ShellForge plan, modules, timeline | [PDF](presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf), [PPTX](presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pptx) | 7 Aug |
 | OSSP | Review 2: ShellForge Weeks 1–6 | [PDF](presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf), [PPTX](presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pptx) | 24 Sep |
+| OSSP | Final review report: ShellForge Weeks 1–10 and its web integration | [PDF](presentations/OSSP/03-Final-Review/OSSP-Final-Review-Report.pdf), [Word](presentations/OSSP/03-Final-Review/OSSP-Final-Review-Report.docx) | 9 Oct |

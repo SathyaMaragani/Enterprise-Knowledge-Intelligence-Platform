@@ -152,7 +152,11 @@ function Sessions({ sessions }) {
             <p className="shellforge-session__week">Week {session.week}</p>
             <h3>{session.title}</h3>
             <p className="muted">{session.summary}</p>
-            <pre className="shellforge-session__commands">{session.commands.join('\n')}</pre>
+            <pre className="shellforge-session__commands">
+              {session.commands.map((command) => (
+                <span key={command}>{command}</span>
+              ))}
+            </pre>
             <button
               type="button"
               className="btn btn--primary"

@@ -3051,15 +3051,27 @@ input.text-input {
   margin: 0;
   overflow-x: auto;
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  /* Cascadia Code would draw >> and -> as single glyphs: wrong in a shell transcript. */
+  font-variant-ligatures: none;
   white-space: pre;
 }
 
 .shellforge-session__commands {
+  /* Wrap long commands rather than hide their ends in a scroll box. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--bg-raised);
   font-size: 0.8rem;
+}
+
+/* One command per line; a wrapped command's continuation is indented. */
+.shellforge-session__commands span {
+  display: block;
+  padding-left: 1.5em;
+  text-indent: -1.5em;
 }
 
 .terminal {

@@ -42,6 +42,7 @@ Guide: Dr. P. Kalpana
 |---|---|---|---|---|
 | Review 1 | 7 Aug | ShellForge plan, modules, timeline (7 slides) | [PDF](OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf) | [PPTX](OSSP/01-Review-1/OSSP-Review-1-ShellForge.pptx) |
 | Review 2 | 24 Sep | ShellForge Weeks 1–6 (16 slides) | [PDF](OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf) | [PPTX](OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pptx) |
+| Final review report | 9 Oct | PBL documentation: ShellForge Weeks 1–10 and its web integration (19 pages) | [PDF](OSSP/03-Final-Review/OSSP-Final-Review-Report.pdf) | [Word](OSSP/03-Final-Review/OSSP-Final-Review-Report.docx) |
 
 ## Layout
 
@@ -50,7 +51,7 @@ presentations/
 ├── DBE-DSD/   01-Review-1/  02-Review-2/  03-Final-Review/
 ├── DSA-3/     01-Review-1/  02-Review-2/  03-Final-Review/
 ├── ML/        01-Review/
-└── OSSP/      01-Review-1/  02-Review-2/
+└── OSSP/      01-Review-1/  02-Review-2/  03-Final-Review/
 ```
 
-Each folder holds the deck as `.pptx` with a `.pdf` of the same name, and the final-review folders also hold the report as `.pdf` and `.docx`.
+Each folder holds the deck as `.pptx` with a `.pdf` of the same name, and the final-review folders also hold the report as `.pdf` and `.docx`. OSSP's final-review folder holds the report only.

@@ -278,7 +278,7 @@ enterprise-knowledge-intelligence/
 | DBE-DSD | [Review 1](docs/presentations/DBE-DSD/01-Review-1/DBE-DSD-Review-1.pdf) · [Review 2](docs/presentations/DBE-DSD/02-Review-2/DBE-DSD-Review-2.pdf) · [Final review](docs/presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review.pdf) · [Final report](docs/presentations/DBE-DSD/03-Final-Review/DBE-DSD-Final-Review-Report.pdf) |
 | DSA-3 | [Review 1](docs/presentations/DSA-3/01-Review-1/DSA-3-Review-1.pdf) · [Review 2: TextHack](docs/presentations/DSA-3/02-Review-2/DSA-3-Review-2-TextHack.pdf) · [Final review](docs/presentations/DSA-3/03-Final-Review/DSA-3-Final-Review.pdf) · [Final report](docs/presentations/DSA-3/03-Final-Review/DSA-3-Final-Review-Report.pdf) |
 | ML | [Project review](docs/presentations/ML/01-Review/ML-Review.pdf) |
-| OSSP | [Review 1](docs/presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf) · [Review 2: Weeks 1–6](docs/presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf) |
+| OSSP | [Review 1](docs/presentations/OSSP/01-Review-1/OSSP-Review-1-ShellForge.pdf) · [Review 2: Weeks 1–6](docs/presentations/OSSP/02-Review-2/OSSP-Review-2-ShellForge-Weeks1-6.pdf) · [Final report](docs/presentations/OSSP/03-Final-Review/OSSP-Final-Review-Report.pdf) |
 
 ## Team
 

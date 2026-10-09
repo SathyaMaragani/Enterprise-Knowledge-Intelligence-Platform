@@ -174,7 +174,8 @@ int run_thread_demo(char **args) {
     }
 
     long expected = threads * increments;
-    printf("[Threads] %ld threads x %ld increments, expected total %ld\n", threads, increments, expected);
+    const char *plural = threads == 1 ? "" : "s";
+    printf("[Threads] %ld thread%s x %ld increments, expected total %ld\n", threads, plural, increments, expected);
 
     double ms = run_workers(unsafe_worker, (int)threads, &increments);
     if (ms < 0) {
@@ -189,7 +190,11 @@ int run_thread_demo(char **args) {
         return -1;
     }
     printf("  With a mutex:    counter = %ld (%ld lost), %.1f ms\n", counter, expected - counter, ms);
-    printf("[Threads] all %ld workers joined with pthread_join()\n", threads);
+    if (threads == 1) {
+        printf("[Threads] the worker joined with pthread_join()\n");
+    } else {
+        printf("[Threads] all %ld workers joined with pthread_join()\n", threads);
+    }
     fflush(stdout);
     return 0;
 }
