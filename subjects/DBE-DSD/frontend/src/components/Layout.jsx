@@ -18,6 +18,7 @@ import {
   SearchIcon,
   ShieldCheckIcon,
   SlidersIcon,
+  SparkleIcon,
   TerminalIcon,
   ZapIcon,
 } from './icons.jsx';
@@ -25,6 +26,7 @@ import {
 const NAV_ITEMS = [
   { label: 'Dashboard', to: '/', Icon: HomeIcon },
   { label: 'Search', to: '/search', Icon: SearchIcon },
+  { label: 'Ask', to: '/ask', Icon: SparkleIcon },
   // A document belongs to the repository, so its viewer keeps Repository lit.
   { label: 'Repository', to: '/repository', also: '/documents/', Icon: FileTextIcon },
   { label: 'TextHack', to: '/texthack', Icon: ZapIcon },

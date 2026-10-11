@@ -1000,6 +1000,131 @@ class EipApplicationTests {
     }
 
     // ---------------------------------------------------------
+    // ASK (RAG) TESTS
+    // ---------------------------------------------------------
+
+    // A stand-in for Groq, so asking runs end to end without a key or the network:
+    // it answers every prompt the same way and keeps the last one it was sent.
+    private static volatile String lastPrompt;
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void standInLanguageModel(org.springframework.test.context.DynamicPropertyRegistry registry)
+            throws java.io.IOException {
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat", exchange -> {
+            lastPrompt = objectMapperForPrompt.readTree(exchange.getRequestBody())
+                    .at("/messages/1/content").asText();
+            byte[] reply = "{\"choices\":[{\"message\":{\"content\":\"Stand-in answer [1].\"}}]}"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, reply.length);
+            try (var out = exchange.getResponseBody()) {
+                out.write(reply);
+            }
+        });
+        server.start();
+        registry.add("groq.api-key", () -> "test-key");
+        registry.add("groq.url", () -> "http://127.0.0.1:" + server.getAddress().getPort() + "/chat");
+        // Never a real provider, whatever keys the machine running the tests has.
+        registry.add("gemini.api-key", () -> "");
+    }
+
+    private static final ObjectMapper objectMapperForPrompt = new ObjectMapper();
+
+    private static String ask(String question) throws Exception {
+        return new ObjectMapper().writeValueAsString(java.util.Map.of("question", question));
+    }
+
+    @Test
+    @WithUserDetails("alice_mgr")
+    void testAskAnswersFromTheDocumentsTheAskerCanRead() throws Exception {
+        // Document 5 (Vendor Contract A) is readable by alice through a grant. Its
+        // second chunk holds the answer; the first shares as many words with the question.
+        lastPrompt = null;
+        mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON)
+                        .content(ask("What is the liability cap in the vendor agreement?")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("Stand-in answer [1]."))
+                .andExpect(jsonPath("$.provider").value("groq"))
+                .andExpect(jsonPath("$.model").value("openai/gpt-oss-120b"))
+                .andExpect(jsonPath("$.sources[*].documentId", hasItem(5)))
+                .andExpect(jsonPath("$.sources[0].number").value(1))
+                .andExpect(jsonPath("$.sources[0].cited").value(true))
+                .andExpect(jsonPath("$.sources[?(@.documentId == 5)].title", contains("Vendor Contract A")))
+                .andExpect(jsonPath("$.sources[?(@.documentId == 5)].passage",
+                        contains(containsString("Liability is capped at $50,000."))));
+
+        assertTrue(lastPrompt.contains("Liability is capped at $50,000."), lastPrompt);
+        assertTrue(lastPrompt.contains("Vendor Contract A (Legal)"), lastPrompt);
+        assertTrue(lastPrompt.endsWith("Question: What is the liability cap in the vendor agreement?"), lastPrompt);
+    }
+
+    @Test
+    @WithUserDetails("bob_eng")
+    void testAskNeverSendsTheModelADocumentTheAskerCannotRead() throws Exception {
+        // The same question from bob, who has neither ownership nor a grant on document 5.
+        lastPrompt = null;
+        mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON)
+                        .content(ask("What is the liability cap in the vendor agreement?")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources[*].documentId", not(hasItem(5))));
+
+        assertTrue(lastPrompt == null || !lastPrompt.contains("50,000"), lastPrompt);
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testAskWithNothingToReadCallsNoModel() throws Exception {
+        // dave_tmp can read no document at all.
+        lastPrompt = null;
+        mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON)
+                        .content(ask("What is the liability cap in the vendor agreement?")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value(nullValue()))
+                .andExpect(jsonPath("$.sources", hasSize(0)));
+
+        assertNull(lastPrompt);
+    }
+
+    @Test
+    @WithUserDetails("dave_tmp")
+    void testAskReportsItsModelsAndRejectsBadRequests() throws Exception {
+        mockMvc.perform(get("/api/ask"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.providers", hasSize(1)))
+                .andExpect(jsonPath("$.providers[0].id").value("groq"))
+                .andExpect(jsonPath("$.providers[0].model").value("openai/gpt-oss-120b"));
+
+        String[][] bad = {
+                {"{}", "Ask a question"},
+                {"{\"question\":\"   \"}", "Ask a question"},
+                {ask("x".repeat(501)), "A question can be at most 500 characters"},
+                {"{\"question\":\"leave\",\"provider\":\"openai\"}", "provider must be auto, groq or gemini"},
+        };
+        for (String[] c : bad) {
+            mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON).content(c[0]))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message", containsString(c[1])));
+        }
+
+        // Gemini has no key here, so asking for it by name is refused rather than answered by Groq.
+        mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"leave\",\"provider\":\"gemini\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Gemini is not set up on this server."));
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testAskRequiresSignIn() throws Exception {
+        mockMvc.perform(get("/api/ask")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/ask").contentType(MediaType.APPLICATION_JSON).content(ask("leave")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------
     // SEARCH ACTIVITY TESTS
     // ---------------------------------------------------------
 

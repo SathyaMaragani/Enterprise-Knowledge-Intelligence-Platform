@@ -3295,3 +3295,145 @@ input.text-input {
 .shellforge-run .muted {
   margin-top: 0.4rem;
 }
+
+/* Ask: a question, then answers newest first, each with the passages it was written from. */
+
+.ask-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.ask-form > label:first-child {
+  margin-top: 0;
+}
+
+.ask-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.ask-form .hint {
+  text-align: left;
+}
+
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.answer__question {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.answer__text {
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Citations: small numbered chips that jump to the source below. */
+.answer__cites > * {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin: 0 0.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: 0.15em;
+}
+
+.answer__cites a:hover,
+.answer__cites a:focus-visible {
+  background: var(--accent);
+  color: #fff;
+}
+
+.answer__by {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+
+.answer__sources-title {
+  margin-top: 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.answer__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.answer__sources li {
+  display: flex;
+  gap: 0.6rem;
+  scroll-margin-top: 5rem;
+}
+
+.answer__sources li > div {
+  min-width: 0;
+}
+
+.answer__sources li:target {
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.answer__number {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5rem;
+  text-align: center;
+}
+
+.answer__sources .is-cited .answer__number {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.answer__sources .doc-link {
+  font-weight: 600;
+}
+
+.answer__sources summary {
+  width: fit-content;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.answer__sources details p {
+  margin-top: 0.3rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--border-strong);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

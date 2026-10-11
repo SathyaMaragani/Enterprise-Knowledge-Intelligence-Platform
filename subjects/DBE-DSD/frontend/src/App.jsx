@@ -4,6 +4,7 @@ import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import AskPage from './pages/AskPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import DocumentPage from './pages/DocumentPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -29,6 +30,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="ask" element={<AskPage />} />
         <Route path="repository" element={<RepositoryPage />} />
         <Route path="documents/:id" element={<DocumentPage />} />
         <Route path="upload" element={<UploadPage />} />

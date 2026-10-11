@@ -1,0 +1,143 @@
+{
+  "input": "C:\\Users\\lucky\\Downloads\\Telegram Desktop\\PBL Final Documentation template.docx",
+  "fonts_by_char_count": {},
+  "direct_run_formatting_runs": 69,
+  "direct_paragraph_formatting_paragraphs": 64,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 7,
+      "text": "Bachelor of Technology",
+      "style": "Default"
+    },
+    {
+      "para_index": 8,
+      "text": "in The Department of XXXX ",
+      "style": "Default"
+    },
+    {
+      "para_index": 9,
+      "text": "Course name with Course code",
+      "style": "Default"
+    },
+    {
+      "para_index": 12,
+      "text": "Roll.no: NAME",
+      "style": "Default"
+    },
+    {
+      "para_index": 13,
+      "text": "Roll.no: NAME",
+      "style": "Default"
+    },
+    {
+      "para_index": 14,
+      "text": "Roll.no: NAME",
+      "style": "Default"
+    },
+    {
+      "para_index": 17,
+      "text": "XXXX(faculty name)",
+      "style": "Default"
+    },
+    {
+      "para_index": 25,
+      "text": "Abstract",
+      "style": "Normal"
+    },
+    {
+      "para_index": 26,
+      "text": "List of Figures",
+      "style": "Normal"
+    },
+    {
+      "para_index": 28,
+      "text": "List of Tables",
+      "style": "Normal"
+    },
+    {
+      "para_index": 29,
+      "text": "Table of Contents",
+      "style": "Normal"
+    },
+    {
+      "para_index": 39,
+      "text": "[For Examples]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 46,
+      "text": "[For Examples]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 55,
+      "text": "[For Examples]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 60,
+      "text": "[For Examples]",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 1,
+        "text": "",
+        "style": "Default"
+      },
+      {
+        "para_index": 2,
+        "text": "Title (20 size)",
+        "style": "Default"
+      },
+      {
+        "para_index": 7,
+        "text": "Bachelor of Technology",
+        "style": "Default"
+      },
+      {
+        "para_index": 8,
+        "text": "in The Department of XXXX ",
+        "style": "Default"
+      },
+      {
+        "para_index": 9,
+        "text": "Course name with Course code",
+        "style": "Default"
+      }
+    ],
+    "direct_run_formatting": [
+      {
+        "para_index": 2,
+        "run_text": "Title",
+        "style": "Default"
+      },
+      {
+        "para_index": 2,
+        "run_text": " ",
+        "style": "Default"
+      },
+      {
+        "para_index": 2,
+        "run_text": "(20 size)",
+        "style": "Default"
+      },
+      {
+        "para_index": 3,
+        "run_text": "(13 size) ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "A Project",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

@@ -42,8 +42,32 @@ public final class Snippets {
         List<Pattern> termPatterns = terms.stream().map(term -> termPattern(term, allowPrefix)).toList();
         Pattern phrasePattern = terms.size() > 1 ? phrasePattern(phrase) : null;
 
-        String best = null;
-        int bestScore = 0;
+        List<String> ranked = rank(matched, termPatterns, phrasePattern, terms.size());
+        String best = ranked.isEmpty() ? semantic : ranked.get(0);
+        if (best == null || best.isBlank()) {
+            return null;
+        }
+        return window(best, anchor(best, phrasePattern, termPatterns), termPatterns);
+    }
+
+    /**
+     * The whole chunks a snippet would be cut from, best first: those holding the
+     * most query terms, at most {@code limit} of them. Chunks holding no term are
+     * left out.
+     */
+    public static List<String> bestChunks(List<String> matched, String phrase, List<String> terms,
+                                          boolean allowPrefix, int limit) {
+        List<String> ranked = rank(matched, terms.stream().map(term -> termPattern(term, allowPrefix)).toList(),
+                                   terms.size() > 1 ? phrasePattern(phrase) : null, terms.size());
+        return ranked.subList(0, Math.min(limit, ranked.size()));
+    }
+
+    /** Chunks containing a term, by how many they contain; equal chunks stay in document order. */
+    private static List<String> rank(List<String> matched, List<Pattern> termPatterns, Pattern phrasePattern,
+                                     int termCount) {
+        record Scored(String text, int score) {
+        }
+        List<Scored> scored = new ArrayList<>();
         for (String text : matched) {
             int score = 0;
             for (Pattern pattern : termPatterns) {
@@ -53,20 +77,14 @@ public final class Snippets {
             }
             // The whole phrase outranks the same words scattered through a chunk.
             if (score > 0 && phrasePattern != null && phrasePattern.matcher(text).find()) {
-                score += terms.size();
+                score += termCount;
             }
-            if (score > bestScore) {
-                best = text;
-                bestScore = score;
+            if (score > 0) {
+                scored.add(new Scored(text, score));
             }
         }
-        if (best == null) {
-            best = semantic;
-        }
-        if (best == null || best.isBlank()) {
-            return null;
-        }
-        return window(best, anchor(best, phrasePattern, termPatterns), termPatterns);
+        scored.sort(Comparator.comparingInt(Scored::score).reversed());
+        return scored.stream().map(Scored::text).toList();
     }
 
     /** Where the window is centred: the phrase if it occurs, else the first term, else the start. */

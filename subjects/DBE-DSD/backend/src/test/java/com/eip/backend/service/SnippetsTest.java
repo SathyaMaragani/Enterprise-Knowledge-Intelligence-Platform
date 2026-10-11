@@ -93,6 +93,22 @@ class SnippetsTest {
     }
 
     @Test
+    void theBestChunksAreWholeAndRankedWithTiesInDocumentOrder() {
+        String phrase = LexicalScorer.normalise("liability cap in the vendor agreement");
+        List<String> chunks = List.of(
+                "Payment is due within thirty days.",
+                "This agreement is between Corp Inc and Vendor A.",
+                "Liability is capped at $50,000.",
+                "The vendor agreement caps liability for both sides.");
+        List<String> terms = LexicalScorer.terms(phrase);
+
+        assertEquals(List.of(chunks.get(3), chunks.get(1)), Snippets.bestChunks(chunks, phrase, terms, true, 2));
+        assertEquals(List.of(chunks.get(3), chunks.get(1), chunks.get(2)),
+                     Snippets.bestChunks(chunks, phrase, terms, true, 10));
+        assertEquals(List.of(), Snippets.bestChunks(chunks, "payroll", List.of("payroll"), true, 2));
+    }
+
+    @Test
     void nothingToShowIsNull() {
         assertNull(choose(List.of(), null, "anything", true));
         assertNull(choose(List.of(), "   ", "anything", true));

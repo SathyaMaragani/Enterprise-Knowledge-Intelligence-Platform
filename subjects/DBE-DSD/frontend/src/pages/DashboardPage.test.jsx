@@ -157,6 +157,7 @@ describe('dashboard', () => {
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Dashboard',
       'Search',
+      'Ask',
       'Repository',
       'TextHack',
       'ShellForge',
