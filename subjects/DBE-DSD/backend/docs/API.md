@@ -199,6 +199,10 @@ Any signed-in user may list them; category names are not document data.
 Uploads a document owned by the caller. Requires the `DOCUMENT_CREATE` permission
 (admins and managers in the seed roles); otherwise 403.
 
+One file per request: a request is capped at 11 MB. The web app's bulk upload is
+this endpoint called once per file, in order, so each file gets its own result
+and one failure does not undo the others.
+
 `multipart/form-data` fields:
 
 | Field | Required | Notes |

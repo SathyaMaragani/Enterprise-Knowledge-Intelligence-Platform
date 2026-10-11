@@ -77,7 +77,7 @@ It is one integrated project built across four courses. Each course owns a part 
     </td>
     <td valign="top">
       <img src="docs/screenshots/upload-form.png" alt="Upload form with a PDF selected">
-      <p align="center"><b>Upload</b><br><sub>PDF, Word, text or Markdown, with title, description, category and department.</sub></p>
+      <p align="center"><b>Upload</b><br><sub>PDF, Word, text or Markdown, one file or up to 20 together, with title, description, category and department.</sub></p>
     </td>
   </tr>
   <tr>
@@ -184,7 +184,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 | Area | What is tested | Result |
 |---|---|---|
 | Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **262 pass** (258 in GitHub Actions on every change) |
-| Frontend | 18 Vitest files: pages, session, API client | **172 pass** |
+| Frontend | 18 Vitest files: pages, session, API client | **178 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |
 | ML | Pipeline, embeddings, Java and Python parity, retrieval equivalence | Java and Python top-5 results **100% identical** |

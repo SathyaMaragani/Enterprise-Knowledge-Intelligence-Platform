@@ -155,6 +155,156 @@ describe('upload page', () => {
   });
 });
 
+describe('bulk upload', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    sessionStorage.setItem('eip.token', tokenFor('alice_mgr'));
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const created = (form, id, chunkCount = 1) =>
+    jsonResponse(201, { id, title: form.get('file').name, status: 'UPLOADED', chunkCount, vectorsStored: false });
+  const names = (forms) => forms.map((form) => form.get('file').name);
+  const chooseCategory = async (name) => {
+    await within(await screen.findByRole('combobox', { name: 'Category' })).findByRole('option', { name });
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: name } });
+  };
+
+  it('uploads several files one at a time, with shared fields and a result for each', async () => {
+    let active = 0;
+    let mostAtOnce = 0;
+    const forms = renderApp('/upload', {
+      upload: async (form) => {
+        active += 1;
+        mostAtOnce = Math.max(mostAtOnce, active);
+        await Promise.resolve();
+        active -= 1;
+        return form.get('file').name === 'a.txt' ? created(form, 41) : created(form, 42, 3);
+      },
+    });
+    await chooseCategory('Finance');
+
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [textFile('a.txt'), textFile('legacy.doc'), textFile('b.md')] },
+    });
+
+    // A batch has no title field: each document is named from its file.
+    expect(screen.queryByLabelText('Title')).toBeNull();
+    expect(screen.getByText('3 files · 33 B')).toBeTruthy();
+    const list = screen.getByRole('list', { name: 'Files in this batch' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list).getByText('Only .pdf, .docx, .txt and .md files can be uploaded.')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Quarter-end batch' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload 2 documents' }));
+
+    expect((await screen.findByRole('status')).textContent).toBe('Uploaded 2 of 3 documents.');
+    expect(names(forms)).toEqual(['a.txt', 'b.md']);
+    expect(mostAtOnce).toBe(1);
+    for (const form of forms) {
+      expect(form.get('title')).toBeNull();
+      expect(form.get('category')).toBe('Finance');
+      expect(form.get('description')).toBe('Quarter-end batch');
+    }
+    expect(within(list).getByRole('link', { name: 'Uploaded · 1 chunk' }).getAttribute('href')).toBe('/documents/41');
+    expect(within(list).getByRole('link', { name: 'Uploaded · 3 chunks' }).getAttribute('href')).toBe('/documents/42');
+    expect(screen.getByRole('link', { name: 'Go to the repository' }).getAttribute('href')).toBe('/repository');
+
+    // Starting again returns to the single-file form.
+    fireEvent.click(screen.getByRole('button', { name: 'Upload more' }));
+    expect(screen.getByLabelText('Title')).toBeTruthy();
+    expect(screen.queryByRole('list', { name: 'Files in this batch' })).toBeNull();
+  });
+
+  it('goes on after a failure, then retries only what failed', async () => {
+    const attempts = {};
+    const forms = renderApp('/upload', {
+      upload: (form) => {
+        const name = form.get('file').name;
+        attempts[name] = (attempts[name] ?? 0) + 1;
+        return name === 'bad.txt' && attempts[name] === 1
+          ? jsonResponse(400, { message: 'The file must be UTF-8 text' })
+          : created(form, 50 + forms.length);
+      },
+    });
+    await chooseCategory('HR');
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [textFile('good.txt'), textFile('bad.txt'), textFile('last.txt')] },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload 3 documents' }));
+
+    const retry = await screen.findByRole('button', { name: 'Retry 1 failed upload' });
+    expect(names(forms)).toEqual(['good.txt', 'bad.txt', 'last.txt']);
+    const list = screen.getByRole('list', { name: 'Files in this batch' });
+    expect(within(list).getByText('Failed: The file must be UTF-8 text')).toBeTruthy();
+    expect(within(list).getAllByRole('link')).toHaveLength(2);
+    expect(screen.queryByRole('status')).toBeNull();
+
+    fireEvent.click(retry);
+
+    expect((await screen.findByRole('status')).textContent).toBe('Uploaded 3 of 3 documents.');
+    expect(names(forms)).toEqual(['good.txt', 'bad.txt', 'last.txt', 'bad.txt']);
+  });
+
+  it('needs a category, lets files be removed, and offers nothing when no file is usable', async () => {
+    const forms = renderApp('/upload', { upload: (form) => created(form, 60) });
+    await screen.findByRole('combobox', { name: 'Category' });
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [textFile('keep.txt'), textFile('drop.txt'), textFile('old.doc')] },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upload 2 documents' }));
+    expect(screen.getByRole('alert').textContent).toBe('Choose a category.');
+    expect(forms).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove drop.txt' }));
+    expect(screen.getByRole('button', { name: 'Upload 1 document' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove keep.txt' }));
+    // One file left: the page is the single-file form again, which names the problem on submit.
+    expect(screen.getByLabelText('Title')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('File'), { target: { files: [textFile('x.doc'), textFile('y.exe')] } });
+    const nothing = screen.getByRole('button', { name: 'Nothing to upload' });
+    expect(nothing.disabled).toBe(true);
+  });
+
+  it('keeps the first 20 files of a larger selection and says so', async () => {
+    renderApp('/upload', { upload: (form) => created(form, 70) });
+    await screen.findByRole('combobox', { name: 'Category' });
+
+    const many = Array.from({ length: 23 }, (_, index) => textFile(`file-${index + 1}.txt`));
+    fireEvent.change(screen.getByLabelText('File'), { target: { files: many } });
+
+    expect(screen.getByRole('alert').textContent).toBe('Only the first 20 files were kept. Upload the rest as another batch.');
+    const items = within(screen.getByRole('list', { name: 'Files in this batch' })).getAllByRole('listitem');
+    expect(items).toHaveLength(20);
+    expect(items.at(-1).textContent).toContain('file-20.txt');
+  });
+
+  it('takes files dropped on the form', async () => {
+    renderApp('/upload', { upload: (form) => created(form, 80) });
+    await screen.findByRole('combobox', { name: 'Category' });
+
+    const dropzone = screen.getByText('Choose or drop PDF, DOCX, TXT or MD files').closest('label');
+    fireEvent.drop(dropzone, { dataTransfer: { files: [textFile('one.txt'), textFile('two.txt')] } });
+
+    expect(within(screen.getByRole('list', { name: 'Files in this batch' })).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('arrives as a batch when several files were dropped on the dashboard', async () => {
+    renderApp(
+      { pathname: '/upload', state: { files: [textFile('one.txt'), textFile('two.txt'), textFile('three.txt')] } },
+      { upload: (form) => created(form, 90) },
+    );
+
+    const list = await screen.findByRole('list', { name: 'Files in this batch' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Upload 3 documents' })).toBeTruthy();
+  });
+});
+
 describe('upload entry points', () => {
   beforeEach(() => {
     sessionStorage.clear();

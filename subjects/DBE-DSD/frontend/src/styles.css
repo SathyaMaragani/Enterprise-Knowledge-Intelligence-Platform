@@ -2503,9 +2503,78 @@ a.btn {
   cursor: pointer;
 }
 
-.dropzone:hover {
+.dropzone:hover,
+.dropzone.is-dragging {
   border-color: var(--accent);
   color: var(--text);
+}
+
+.dropzone.is-dragging {
+  background: var(--accent-soft);
+}
+
+/* A batch of files, each with where it stands. */
+.upload-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.upload-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.15rem 0.9rem;
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.upload-list__item:first-child {
+  border-top: 0;
+}
+
+.upload-list__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.upload-list__size {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The status takes a line of its own under the name, so long reasons can wrap. */
+.upload-list__status {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: var(--muted);
+}
+
+.upload-list__item.is-invalid .upload-list__status,
+.upload-list__item.is-failed .upload-list__status {
+  color: var(--red);
+}
+
+.upload-list__item.is-done .upload-list__status a {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.upload-list__item.is-uploading .upload-list__status {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.upload-form__after {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .upload-form:has(#upload-file:focus-visible) .dropzone {

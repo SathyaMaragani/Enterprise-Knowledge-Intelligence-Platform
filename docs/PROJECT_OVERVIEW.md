@@ -43,7 +43,7 @@ It stores each kind of data in the database built for it, and keeps those databa
 | Role | Can |
 |---|---|
 | **Employee** | Sign in; search in four modes, with the matching passage quoted under each result; browse the repository; read their own documents and those shared with them, and download the original files; get notified when a document is shared with them or edited; change their own password; see their search history; use the TextHack workbench and the ML insights page |
-| **Manager** | Everything above, plus upload documents (PDF, Word, text, Markdown up to 10 MB), edit the title, description and category of their own documents, and share them with colleagues |
+| **Manager** | Everything above, plus upload documents (PDF, Word, text, Markdown up to 10 MB), one at a time or up to 20 together, edit the title, description and category of their own documents, and share them with colleagues |
 | **Administrator** | Everything, on every document; edit and delete documents; create accounts, change roles, disable accounts, reset passwords |
 
 **Pages:**
@@ -337,7 +337,7 @@ enterprise-knowledge-intelligence/
 | Subject | What is tested | Result |
 |---|---|---|
 | DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **262 pass**: 258 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| DBE-DSD frontend | 18 Vitest files: pages, session, API client | **172 pass** in GitHub Actions |
+| DBE-DSD frontend | 18 Vitest files: pages, session, API client | **178 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
 | ML | Pipeline, embeddings, classification/clustering consistency, Java/Python parity, retrieval equivalence | 15 + 6 + 4 checks pass; Java and Python top-5 results 100% identical |
@@ -358,7 +358,7 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 ```mermaid
 flowchart LR
     GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 and ShellForge suites,<br/>then 258 tests on a Compose stack]
-    GH --> CI2[GitHub Actions<br/>Frontend: 172 tests + build]
+    GH --> CI2[GitHub Actions<br/>Frontend: 178 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
     RD --> LIVE[ekipsearch.vercel.app]
@@ -399,7 +399,7 @@ flowchart LR
 | 6 Oct | PDF and Word (.docx) upload support |
 | 7 Oct | Search: partly typed words, two-typo tolerance, calibrated percentages |
 | 9 Oct | ShellForge Week 10 (POSIX threads, mutex, monitor thread); ShellForge page in the web app |
-| 12 Oct | Search snippets; original files kept and downloadable; document editing; own-password change; notifications |
+| 12 Oct | Search snippets; original files kept and downloadable; document editing; own-password change; notifications; bulk upload |
 
 ---
 

@@ -93,7 +93,7 @@ function Hero({ name, canUpload }) {
   );
 }
 
-/** The upload button; a file dropped on it opens the upload form with that file already chosen. */
+/** The upload button; files dropped on it open the upload form with them already chosen. */
 function UploadDropTarget() {
   const navigate = useNavigate();
   const [dragging, setDragging] = useState(false);
@@ -109,9 +109,9 @@ function UploadDropTarget() {
       onDrop={(event) => {
         event.preventDefault();
         setDragging(false);
-        const file = event.dataTransfer.files?.[0];
-        if (file) {
-          navigate('/upload', { state: { file } });
+        const files = [...(event.dataTransfer.files ?? [])];
+        if (files.length > 0) {
+          navigate('/upload', { state: { files } });
         }
       }}
     >
