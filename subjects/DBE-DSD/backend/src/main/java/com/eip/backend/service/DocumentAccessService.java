@@ -13,7 +13,8 @@ import java.util.Collection;
 import java.util.Set;
 
 /**
- * Single place where "may this user read this document?" is answered.
+ * Single place where "may this user read this document?" and "may this user
+ * edit it?" are answered.
  *
  * Every read path -- single document fetch, the document list, unified search,
  * semantic search and raw vector search -- routes through here, so the rule
@@ -65,6 +66,22 @@ public class DocumentAccessService {
             return false;
         }
         return !readableIds(Set.of(document.getId()), user).isEmpty();
+    }
+
+    /**
+     * Editing a document's title, description or category: an administrator, or
+     * its owner when they hold DOCUMENT_UPDATE. A READ grant does not allow edits.
+     */
+    public boolean canEdit(Document document) {
+        if (document == null) {
+            return false;
+        }
+        if (isAdmin()) {
+            return true;
+        }
+        User user = currentUser();
+        return user != null && hasAuthority("DOCUMENT_UPDATE")
+                && document.getOwner() != null && document.getOwner().getId().equals(user.getId());
     }
 
     public void requireRead(Document document) {

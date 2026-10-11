@@ -1,5 +1,7 @@
 package com.eip.backend.dto.search;
 
+import com.eip.backend.service.Snippets;
+
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -17,6 +19,8 @@ public class SearchHit {
     private Double vectorScore;
     private String chunkId;
     private final Set<String> matchedBy = new LinkedHashSet<>();
+    /** The passage that matched, with the spans to highlight; null when only the title or description matched. */
+    private Snippets.Snippet snippet;
 
     public Integer getDocumentId() { return documentId; }
     public void setDocumentId(Integer documentId) { this.documentId = documentId; }
@@ -39,4 +43,6 @@ public class SearchHit {
     public String getChunkId() { return chunkId; }
     public void setChunkId(String chunkId) { this.chunkId = chunkId; }
     public Set<String> getMatchedBy() { return matchedBy; }
+    public Snippets.Snippet getSnippet() { return snippet; }
+    public void setSnippet(Snippets.Snippet snippet) { this.snippet = snippet; }
 }

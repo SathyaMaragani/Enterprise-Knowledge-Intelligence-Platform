@@ -66,6 +66,18 @@ server and return a generic message, never exception text.
 
 `roles` and `permissions` are sorted. Returns 401 without a valid token.
 
+### PUT /api/auth/password
+- **Auth**: required (Bearer token)
+- **Purpose**: A user changes their own password.
+
+Body: `{ "currentPassword": "...", "newPassword": "..." }`. The new password
+must be 8 to 72 characters and differ from the current one. Returns 204.
+
+A wrong current password is **400**, not 401: the token is still valid, and
+clients sign the user out on a 401 that carried a token. Tokens already issued
+stay valid until they expire. A forgotten password is reset by an administrator
+(`PUT /api/admin/users/{id}/password`); there is no email reset.
+
 ### Disabled accounts
 A disabled account cannot sign in, and every token it already holds is rejected
 on its next request (401), without waiting for the token to expire.
@@ -143,6 +155,42 @@ Filters only narrow what the caller may already read; they never widen access.
 ### GET /api/documents/{id}
 Returns the unified document consisting of PostgreSQL metadata and MongoDB content data. Returns 404 if either record is missing, and 403 if the caller may not read it.
 
+Two flags say what the caller can do with it: `canEdit` (see PATCH below) and
+`originalAvailable` (the uploaded file can be downloaded).
+
+### GET /api/documents/{id}/file
+The file exactly as it was uploaded, for anyone who may read the document.
+
+- `Content-Type` is the type the server recorded for the file's extension at
+  upload, never the type the uploading browser claimed.
+- `Content-Disposition: attachment` with the original file name, and
+  `X-Content-Type-Options: nosniff`, so an uploaded file is never rendered as a
+  page of this site.
+
+Returns 403 without read access, and 404 for an unknown document or one with no
+stored file: the seeded documents, and uploads made before files were kept.
+Files are stored in GridFS in the application's MongoDB database.
+
+### PATCH /api/documents/{id}
+Changes a document's title, description or category.
+
+```json
+{ "title": "Quokka Budget", "description": "", "category": "Legal" }
+```
+
+A field left out is not changed; an empty `description` removes the description.
+`title` is 1 to 255 characters after trimming, `description` at most 2000, and
+`category` must name an existing category. Returns the updated unified document.
+
+**Who may edit:** an administrator, or the document's owner if they hold
+`DOCUMENT_UPDATE` (managers in the seed roles). A READ grant does not allow
+edits. Returns 400 for invalid input, 403 otherwise, 404 for an unknown document.
+
+The title and category are also stored with the document's vectors in Qdrant,
+where search filters on category, and the title with its MongoDB content, so an
+edit updates all three stores. Qdrant is updated first: if it is unreachable the
+request fails with 503 and nothing has changed.
+
 ### GET /api/categories
 Every category, sorted by name: `[{ "id": 2, "name": "Finance", "description": "..." }]`.
 Any signed-in user may list them; category names are not document data.
@@ -200,7 +248,8 @@ access to the document. Versions, grants and tags cascade.
 
 Returns 204, or 403 without the permission, 404 if the document does not exist,
 and 503 if Qdrant is unreachable. Qdrant is removed first, so a 503 means nothing
-was deleted and the request can simply be retried.
+was deleted and the request can simply be retried. The stored original file is
+removed with the document.
 
 
 ### Document access grants
@@ -318,7 +367,11 @@ nothing under `KEYWORD`.
       "keywordScore": 1.0,
       "vectorScore": null,
       "chunkId": null,
-      "matchedBy": ["KEYWORD"]
+      "matchedBy": ["KEYWORD"],
+      "snippet": {
+        "text": "This agreement is between Corp Inc and Vendor A for software licensing.",
+        "highlights": [{ "start": 39, "end": 45 }]
+      }
     }
   ],
   "page": 0,
@@ -376,6 +429,15 @@ match (`port` does not find "Report"). Allowed edits scale with term length:
 none up to 3 characters, 1 for 4-5, 2 for 6 or more. Stopwords and single
 characters are ignored. A hit must match every term of a one- or two-term
 query, or 60% of a longer one.
+
+**`snippet`** is the passage of the document that matched, for the hits on the
+returned page. `text` is at most about 260 characters, cut at word boundaries
+with `…` where it was shortened; `highlights` are the spans of `text` to mark
+(`start` inclusive, `end` exclusive). The passage is the chunk containing the
+most query terms, the whole phrase counting for more; when no chunk contains a
+term, it is the chunk the vector search ranked best. Highlighting follows the
+search mode: whole words in `KEYWORD`, and also words a term begins in the
+others. `snippet` is `null` when only the title or description matched.
 
 **`matchedBy`** lists the signals that found a hit: `KEYWORD`, `VECTOR`, and
 `FUZZY` when the keyword score depended on a misspelled or partly typed term. A query for
@@ -489,3 +551,22 @@ to 4 and 100000. It returns:
 | 200 | The session ran, including one stopped at the time limit (`timedOut: true`) |
 | 400 | Unknown session, missing session, or `threads`/`increments` out of range |
 | 503 | The binary is not installed, or two runs are already in progress |
+
+## 8. Notifications
+`GET /api/notifications` returns what happened to documents other people shared
+with the signed-in user, newest first, from the last 30 days (at most 20):
+
+```json
+[
+  { "type": "UPDATED", "documentId": 7, "title": "Q2 Budget Draft", "owner": "alice_mgr", "at": "2026-10-12T09:14:03Z" },
+  { "type": "SHARED",  "documentId": 7, "title": "Q2 Budget Draft", "owner": "alice_mgr", "at": "2026-10-11T16:02:40Z" }
+]
+```
+
+- `SHARED`: the user was given READ access to the document.
+- `UPDATED`: a document shared with the user was edited after it was shared.
+
+Nothing is stored for this: both are read from `document_permissions.granted_at`
+and `documents.updated_at`, so revoking a grant removes its notifications, and
+the response cannot say who shared or edited. Which notifications are new is
+remembered by the client. Returns 401 without a token.

@@ -72,6 +72,20 @@ describe('search page', () => {
     expect(screen.getByRole('link', { name: 'Search' }).className).toContain('active');
   });
 
+  it('quotes the passage that matched, with the query’s words marked', async () => {
+    const snippet = { text: '\u2026Services communicate via Kafka. The DB is PostgreSQL.', highlights: [{ start: 26, end: 31 }] };
+    renderSearch('/search?q=kafka', () =>
+      jsonResponse(200, { hits: [{ ...HIT, snippet }, { ...HIT, documentId: 9, title: 'No passage', snippet: null }], page: 0, size: 10, totalHits: 2, sources: ['KEYWORD'] }),
+    );
+
+    const hit = (await screen.findByRole('link', { name: 'Q1 Financial Report' })).closest('li');
+    const passage = hit.querySelector('.hit__snippet');
+    expect(passage.textContent).toBe(snippet.text);
+    expect([...passage.querySelectorAll('mark')].map((mark) => mark.textContent)).toEqual(['Kafka']);
+    // A hit that matched on its title alone has nothing to quote.
+    expect(screen.getByRole('link', { name: 'No passage' }).closest('li').querySelector('.hit__snippet')).toBeNull();
+  });
+
   it('runs the search from the URL and shows detailed hits', async () => {
     const bodies = renderSearch('/search?q=finacial', () =>
       jsonResponse(200, { hits: [HIT], page: 0, size: 10, totalHits: 1, sources: ['KEYWORD'] }),

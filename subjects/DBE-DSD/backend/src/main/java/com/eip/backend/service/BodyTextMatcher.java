@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class BodyTextMatcher {
         for (String term : terms) {
             String word = escape(term);
             boolean prefix = allowPrefix && term.length() >= LexicalScorer.MIN_PREFIX_LENGTH;
-            anyTerm.add(prefix ? "\\b" + word : "\\b" + word + "\\b");
+            anyTerm.add(termRegex(term, allowPrefix));
             wholeWord.add(regexMatch("\\b" + word + "\\b"));
             wordStart.add(prefix ? regexMatch("\\b" + word) : new Document("$literal", false));
         }
@@ -88,6 +89,75 @@ public class BodyTextMatcher {
             found.put(id.intValue(), new LexicalScorer.BodyEvidence(Boolean.TRUE.equals(row.get("phrase")), credits));
         }
         return found;
+    }
+
+    /** Chunk texts a search snippet can be cut from: see {@link #passages}. */
+    public record Passages(List<String> matched, Map<String, String> byChunkId) {
+    }
+
+    // ponytail: only the first few matching chunks of each document are considered,
+    // so in a very long document the passage shown is an early match, not the best.
+    private static final int CANDIDATES = 8;
+
+    /**
+     * For the documents on one page of results, the chunks a snippet can be cut
+     * from: up to {@value #CANDIDATES} chunks per document that contain a term, and
+     * any chunk named in {@code chunkIds} (the vector search's best chunks). MongoDB
+     * returns those chunks only, never whole documents.
+     */
+    public Map<Integer, Passages> passages(Collection<Integer> documentIds, List<String> terms, boolean allowPrefix,
+                                           Collection<String> chunkIds) {
+        if (documentIds.isEmpty()) {
+            return Map.of();
+        }
+        Object chunks = new Document("$ifNull", List.of("$chunks", List.of()));
+        Object matched = new Document("$literal", List.of());
+        if (!terms.isEmpty()) {
+            String anyTerm = terms.stream().map(term -> termRegex(term, allowPrefix)).collect(Collectors.joining("|"));
+            Document containsTerm = new Document("$regexMatch", new Document("input", "$$c.text")
+                    .append("regex", anyTerm).append("options", "i"));
+            matched = new Document("$map", new Document("as", "c").append("in", "$$c.text")
+                    .append("input", new Document("$slice", List.of(
+                            new Document("$filter", new Document("input", chunks).append("as", "c").append("cond", containsTerm)),
+                            CANDIDATES))));
+        }
+        Document named = new Document("$filter", new Document("input", chunks).append("as", "c")
+                .append("cond", new Document("$in", List.of("$$c.chunk_id", new ArrayList<>(chunkIds)))));
+
+        List<Document> pipeline = List.of(
+                new Document("$match", new Document("postgres_document_id", new Document("$in", new ArrayList<>(documentIds)))),
+                new Document("$project", new Document("_id", 0)
+                        .append("id", "$postgres_document_id")
+                        .append("matched", matched)
+                        .append("named", named)));
+
+        Map<Integer, Passages> found = new HashMap<>();
+        String collection = mongoTemplate.getCollectionName(KnowledgeDocument.class);
+        for (Document row : mongoTemplate.getCollection(collection).aggregate(pipeline)) {
+            if (!(row.get("id") instanceof Number id)) {
+                continue;
+            }
+            Map<String, String> byChunkId = new HashMap<>();
+            for (Document chunk : row.getList("named", Document.class, List.of())) {
+                if (chunk.get("chunk_id") instanceof String chunkId && chunk.get("text") instanceof String text) {
+                    byChunkId.put(chunkId, text);
+                }
+            }
+            List<String> texts = new ArrayList<>();
+            for (Object text : row.getList("matched", Object.class, List.of())) {
+                if (text instanceof String string) {
+                    texts.add(string);
+                }
+            }
+            found.put(id.intValue(), new Passages(texts, byChunkId));
+        }
+        return found;
+    }
+
+    /** A term as a whole word, or as the start of one when prefixes are allowed and enough was typed. */
+    private static String termRegex(String term, boolean allowPrefix) {
+        boolean prefix = allowPrefix && term.length() >= LexicalScorer.MIN_PREFIX_LENGTH;
+        return "\\b" + escape(term) + (prefix ? "" : "\\b");
     }
 
     private static Document regexMatch(String regex) {

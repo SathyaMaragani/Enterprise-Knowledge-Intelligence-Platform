@@ -24,6 +24,15 @@ public class UnifiedDocumentResponse {
     private Object processing;
     private Object version;
 
+    // What the caller can do with this document
+    private boolean canEdit;
+    private boolean originalAvailable;
+
+    public boolean isCanEdit() { return canEdit; }
+    public void setCanEdit(boolean canEdit) { this.canEdit = canEdit; }
+    public boolean isOriginalAvailable() { return originalAvailable; }
+    public void setOriginalAvailable(boolean originalAvailable) { this.originalAvailable = originalAvailable; }
+
     // Postgres getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }

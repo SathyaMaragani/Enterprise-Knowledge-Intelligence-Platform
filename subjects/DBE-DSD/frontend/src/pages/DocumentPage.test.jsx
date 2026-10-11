@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
@@ -34,7 +34,7 @@ const DOCUMENT = {
 };
 
 function renderDocument(path, routes) {
-  mockApi(routes);
+  const fetchMock = mockApi(routes);
   render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
@@ -42,6 +42,7 @@ function renderDocument(path, routes) {
       </AuthProvider>
     </MemoryRouter>,
   );
+  return fetchMock;
 }
 
 describe('document viewer', () => {
@@ -256,6 +257,112 @@ describe('document viewer', () => {
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/does not exist/);
     expect(fetchMock.mock.calls.some(([path]) => path.startsWith('/api/documents/'))).toBe(false);
+  });
+
+  it('downloads the original file, when one was kept, with the sign-in token', async () => {
+    const createObjectURL = vi.fn(() => 'blob:original');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const blob = new Blob(['file bytes']);
+    const fetchMock = renderDocument('/documents/3', {
+      'GET /api/documents/3': jsonResponse(200, { ...DOCUMENT, originalAvailable: true }),
+      'GET /api/documents/3/file': {
+        ok: true,
+        status: 200,
+        blob: async () => blob,
+        headers: { get: () => "attachment; filename*=UTF-8''arch%20v2.md" },
+      },
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Download' }));
+
+    await waitFor(() => expect(click).toHaveBeenCalledOnce());
+    const link = click.mock.instances[0];
+    expect(link.download).toBe('arch v2.md');
+    expect(link.getAttribute('href')).toBe('blob:original');
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+    const [, init] = fetchMock.mock.calls.find(([path]) => path === '/api/documents/3/file');
+    expect(init.headers.Authorization).toMatch(/^Bearer /);
+    // Only a PDF can be opened in a tab.
+    expect(screen.queryByRole('button', { name: 'Open PDF' })).toBeNull();
+    click.mockRestore();
+  });
+
+  it('offers no download for a document stored without its file, and Open for a PDF', async () => {
+    renderDocument('/documents/3', { 'GET /api/documents/3': jsonResponse(200, DOCUMENT) });
+    await screen.findByRole('heading', { level: 1, name: 'System Architecture v2' });
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
+
+  it('shows Open PDF beside Download for a PDF', async () => {
+    renderDocument('/documents/3', {
+      'GET /api/documents/3': jsonResponse(200, {
+        ...DOCUMENT,
+        originalAvailable: true,
+        source: { ...DOCUMENT.source, mimeType: 'application/pdf' },
+      }),
+    });
+    expect(await screen.findByRole('button', { name: 'Open PDF' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy();
+  });
+
+  it('lets an editor change the title, description and category', async () => {
+    const routes = {
+      'GET /api/documents/3': jsonResponse(200, { ...DOCUMENT, canEdit: true }),
+      'GET /api/categories': jsonResponse(200, [
+        { id: 1, name: 'Technical' },
+        { id: 2, name: 'Legal' },
+      ]),
+      'PATCH /api/documents/3': jsonResponse(200, {}),
+    };
+    const fetchMock = renderDocument('/documents/3', routes);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const form = screen.getByRole('form', { name: 'Edit details' });
+    expect(within(form).getByLabelText('Title').value).toBe('System Architecture v2');
+    await within(form).findByRole('option', { name: 'Legal' });
+    expect(within(form).getByLabelText('Category').value).toBe('Technical');
+
+    fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'Architecture v3' } });
+    fireEvent.change(within(form).getByLabelText('Description'), { target: { value: '' } });
+    fireEvent.change(within(form).getByLabelText('Category'), { target: { value: 'Legal' } });
+    routes['GET /api/documents/3'] = jsonResponse(200, {
+      ...DOCUMENT,
+      canEdit: true,
+      title: 'Architecture v3',
+      description: null,
+      category: 'Legal',
+    });
+    fireEvent.click(within(form).getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Changes saved.')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Architecture v3' })).toBeTruthy();
+    expect(screen.queryByRole('form', { name: 'Edit details' })).toBeNull();
+    const [, init] = fetchMock.mock.calls.find(([, options]) => options?.method === 'PATCH');
+    expect(JSON.parse(init.body)).toEqual({ title: 'Architecture v3', description: '', category: 'Legal' });
+  });
+
+  it('keeps the edit form open with the reason when a save is refused or the title is blank', async () => {
+    const fetchMock = renderDocument('/documents/3', {
+      'GET /api/documents/3': jsonResponse(200, { ...DOCUMENT, canEdit: true }),
+      'PATCH /api/documents/3': jsonResponse(403, { message: 'Only the document’s owner or an administrator can edit it' }),
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const form = screen.getByRole('form', { name: 'Edit details' });
+    fireEvent.change(within(form).getByLabelText('Title'), { target: { value: '   ' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Save changes' }));
+    expect(within(form).getByRole('alert').textContent).toBe('Give the document a title.');
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === 'PATCH')).toBe(false);
+
+    fireEvent.change(within(form).getByLabelText('Title'), { target: { value: 'Renamed' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Save changes' }));
+    expect(await within(form).findByText(/owner or an administrator can edit it/)).toBeTruthy();
+
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('form', { name: 'Edit details' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'System Architecture v2' })).toBeTruthy();
   });
 
   it('copes with a document that has no content details', async () => {

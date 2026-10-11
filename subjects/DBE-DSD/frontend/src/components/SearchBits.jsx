@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { MATCH_LABELS } from '../pages/dashboardData.js';
 import { CategoryTag, StatusPill } from './DocumentBits.jsx';
+import { Highlighted } from './highlight.jsx';
 import { BrainIcon, LayersIcon, TypeIcon, WavesIcon } from './icons.jsx';
 
 export const SEARCH_MODES = [
@@ -64,8 +65,9 @@ export function KeywordFallbackNotice({ mode, sources }) {
 const percent = (value) => `${Math.round((value ?? 0) * 100)}%`;
 
 /**
- * Ranked hits, each linking to the document viewer: what the document is, how it
- * matched and how relevant it is. `detailed` adds the status and owner.
+ * Ranked hits, each linking to the document viewer: what the document is, the
+ * passage that matched with the query's words marked, how it matched and how
+ * relevant it is. `detailed` adds the status and owner.
  */
 export function SearchHitList({ hits, detailed = false }) {
   return (
@@ -77,6 +79,11 @@ export function SearchHitList({ hits, detailed = false }) {
               {hit.title}
             </Link>
             {hit.description && <p className="hit__description">{hit.description}</p>}
+            {hit.snippet && (
+              <p className="hit__snippet">
+                <Highlighted text={hit.snippet.text} matches={hit.snippet.highlights} />
+              </p>
+            )}
             <p className="hit__meta">
               {hit.category && <CategoryTag category={hit.category} />}
               {detailed && hit.status && <StatusPill status={hit.status} />}

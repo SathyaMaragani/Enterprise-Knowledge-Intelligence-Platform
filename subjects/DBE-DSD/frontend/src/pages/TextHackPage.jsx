@@ -1,35 +1,13 @@
 import { useRef, useState } from 'react';
 import { useApi, useRun } from '../api/useApi.js';
+import { Highlighted, highlightSegments } from '../components/highlight.jsx';
+
+export { highlightSegments };
 
 const SAMPLE_TEXT = 'she sells sea shells by the sea shore; he hears the ushers hush.';
 const SAMPLE_PATTERNS = 'he\nshe\nhers';
 // Two edge-disjoint chains from 0 to 5 (0-1-3-5 and 0-2-4-5).
 const SAMPLE_CITATIONS = '0 1\n0 2\n1 3\n2 3\n2 4\n3 5\n4 5';
-
-/**
- * Splits `text` into plain and highlighted runs. Overlapping or touching
- * matches merge into one highlight, since a character is either marked or not.
- */
-export function highlightSegments(text, matches) {
-  const merged = [];
-  for (const { start, end } of [...matches].sort((a, b) => a.start - b.start)) {
-    const last = merged.at(-1);
-    if (last && start <= last.end) {
-      last.end = Math.max(last.end, end);
-    } else {
-      merged.push({ start, end });
-    }
-  }
-  const segments = [];
-  let cursor = 0;
-  for (const { start, end } of merged) {
-    if (start > cursor) segments.push({ text: text.slice(cursor, start), marked: false });
-    segments.push({ text: text.slice(start, end), marked: true });
-    cursor = end;
-  }
-  if (cursor < text.length) segments.push({ text: text.slice(cursor), marked: false });
-  return segments;
-}
 
 /** One citation per line, "0 1" or "0 -> 1". Returns { citations } or { error }. */
 export function parseCitations(input) {
@@ -106,9 +84,7 @@ function PatternDemo() {
             {result.matches.length === 1 ? 'match' : 'matches'}
           </p>
           <div className="doc-content texthack-text" data-testid="highlighted-text">
-            {highlightSegments(searched, result.matches).map((segment, index) =>
-              segment.marked ? <mark key={index}>{segment.text}</mark> : <span key={index}>{segment.text}</span>,
-            )}
+            <Highlighted text={searched} matches={result.matches} />
           </div>
           {result.matches.length > 0 && (
             <ol className="texthack-matches" aria-label="Matches">

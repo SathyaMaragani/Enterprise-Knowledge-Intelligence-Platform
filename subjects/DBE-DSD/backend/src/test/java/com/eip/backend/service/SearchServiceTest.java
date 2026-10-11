@@ -44,6 +44,8 @@ class SearchServiceTest {
     private Set<Integer> readable;
     /** What MongoDB reports about document bodies, by document id. */
     private Map<Integer, LexicalScorer.BodyEvidence> bodyMatches = Map.of();
+    private Map<Integer, BodyTextMatcher.Passages> passages = Map.of();
+    private List<Integer> passagesAskedFor;
     private RuntimeException bodyFailure;
     /** The server-side query embedding; null means the model is not loaded. */
     private List<Float> queryEmbedding;
@@ -98,6 +100,16 @@ class SearchServiceTest {
                 }
                 bodyPhrase = phrase;
                 return bodyMatches;
+            }
+
+            @Override
+            public Map<Integer, Passages> passages(java.util.Collection<Integer> documentIds, List<String> terms,
+                                                   boolean allowPrefix, java.util.Collection<String> chunkIds) {
+                if (bodyFailure != null) {
+                    throw bodyFailure;
+                }
+                passagesAskedFor = List.copyOf(documentIds);
+                return passages;
             }
         };
 
@@ -554,6 +566,38 @@ class SearchServiceTest {
         SearchResponse response = searchService.search(request("laptop policy", null, SearchMode.KEYWORD));
 
         assertEquals(List.of(1, 2, 3), response.getHits().stream().map(SearchHit::getDocumentId).toList());
+    }
+
+    @Test
+    void aHitCarriesThePassageThatMatched() {
+        Document handbook = doc(1, "Onboarding", "first week");
+        doc(2, "Travel", "flights");
+        scanReturns(handbook, known.get(1));
+        bodyMatches = Map.of(1, body(true, 1.0));
+        passages = Map.of(1, new BodyTextMatcher.Passages(
+                List.of("Laptops are issued on day one. Report a lost laptop to security."), Map.of()));
+
+        SearchResponse response = searchService.search(request("laptop", null, SearchMode.KEYWORD));
+
+        // Only the page being returned is looked up.
+        assertEquals(List.of(1), passagesAskedFor);
+        Snippets.Snippet snippet = response.getHits().get(0).getSnippet();
+        assertEquals("Laptops are issued on day one. Report a lost laptop to security.", snippet.text());
+        // KEYWORD mode matches whole words: "laptop", not "Laptops".
+        assertEquals(List.of("laptop"), snippet.highlights().stream()
+                .map(range -> snippet.text().substring(range.start(), range.end())).toList());
+    }
+
+    @Test
+    void aMeaningOnlyHitShowsItsBestChunk() {
+        doc(1, "Hybrid Working", "x");
+        vectorReturns(vectorItem(1, 0.9f, "doc1-chunk2"));
+        passages = Map.of(1, new BodyTextMatcher.Passages(List.of(),
+                Map.of("doc1-chunk2", "Employees may work from home two days a week.")));
+
+        SearchResponse response = searchService.search(request(null, List.of(0.1f, 0.2f)));
+
+        assertEquals("Employees may work from home two days a week.", response.getHits().get(0).getSnippet().text());
     }
 
     @Test

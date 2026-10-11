@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jsonResponse, makeToken, mockFetch, tokenFor } from '../test-utils.js';
-import { ApiError, request, setUnauthorizedHandler } from './client.js';
+import { ApiError, download, filenameFrom, request, setUnauthorizedHandler } from './client.js';
 
 describe('request', () => {
   let onUnauthorized;
@@ -113,6 +113,40 @@ describe('request', () => {
 
     expect(error.message).toBe('Invalid username or password');
     expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('downloads a file with the token and takes its name from Content-Disposition', async () => {
+    sessionStorage.setItem('eip.token', tokenFor('alice_mgr'));
+    const blob = new Blob(['file bytes']);
+    const fetchMock = mockFetch({
+      ok: true,
+      status: 200,
+      blob: async () => blob,
+      headers: { get: (name) => (name === 'Content-Disposition' ? "attachment; filename*=UTF-8''Q2%20budget.pdf" : null) },
+    });
+
+    const file = await download('/api/documents/7/file');
+
+    expect(file).toEqual({ blob, filename: 'Q2 budget.pdf' });
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe('/api/documents/7/file');
+    expect(init.headers.Authorization).toMatch(/^Bearer /);
+  });
+
+  it('reports a refused download with the server’s message', async () => {
+    mockFetch(jsonResponse(404, { message: 'The original file of this document was not kept' }));
+
+    const error = await download('/api/documents/1/file').catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.message).toBe('The original file of this document was not kept');
+  });
+
+  it('reads encoded, quoted and missing file names', () => {
+    expect(filenameFrom("attachment; filename=\"=?UTF-8?Q?x?=\"; filename*=UTF-8''r%C3%A9sum%C3%A9.docx")).toBe('résumé.docx');
+    expect(filenameFrom('attachment; filename="notes.txt"')).toBe('notes.txt');
+    expect(filenameFrom("attachment; filename*=UTF-8''bad%zz.txt; filename=plain.txt")).toBe('plain.txt');
+    expect(filenameFrom(null)).toBe('download');
   });
 
   it('does not send a locally expired token at all', async () => {

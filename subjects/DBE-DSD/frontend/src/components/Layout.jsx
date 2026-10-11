@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can, roleLabel } from '../auth/roles.js';
-import { initials } from '../pages/dashboardData.js';
+import { initials, relativeTime } from '../pages/dashboardData.js';
 import BrandMark from './BrandMark.jsx';
 import { modeParam, parseSearchMode } from './SearchBits.jsx';
 import {
@@ -13,6 +13,7 @@ import {
   FileTextIcon,
   HomeIcon,
   LightbulbIcon,
+  LockIcon,
   LogOutIcon,
   SearchIcon,
   ShieldCheckIcon,
@@ -71,7 +72,7 @@ export default function Layout() {
         <header className="topbar">
           {/* The search page leads with its own, fuller search form. */}
           {pathname !== '/search' && <GlobalSearch />}
-          <Notifications />
+          <Notifications key={session.username} username={session.username} />
           <AccountMenu
             name={profile?.fullName || session.username}
             role={roleLabel(profile) ?? 'Signed in'}
@@ -173,29 +174,86 @@ function useDismiss(open, setOpen) {
   return containerRef;
 }
 
+/** When this browser last had the notifications open, as a timestamp; 0 if never or unreadable. */
+function readSeen(key) {
+  try {
+    return Number(localStorage.getItem(key)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /**
- * The backend sends no notifications yet, so the bell says so honestly rather
- * than showing an unread marker with nothing behind it.
+ * Documents shared with the user, and later edits to those, newest first. The
+ * server derives the list; which ones are new is remembered in this browser,
+ * and closing the panel marks them all as seen.
  */
-function Notifications() {
+function Notifications({ username }) {
   const [open, setOpen] = useState(false);
   const containerRef = useDismiss(open, setOpen);
+  const { data, reload } = useApi('/api/notifications');
+  const items = data ?? [];
+  const storageKey = `eip.notifications.seen.${username}`;
+  const [seenAt, setSeenAt] = useState(() => readSeen(storageKey));
+  const isNew = (item) => new Date(item.at).getTime() > seenAt;
+  const unread = items.filter(isNew).length;
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    return () => {
+      const now = Date.now();
+      setSeenAt(now);
+      try {
+        localStorage.setItem(storageKey, String(now));
+      } catch {
+        // Storage is unavailable (private window): the marker returns next visit.
+      }
+    };
+  }, [open, storageKey]);
 
   return (
     <div className="notifications" ref={containerRef}>
       <button
         type="button"
         className="icon-button topbar__bell"
-        aria-label="Notifications"
+        aria-label={unread > 0 ? `Notifications, ${unread} new` : 'Notifications'}
         aria-expanded={open}
-        onClick={() => setOpen((isOpen) => !isOpen)}
+        onClick={() => {
+          if (!open) {
+            reload();
+          }
+          setOpen((isOpen) => !isOpen);
+        }}
       >
         <BellIcon size={21} />
+        {unread > 0 && (
+          <span className="topbar__badge" aria-hidden="true">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
       </button>
       {open && (
-        <div className="popover glass-panel" role="status">
+        <div className="popover glass-panel notifications__panel">
           <p className="popover__title">Notifications</p>
-          <p className="muted">You’re all caught up.</p>
+          {items.length === 0 ? (
+            <p className="muted">You’re all caught up.</p>
+          ) : (
+            <ul className="notification-list">
+              {items.map((item) => (
+                <li key={`${item.type}-${item.documentId}-${item.at}`} className={isNew(item) ? 'is-new' : undefined}>
+                  <Link to={`/documents/${item.documentId}`} onClick={() => setOpen(false)}>
+                    <strong>{item.title}</strong> {item.type === 'UPDATED' ? 'was updated' : 'was shared with you'}
+                  </Link>
+                  <span className="muted">
+                    {item.owner ? `Owner: ${item.owner} · ` : ''}
+                    {relativeTime(item.at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>
@@ -228,6 +286,10 @@ function AccountMenu({ name, role, onSignOut }) {
 
       {open && (
         <div className="account__menu popover glass-panel" role="menu">
+          <Link role="menuitem" className="menu-item" to="/account" onClick={() => setOpen(false)}>
+            <LockIcon />
+            Account and password
+          </Link>
           <button type="button" role="menuitem" className="menu-item" onClick={onSignOut}>
             <LogOutIcon />
             Sign out

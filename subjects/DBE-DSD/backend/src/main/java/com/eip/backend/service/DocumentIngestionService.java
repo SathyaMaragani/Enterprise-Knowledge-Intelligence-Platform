@@ -18,6 +18,7 @@ import com.eip.backend.repository.DocumentVersionRepository;
 import com.eip.backend.repository.KnowledgeDocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,19 +29,22 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * Stores an uploaded document across all three databases, and removes one.
+ * Stores an uploaded document across all three databases, edits one and removes one.
  *
- * <p>Upload order: PostgreSQL row (status PROCESSING), MongoDB content and chunks,
- * a version-1 history row, chunk embeddings in Qdrant, then the final status.
+ * <p>Upload order: PostgreSQL row (status PROCESSING), the file itself in GridFS,
+ * MongoDB content and chunks, a version-1 history row, chunk embeddings in Qdrant,
+ * then the final status.
  * There is no transaction spanning three databases, so each later failure undoes
  * the earlier writes before the error is returned: a failed upload leaves nothing
  * behind.
  *
  * <p>Vectors are optional. With the embedding model disabled, or Qdrant down, the
  * document is still stored and keyword-searchable with status UPLOADED; with
- * vectors it is INDEXED.
+ * vectors it is INDEXED. The original file is optional in the same way: if it
+ * cannot be kept, the document is stored without a download.
  */
 @Service
 public class DocumentIngestionService {
@@ -58,6 +62,7 @@ public class DocumentIngestionService {
     private final QdrantService qdrantService;
     private final EmbeddingService embeddingService;
     private final DocumentAccessService documentAccessService;
+    private final OriginalFileStore originalFileStore;
 
     public DocumentIngestionService(DocumentRepository documentRepository,
                                     CategoryRepository categoryRepository,
@@ -65,7 +70,8 @@ public class DocumentIngestionService {
                                     KnowledgeDocumentRepository knowledgeDocumentRepository,
                                     QdrantService qdrantService,
                                     EmbeddingService embeddingService,
-                                    DocumentAccessService documentAccessService) {
+                                    DocumentAccessService documentAccessService,
+                                    OriginalFileStore originalFileStore) {
         this.documentRepository = documentRepository;
         this.categoryRepository = categoryRepository;
         this.documentVersionRepository = documentVersionRepository;
@@ -73,6 +79,7 @@ public class DocumentIngestionService {
         this.qdrantService = qdrantService;
         this.embeddingService = embeddingService;
         this.documentAccessService = documentAccessService;
+        this.originalFileStore = originalFileStore;
     }
 
     // ponytail: embeddings are computed inside the request, one chunk at a time.
@@ -88,7 +95,8 @@ public class DocumentIngestionService {
 
         String filename = requireFilename(file);
         TextExtractor.Format format = requireSupportedFormat(filename);
-        String text = requireText(file, format);
+        byte[] bytes = requireBytes(file);
+        String text = TextExtractor.extract(format, bytes);
         Category category = requireCategory(categoryName);
         String finalTitle = resolveTitle(title, filename);
         String finalDepartment = isBlank(department) ? category.getName() : department.trim();
@@ -107,9 +115,11 @@ public class DocumentIngestionService {
         boolean mongoSaved = false;
         boolean vectorsStored = false;
         try {
+            String original = storeOriginal(id, filename, format, bytes);
             List<String> chunkTexts = TextChunker.chunk(text);
             KnowledgeDocument knowledge = buildKnowledgeDocument(id, finalTitle, text, filename, format,
-                                                                 finalDepartment, owner.getUsername(), chunkTexts);
+                                                                 finalDepartment, owner.getUsername(), chunkTexts,
+                                                                 original);
             knowledge = knowledgeDocumentRepository.save(knowledge);
             mongoSaved = true;
 
@@ -150,7 +160,59 @@ public class DocumentIngestionService {
 
         qdrantService.deleteDocumentChunks(id);
         knowledgeDocumentRepository.deleteByPostgresDocumentId(id);
+        originalFileStore.delete(id);
         documentRepository.delete(document);
+    }
+
+    /**
+     * Changes a document's title, description or category; a null argument leaves
+     * that field as it is, and a blank description clears it. Allowed to the
+     * document's owner (with DOCUMENT_UPDATE) and to administrators.
+     *
+     * <p>The title and category are also stored with the vectors, where search
+     * filters on category, and the title with the MongoDB content. Qdrant goes
+     * first, as in {@link #delete}: if it is unreachable the request fails before
+     * anything has changed.
+     */
+    public Document update(Integer id, String title, String description, String categoryName) {
+        Document document = documentRepository.findById(id).orElseThrow(() -> new DocumentNotFoundException(id));
+        documentAccessService.requireRead(document);
+        if (!documentAccessService.canEdit(document)) {
+            throw new AccessDeniedException("Only the document's owner or an administrator can edit it");
+        }
+
+        String newTitle = title == null ? document.getTitle() : resolveTitle(title, "");
+        String newDescription = description == null ? document.getDescription()
+                : isBlank(description) ? null : description.trim();
+        Category newCategory = categoryName == null ? document.getCategory() : requireCategory(categoryName);
+
+        boolean titleChanged = !newTitle.equals(document.getTitle());
+        boolean categoryChanged = !Objects.equals(idOf(newCategory), idOf(document.getCategory()));
+        if ((titleChanged || categoryChanged) && "INDEXED".equals(document.getStatus())) {
+            qdrantService.updateDocumentPayload(id, newTitle, newCategory == null ? null : newCategory.getName());
+        }
+        if (titleChanged) {
+            knowledgeDocumentRepository.updateTitle(id, newTitle, new Date());
+        }
+        document.setTitle(newTitle);
+        document.setDescription(newDescription);
+        document.setCategory(newCategory);
+        document.setUpdatedAt(ZonedDateTime.now());
+        return documentRepository.save(document);
+    }
+
+    private static Integer idOf(Category category) {
+        return category == null ? null : category.getId();
+    }
+
+    /** The stored file's id, or null when it could not be kept: the upload goes on without it. */
+    private String storeOriginal(Integer id, String filename, TextExtractor.Format format, byte[] bytes) {
+        try {
+            return originalFileStore.store(id, filename, format.mimeType, bytes);
+        } catch (RuntimeException e) {
+            logger.warn("Stored document {} without its original file: {}", id, e.getMessage());
+            return null;
+        }
     }
 
     private boolean storeVectors(Integer id, String title, String category, String department, List<String> chunkTexts) {
@@ -181,6 +243,7 @@ public class DocumentIngestionService {
             if (mongoSaved) {
                 knowledgeDocumentRepository.deleteByPostgresDocumentId(id);
             }
+            originalFileStore.delete(id);
             documentRepository.deleteById(id);
         } catch (RuntimeException cleanup) {
             logger.error("Could not fully undo failed upload of document {}", id, cleanup);
@@ -189,7 +252,8 @@ public class DocumentIngestionService {
 
     private static KnowledgeDocument buildKnowledgeDocument(Integer id, String title, String text, String filename,
                                                             TextExtractor.Format format, String department,
-                                                            String uploadedBy, List<String> chunkTexts) {
+                                                            String uploadedBy, List<String> chunkTexts,
+                                                            String original) {
         Date now = new Date();
 
         Content content = new Content();
@@ -200,8 +264,9 @@ public class DocumentIngestionService {
         Source source = new Source();
         source.setFilename(filename);
         source.setMimeType(format.mimeType);
-        source.setStorageType("MONGODB");
-        source.setStorageReference("upload:" + filename);
+        // GRIDFS marks a document whose original file can be downloaded.
+        source.setStorageType(original != null ? "GRIDFS" : "MONGODB");
+        source.setStorageReference(original != null ? "gridfs:" + original : "upload:" + filename);
 
         List<Chunk> chunks = new ArrayList<>(chunkTexts.size());
         for (int position = 0; position < chunkTexts.size(); position++) {
@@ -266,12 +331,12 @@ public class DocumentIngestionService {
         return format;
     }
 
-    private static String requireText(MultipartFile file, TextExtractor.Format format) {
+    private static byte[] requireBytes(MultipartFile file) {
         if (file.getSize() > MAX_BYTES) {
             throw new IllegalArgumentException("Files can be at most 10 MB");
         }
         try {
-            return TextExtractor.extract(format, file.getBytes());
+            return file.getBytes();
         } catch (IOException e) {
             throw new IllegalStateException("Could not read the uploaded file", e);
         }

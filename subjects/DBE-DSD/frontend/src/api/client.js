@@ -23,8 +23,35 @@ export function setUnauthorizedHandler(handler) {
  * browser setting the boundary. Requests carry the stored bearer token unless
  * `auth` is false. Failures throw ApiError with a message fit to show a user.
  */
-export async function request(path, { method = 'GET', body, form, auth = true } = {}) {
-  const headers = { Accept: 'application/json' };
+export async function request(path, options) {
+  return readJson(await send(path, options));
+}
+
+/**
+ * Fetches a file with the caller's token, which a plain link cannot send:
+ * `{ blob, filename }`, the name taken from Content-Disposition.
+ */
+export async function download(path) {
+  const response = await send(path, { accept: '*/*' });
+  return { blob: await response.blob(), filename: filenameFrom(response.headers.get('Content-Disposition')) };
+}
+
+/** `filename*=UTF-8''...` if present, else `filename="..."`, else a neutral name. */
+export function filenameFrom(disposition) {
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition ?? '');
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch {
+      // Malformed escapes: fall through to the plain form.
+    }
+  }
+  return /filename="?([^";]+)"?/i.exec(disposition ?? '')?.[1] ?? 'download';
+}
+
+/** Sends the request; returns the Response when it succeeded and throws ApiError otherwise. */
+async function send(path, { method = 'GET', body, form, auth = true, accept = 'application/json' } = {}) {
+  const headers = { Accept: accept };
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -50,10 +77,10 @@ export async function request(path, { method = 'GET', body, form, auth = true } 
     throw new ApiError(0, 'Cannot reach the server. Check that the backend is running.');
   }
 
-  const data = await readJson(response);
   if (response.ok) {
-    return data;
+    return response;
   }
+  const data = await readJson(response);
 
   // A rejected token ends the session however it happened: expiry, a rotated
   // JWT_SECRET, or a removed user. A 401 without a token is a failed login and

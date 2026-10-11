@@ -153,7 +153,8 @@ export default function LoginPage() {
           </div>
           {showResetHelp && (
             <p id="reset-help" className="notice">
-              Password resets are handled by your EIP administrator.
+              Password resets are handled by your EIP administrator. Once signed in, you can change your password
+              from the account menu.
             </p>
           )}
 

@@ -140,21 +140,23 @@ There is no transaction across PostgreSQL, MongoDB and Qdrant. Writes are theref
 ```mermaid
 flowchart LR
     A[1 Validate<br/>+ extract text] --> B[2 PostgreSQL<br/>documents row<br/>PROCESSING]
-    B --> C[3 Chunk<br/>180 words,<br/>40 overlap]
-    C --> D[4 MongoDB<br/>text + chunks]
-    D --> E[5 PostgreSQL<br/>version 1]
-    E --> F[6 Embed +<br/>Qdrant upsert]
-    F --> G[7 Status INDEXED<br/>or UPLOADED]
-    B -. failure after step 2 .-> X[Undo in reverse:<br/>Qdrant points, MongoDB doc,<br/>PostgreSQL row]
+    B --> K[3 GridFS<br/>the file itself]
+    K --> C[4 Chunk<br/>180 words,<br/>40 overlap]
+    C --> D[5 MongoDB<br/>text + chunks]
+    D --> E[6 PostgreSQL<br/>version 1]
+    E --> F[7 Embed +<br/>Qdrant upsert]
+    F --> G[8 Status INDEXED<br/>or UPLOADED]
+    B -. failure after step 2 .-> X[Undo in reverse:<br/>Qdrant points, MongoDB doc,<br/>stored file, PostgreSQL row]
 ```
 
 1. **Validate and extract.** The caller needs DOCUMENT_CREATE. `.pdf`, `.docx`, `.txt` and `.md` files of up to 10 MB are accepted, and up to 1 MB of extracted text (section 5).
 2. **PostgreSQL first.** The `documents` row is written with status PROCESSING, because it issues the id the other stores reference.
-3. **Chunk.** The text is split into 180-word windows with a 40-word overlap. These are the same parameters as the ML pipeline, so demo chunks and uploaded chunks are cut identically.
-4. **MongoDB.** The text, chunks, source, metadata and processing record are saved, including which extractor produced the text.
-5. **History.** A `document_versions` row is added, version 1.
-6. **Embed.** When the embedding model is enabled, each chunk is embedded and upserted to Qdrant.
-7. **Final status.** INDEXED when vectors were stored. UPLOADED when the model is off or Qdrant is unavailable: the document is stored and keyword-searchable, just not semantically.
+3. **Keep the file.** The file itself is stored in GridFS in the same MongoDB database, keyed by the document id, so it can be downloaded again. If it cannot be stored, the upload goes on without it and the document simply has no download.
+4. **Chunk.** The text is split into 180-word windows with a 40-word overlap. These are the same parameters as the ML pipeline, so demo chunks and uploaded chunks are cut identically.
+5. **MongoDB.** The text, chunks, source, metadata and processing record are saved, including which extractor produced the text and where the original file is.
+6. **History.** A `document_versions` row is added, version 1.
+7. **Embed.** When the embedding model is enabled, each chunk is embedded and upserted to Qdrant.
+8. **Final status.** INDEXED when vectors were stored. UPLOADED when the model is off or Qdrant is unavailable: the document is stored and keyword-searchable, just not semantically.
 
 If anything fails after step 2, the earlier writes are removed in reverse order before the error is returned, so a failed upload leaves nothing behind.
 
@@ -163,8 +165,18 @@ If anything fails after step 2, the earlier writes are removed in reverse order 
 Delete needs DOCUMENT_DELETE and read access to the document. It removes data in this order:
 
 1. **Qdrant points first.** If Qdrant is unreachable, the request fails with 503 before anything is removed and can simply be retried.
-2. **The MongoDB document.**
+2. **The MongoDB document**, and the stored file.
 3. **The PostgreSQL row.** Its deletion cascades to versions, tags and grants.
+
+### Edit (`PATCH /api/documents/{id}`)
+
+The title and category live in all three stores: PostgreSQL holds them, Qdrant keeps a copy with each vector because search filters on category there, and MongoDB keeps the title with the content. An edit follows the same rule as delete:
+
+1. **Qdrant payload first**, for documents that have vectors. If Qdrant is unreachable, the request fails with 503 and nothing has changed.
+2. **The MongoDB title**, with one `$set` that does not load the text or chunks.
+3. **The PostgreSQL row**, including `updated_at`.
+
+The owner (with DOCUMENT_UPDATE) or an administrator may edit; the text itself is not editable.
 
 ### Availability (CAP)
 
@@ -273,16 +285,20 @@ flowchart TD
 |---|---|---|
 | `POST /api/auth/login` | Sign in; returns a JWT | Public |
 | `GET /api/auth/me` | Current user, roles and permissions | Signed in |
+| `PUT /api/auth/password` | Change your own password, proving the current one | Signed in |
 | `GET /api/health`, `/actuator/health` | Service health (component details hidden in production) | Public |
 | `GET /api/documents` | All readable documents | Signed in |
 | `GET /api/documents/page` | Paged list; category, status and text filters; access resolved in SQL | Signed in |
 | `GET /api/documents/{id}` | PostgreSQL metadata merged with MongoDB text, chunks and processing | Read access |
 | `POST /api/documents` | Upload (multipart) across the three stores | DOCUMENT_CREATE |
+| `GET /api/documents/{id}/file` | The file as uploaded, from GridFS, sent as an attachment | Read access |
+| `PATCH /api/documents/{id}` | Edit title, description or category across the three stores | Owner with DOCUMENT_UPDATE, or administrator |
 | `DELETE /api/documents/{id}` | Delete from Qdrant, MongoDB and PostgreSQL | DOCUMENT_DELETE + read access |
 | `GET/POST/DELETE /api/documents/{id}/permissions` | List, grant and revoke READ | Owner or USER_MANAGE |
 | `GET /api/categories` | Categories, sorted | Signed in |
 | `POST /api/search` | Unified search: hybrid, semantic, keyword or fuzzy | Signed in; filtered |
 | `GET /api/search/history` | Caller's own recent searches | Signed in |
+| `GET /api/notifications` | Documents shared with the caller, and later edits to those | Signed in |
 | `POST /api/search/vector`, `POST /api/search/vector/document/{id}`, `GET /api/search/vector/collection-info` | Raw vector search, per-document chunks, collection statistics | Signed in; filtered |
 | `POST /api/documents/search/semantic` | Semantic search returning unified documents | Signed in; filtered |
 | `GET/POST/PATCH /api/admin/users`, `PUT /api/admin/users/{id}/password`, `GET /api/admin/roles` | Account administration | USER_MANAGE |
@@ -338,15 +354,17 @@ flowchart LR
 |---|---|
 | Sign-in | Username and password; "starting the server" screen while the free-tier backend wakes up |
 | Dashboard (`/`) | Greeting hero with search-mode chips and drag-and-drop upload; live counts (documents, indexed, categories, vector chunks); recent documents; your recent searches; document activity; feature shortcuts |
-| Search (`/search`) | Four modes, category and status filters, paging; hits show match signals and relevance; everything lives in the URL |
+| Search (`/search`) | Four modes, category and status filters, paging; hits quote the matching passage with the query's words marked, and show match signals and relevance; everything lives in the URL |
 | Repository (`/repository`) | Paged table of readable documents with filters |
-| Document (`/documents/{id}`) | Metadata, extracted text, chunks, source and processing details, sharing panel, delete |
+| Document (`/documents/{id}`) | Metadata, extracted text, chunks, source and processing details; download the original file or open a PDF; edit title, description and category; sharing panel; delete |
 | Upload (`/upload`) | PDF, DOCX, TXT or MD up to 10 MB; client-side checks mirror the server's |
 | Administration (`/admin`) | Accounts table, role changes, disable, password reset, add user |
+| Account (`/account`) | Your details; change your own password |
 | TextHack (`/texthack`) | DSA-3 workbench: pattern search, similarity and alignment, citation flow, complexity table |
 | ShellForge (`/shellforge`) | OSSP shell run on the server: Week 10 race-and-mutex lab, preset sessions with their transcripts |
 | ML insights (`/insights`) | ML subject's classification and clustering results, in SVG charts |
 
+- **Notifications.** The bell lists documents shared with you and later edits to them, with a count of those new since you last opened it.
 - **Session.** The JWT is kept in `sessionStorage`. The client signs out when it expires, or on any 401 to a request that carried a token.
 - **Permission-aware UI.** The UI offers only what the user's permissions allow. The backend enforces every rule again, so a hidden button is a convenience, not a control.
 
@@ -380,8 +398,8 @@ Guides: [`deploy/README.md`](../../subjects/DBE-DSD/deploy/README.md), [`RENDER-
 
 | Suite | Result |
 |---|---|
-| Backend (JUnit 5, MockMvc, Spring Security test) | **233 tests pass**: 229 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| Frontend (Vitest + Testing Library, 17 files) | **156 tests pass** |
+| Backend (JUnit 5, MockMvc, Spring Security test) | **262 tests pass**: 258 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| Frontend (Vitest + Testing Library, 18 files) | **172 tests pass** |
 | Smoke test through nginx (`docker/smoke-test.mjs`) | **28 / 28 checks**: sign-in, account creation per role, upload with embedding, access denial and grants, keyword and semantic search, the 413 limit, clean-up |
 | Load test (`docker/load-test.mjs`) | 50 users for 30 s, backend capped at 1 GB: **169 requests/s, 0 errors** |
 | Render free-tier limits | Healthy after 101 s; semantic search 0.4–0.9 s (was 6.5–9.4 s before tuning); hybrid 0.5–0.6 s; memory 446 MiB steady, 485 MiB peak |
@@ -426,7 +444,7 @@ Running the tests: [`backend/docs/TESTING.md`](../../subjects/DBE-DSD/backend/do
 |---|---|---|
 | CO1 Relational database engineering | ER modelling, 3NF, DDL and constraints, indexes, SQL querying, transactions | 12-table schema, ERD, data dictionary, CHECK/UNIQUE/FK actions, 10 indexes, migrations; joins and GROUP BY aggregates in `common_queries.sql` and `reporting_queries.sql`; `schema_tests.sql` proves each constraint by attempting a violation inside `BEGIN … ROLLBACK`; JPQL repositories that resolve access inside the query. Views, CTEs and window functions are not used. |
 | CO2 Database engineering | SQL vs NoSQL, MongoDB modelling and indexing, polyglot persistence, consistency strategies, vector databases, hybrid search | Three stores with one join key; `$jsonSchema` validator and 9 indexes; compensating actions on upload and delete; Qdrant HNSW; hybrid keyword + vector search |
-| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 233 backend tests on live databases; controller–service–repository layering |
+| CO3 Backend API engineering | REST design, authentication and security (JWT, hashing, RBAC), database integration and testing, layered architecture | REST API with consistent errors; JWT + BCrypt + permissions + per-document grants; 262 backend tests on live databases; controller–service–repository layering |
 | CO4 Multi-framework backend | Spring Boot core, JPA, validation, Spring Security, Actuator | Spring Boot 3.4 service; Spring Security filter chain; Actuator health with details hidden in production |
 | CO5 Microservices | Service boundaries, distributed consistency (sagas, compensating actions) | Compensating writes across three databases. The backend itself is one service, not split into microservices (see limitations). |
 | CO6 Deployment and delivery | Docker, Compose, CI/CD, load testing, documentation | Dockerfiles, Compose with health checks, GitHub Actions for backend and frontend, deploy-on-green to Render, smoke and load tests, this documentation |

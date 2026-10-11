@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
+import AccountPage from './pages/AccountPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import DocumentPage from './pages/DocumentPage.jsx';
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="documents/:id" element={<DocumentPage />} />
         <Route path="upload" element={<UploadPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="texthack" element={<TextHackPage />} />
         <Route path="shellforge" element={<ShellForgePage />} />
         <Route

@@ -1409,6 +1409,7 @@ class EipApplicationTests {
             return;
         }
         knowledgeDocumentRepository.deleteByPostgresDocumentId(id);
+        originalFileStore.delete(id);
         documentRepository.findById(id).ifPresent(documentRepository::delete);
     }
 
@@ -1637,6 +1638,345 @@ class EipApplicationTests {
                 .andExpect(status().isForbidden());
         assertTrue(documentRepository.findById(2).isPresent());
         assertTrue(knowledgeDocumentRepository.findByPostgresDocumentId(2).isPresent());
+    }
+
+    // ---------------------------------------------------------
+    // ORIGINAL FILES, EDITING, SNIPPETS, OWN PASSWORD, NOTIFICATIONS
+    // ---------------------------------------------------------
+
+    @Autowired
+    private com.eip.backend.service.OriginalFileStore originalFileStore;
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder patch(String url) {
+        return org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(url)
+                .contentType(MediaType.APPLICATION_JSON);
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testOriginalFileIsKeptDownloadedAndRemovedWithTheDocument() throws Exception {
+        String alice = bearer("alice_mgr");
+        byte[] bytes = "The original bytes,\r\nexactly as uploaded.".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Integer id = null;
+        try {
+            // The browser's claimed type is ignored: the server records its own for the extension.
+            id = uploadedId(mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .multipart("/api/documents")
+                            .file(new org.springframework.mock.web.MockMultipartFile(
+                                    "file", "original notes.txt", "text/html", bytes))
+                            .param("category", "Finance")
+                            .header("Authorization", alice))
+                    .andExpect(status().isCreated())
+                    .andReturn());
+
+            mockMvc.perform(get("/api/documents/" + id).header("Authorization", alice))
+                    .andExpect(jsonPath("$.originalAvailable").value(true))
+                    .andExpect(jsonPath("$.source.storageType").value("GRIDFS"))
+                    .andExpect(jsonPath("$.source.storageReference", startsWith("gridfs:")));
+
+            org.springframework.test.web.servlet.MvcResult file = mockMvc.perform(
+                            get("/api/documents/" + id + "/file").header("Authorization", alice))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Type", "text/plain"))
+                    .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                    .andExpect(header().string("Content-Disposition", startsWith("attachment")))
+                    .andExpect(header().string("Content-Disposition", containsString("original%20notes.txt")))
+                    .andReturn();
+            assertArrayEquals(bytes, file.getResponse().getContentAsByteArray());
+
+            // The file follows the document's read rule.
+            mockMvc.perform(get("/api/documents/" + id + "/file").header("Authorization", bearer("dave_tmp")))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(get("/api/documents/" + id + "/file")).andExpect(status().isUnauthorized());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .delete("/api/documents/" + id).header("Authorization", bearer("admin_user")))
+                    .andExpect(status().isNoContent());
+            assertTrue(originalFileStore.find(id).isEmpty(), "the file goes with the document");
+        } finally {
+            removeUpload(id);
+        }
+    }
+
+    @Test
+    void testDocumentsStoredWithoutAnOriginalSaySo() throws Exception {
+        mockMvc.perform(get("/api/documents/1"))
+                .andExpect(jsonPath("$.originalAvailable").value(false));
+        mockMvc.perform(get("/api/documents/1/file"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("was not kept")));
+        mockMvc.perform(get("/api/documents/999999/file")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testOwnerEditsTitleDescriptionAndCategory() throws Exception {
+        String alice = bearer("alice_mgr");
+        Integer id = null;
+        try {
+            id = uploadedId(mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .multipart("/api/documents")
+                            .file(textFile("edit-me.txt", "quokka budget figures for the editing test"))
+                            .param("title", "Edit Me")
+                            .param("description", "Before the edit")
+                            .param("category", "Finance")
+                            .header("Authorization", alice))
+                    .andExpect(status().isCreated())
+                    .andReturn());
+            java.time.ZonedDateTime before = documentRepository.findById(id).orElseThrow().getUpdatedAt();
+
+            mockMvc.perform(get("/api/documents/" + id).header("Authorization", alice))
+                    .andExpect(jsonPath("$.canEdit").value(true));
+
+            mockMvc.perform(patch("/api/documents/" + id).header("Authorization", alice)
+                            .content("{\"title\":\"  Quokka Budget  \",\"description\":\"\",\"category\":\"Legal\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title").value("Quokka Budget"))
+                    .andExpect(jsonPath("$.description").value(nullValue()))
+                    .andExpect(jsonPath("$.category").value("Legal"))
+                    .andExpect(jsonPath("$.content.rawText", containsString("quokka budget figures")));
+
+            Document stored = documentRepository.findById(id).orElseThrow();
+            assertEquals("Quokka Budget", stored.getTitle());
+            assertTrue(stored.getUpdatedAt().isAfter(before));
+            // The content document is renamed too, and its text is left alone.
+            var knowledge = knowledgeDocumentRepository.findByPostgresDocumentId(id).orElseThrow();
+            assertEquals("Quokka Budget", knowledge.getTitle());
+            assertTrue(knowledge.getContent().getRawText().contains("quokka budget figures"));
+
+            // A field left out is not changed.
+            mockMvc.perform(patch("/api/documents/" + id).header("Authorization", alice)
+                            .content("{\"description\":\"After the edit\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title").value("Quokka Budget"))
+                    .andExpect(jsonPath("$.category").value("Legal"))
+                    .andExpect(jsonPath("$.description").value("After the edit"));
+
+            // The new category is what the repository filters on.
+            mockMvc.perform(get("/api/documents/page").param("category", "Legal").header("Authorization", alice))
+                    .andExpect(jsonPath("$.items[*].id", hasItem(id)));
+
+            String[][] invalid = {
+                    {"{\"title\":\"   \"}", "Give the document a title"},
+                    {"{\"title\":\"" + "x".repeat(256) + "\"}", "at most 255 characters"},
+                    {"{\"category\":\"Nope\"}", "Unknown category"},
+            };
+            for (String[] c : invalid) {
+                mockMvc.perform(patch("/api/documents/" + id).header("Authorization", alice).content(c[0]))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message", containsString(c[1])));
+            }
+
+            // Someone who cannot read it cannot edit it; an administrator can.
+            mockMvc.perform(patch("/api/documents/" + id).header("Authorization", bearer("bob_eng"))
+                            .content("{\"title\":\"Taken over\"}"))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(patch("/api/documents/" + id).content("{\"title\":\"Anonymous\"}"))
+                    .andExpect(status().isUnauthorized());
+            mockMvc.perform(patch("/api/documents/" + id).header("Authorization", bearer("admin_user"))
+                            .content("{\"title\":\"Renamed by admin\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title").value("Renamed by admin"));
+        } finally {
+            removeUpload(id);
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testEditingNeedsOwnershipAndTheUpdatePermission() throws Exception {
+        // bob_eng owns document 3 but EMPLOYEE lacks DOCUMENT_UPDATE.
+        mockMvc.perform(get("/api/documents/3").header("Authorization", bearer("bob_eng")))
+                .andExpect(jsonPath("$.canEdit").value(false));
+        mockMvc.perform(patch("/api/documents/3").header("Authorization", bearer("bob_eng"))
+                        .content("{\"title\":\"Renamed\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", containsString("owner or an administrator")));
+        // alice_mgr holds DOCUMENT_UPDATE but does not own document 10.
+        mockMvc.perform(patch("/api/documents/10").header("Authorization", bearer("alice_mgr"))
+                        .content("{\"title\":\"Renamed\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/documents/999999").header("Authorization", bearer("admin_user"))
+                        .content("{\"title\":\"Renamed\"}"))
+                .andExpect(status().isNotFound());
+        assertEquals("System Architecture v2", documentRepository.findById(3).orElseThrow().getTitle());
+        assertEquals("NDA Template", documentRepository.findById(10).orElseThrow().getTitle());
+    }
+
+    @Test
+    void testEditRewritesTheTitleAndCategoryStoredWithTheVectors() throws Exception {
+        // Document 10 (NDA Template, Legal) is INDEXED with three seeded points,
+        // whose payload carries the seed's own placeholder title.
+        org.springframework.jdbc.core.JdbcTemplate jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+        var seeded = qdrantService.searchByDocumentId(10, generateTestVector(384), 1).getResults().get(0);
+        try {
+            mockMvc.perform(patch("/api/documents/10").content("{\"title\":\"NDA Template (edited)\",\"category\":\"HR\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.title").value("NDA Template (edited)"));
+
+            var points = qdrantService.searchByDocumentId(10, generateTestVector(384), 3).getResults();
+            assertEquals(3, points.size());
+            for (var point : points) {
+                assertEquals("NDA Template (edited)", point.getTitle());
+                assertEquals("HR", point.getCategory());
+            }
+            // Another document's points are not touched.
+            assertNotEquals("NDA Template (edited)",
+                    qdrantService.searchByDocumentId(9, generateTestVector(384), 1).getResults().get(0).getTitle());
+        } finally {
+            // Put the fixture back exactly: all three stores, timestamp included.
+            mockMvc.perform(patch("/api/documents/10").content("{\"title\":\"NDA Template\",\"category\":\"Legal\"}"))
+                    .andExpect(status().isOk());
+            qdrantService.updateDocumentPayload(10, seeded.getTitle(), seeded.getCategory());
+            jdbc.update("update documents set updated_at = created_at where id = 10");
+        }
+        assertEquals("NDA Template", documentRepository.findById(10).orElseThrow().getTitle());
+        assertEquals("NDA Template", knowledgeDocumentRepository.findByPostgresDocumentId(10).orElseThrow().getTitle());
+        var restored = qdrantService.searchByDocumentId(10, generateTestVector(384), 1).getResults().get(0);
+        assertEquals(seeded.getTitle(), restored.getTitle());
+        assertEquals(seeded.getCategory(), restored.getCategory());
+    }
+
+    @Test
+    void testSearchHitsCarryTheMatchingPassage() throws Exception {
+        // "Kafka" is only in document 3's text: the hit shows the chunk that has it.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"kafka\",\"mode\":\"KEYWORD\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hits[0].documentId").value(3))
+                .andExpect(jsonPath("$.hits[0].snippet.text").value("Services communicate via Kafka. The DB is PostgreSQL."))
+                .andExpect(jsonPath("$.hits[0].snippet.highlights", hasSize(1)))
+                .andExpect(jsonPath("$.hits[0].snippet.highlights[0].start").value(25))
+                .andExpect(jsonPath("$.hits[0].snippet.highlights[0].end").value(30));
+
+        // A partly typed word highlights the whole word it begins.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"microserv\",\"mode\":\"FUZZY\"}"))
+                .andExpect(jsonPath("$.hits[0].documentId").value(3))
+                .andExpect(jsonPath("$.hits[0].snippet.text").value("The new architecture uses microservices."))
+                .andExpect(jsonPath("$.hits[0].snippet.highlights[0].start").value(26))
+                .andExpect(jsonPath("$.hits[0].snippet.highlights[0].end").value(39));
+
+        // "Handbook" is in document 1's title but not in its text: nothing to quote.
+        mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"handbook\",\"mode\":\"KEYWORD\"}"))
+                .andExpect(jsonPath("$.hits[0].documentId").value(1))
+                .andExpect(jsonPath("$.hits[0].snippet").value(nullValue()));
+    }
+
+    @Test
+    void testVectorHitsShowTheirBestChunk() throws Exception {
+        String body = mockMvc.perform(post("/api/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unifiedSearch(null, generateTestVector(384), 0, 10)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        // Seeded points name chunks the seeded content does not have, so only hits
+        // whose chunk exists carry a snippet; none may carry another document's text.
+        for (com.fasterxml.jackson.databind.JsonNode hit : objectMapper.readTree(body).get("hits")) {
+            com.fasterxml.jackson.databind.JsonNode snippet = hit.get("snippet");
+            if (snippet != null && !snippet.isNull()) {
+                var knowledge = knowledgeDocumentRepository
+                        .findByPostgresDocumentId(hit.get("documentId").asInt()).orElseThrow();
+                String shown = snippet.get("text").asText().replace("\u2026", "");
+                assertTrue(knowledge.getContent().getRawText().contains(shown), shown);
+            }
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testUserChangesOwnPassword() throws Exception {
+        String admin = bearer("admin_user");
+        try {
+            mockMvc.perform(post("/api/admin/users").header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(createUserJson("pw_tmp", "EMPLOYEE")))
+                    .andExpect(status().isCreated());
+            String token = bearer("pw_tmp");
+            java.util.function.Function<String, org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder> change =
+                    body -> org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/password")
+                            .header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(body);
+
+            String[][] refused = {
+                    {"{\"currentPassword\":\"wrong-pass-123\",\"newPassword\":\"brand-new-pass-1\"}", "current password is not correct"},
+                    {"{\"currentPassword\":\"temp-pass-123\",\"newPassword\":\"temp-pass-123\"}", "different from the current one"},
+                    {"{\"currentPassword\":\"temp-pass-123\",\"newPassword\":\"short\"}", "8 to 72 characters"},
+                    {"{\"newPassword\":\"brand-new-pass-1\"}", "Enter your current password"},
+            };
+            for (String[] c : refused) {
+                // 400, not 401: the client signs out on a 401 that carried a token.
+                mockMvc.perform(change.apply(c[0]))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message", containsString(c[1])));
+            }
+            login("pw_tmp", "temp-pass-123").andExpect(status().isOk());
+
+            mockMvc.perform(change.apply("{\"currentPassword\":\"temp-pass-123\",\"newPassword\":\"brand-new-pass-1\"}"))
+                    .andExpect(status().isNoContent());
+
+            login("pw_tmp", "temp-pass-123").andExpect(status().isUnauthorized());
+            login("pw_tmp", "brand-new-pass-1").andExpect(status().isOk());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"currentPassword\":\"brand-new-pass-1\",\"newPassword\":\"another-pass-22\"}"))
+                    .andExpect(status().isUnauthorized());
+        } finally {
+            removeUser("pw_tmp");
+        }
+    }
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void testNotificationsComeFromSharesAndLaterEdits() throws Exception {
+        // Document 7 (Q2 Budget Draft) belongs to alice_mgr; bob_eng cannot read it yet.
+        String alice = bearer("alice_mgr");
+        String bob = bearer("bob_eng");
+        org.springframework.jdbc.core.JdbcTemplate jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+        Integer grantId = null;
+        try {
+            mockMvc.perform(get("/api/notifications").header("Authorization", bob))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.documentId == 7)]", hasSize(0)));
+
+            String body = mockMvc.perform(post("/api/documents/7/permissions")
+                            .header("Authorization", alice)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"bob_eng\"}"))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            grantId = objectMapper.readTree(body).get("id").asInt();
+
+            mockMvc.perform(get("/api/notifications").header("Authorization", bob))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)].type", contains("SHARED")))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)].title", contains("Q2 Budget Draft")))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)].owner", contains("alice_mgr")));
+            // The owner is not notified about her own document.
+            mockMvc.perform(get("/api/notifications").header("Authorization", alice))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)]", hasSize(0)));
+
+            // An edit after the share is a second notification, newest first.
+            jdbc.update("update documents set updated_at = now() + interval '5 minutes' where id = 7");
+            mockMvc.perform(get("/api/notifications").header("Authorization", bob))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)].type", contains("UPDATED", "SHARED")));
+
+            // Revoking the grant takes its notifications with it.
+            documentPermissionRepository.deleteById(grantId);
+            grantId = null;
+            mockMvc.perform(get("/api/notifications").header("Authorization", bob))
+                    .andExpect(jsonPath("$[?(@.documentId == 7)]", hasSize(0)));
+
+            mockMvc.perform(get("/api/notifications")).andExpect(status().isUnauthorized());
+        } finally {
+            jdbc.update("update documents set updated_at = created_at where id = 7");
+            if (grantId != null) {
+                documentPermissionRepository.deleteById(grantId);
+            }
+        }
     }
 
     // ---------------------------------------------------------

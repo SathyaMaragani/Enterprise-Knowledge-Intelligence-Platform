@@ -176,7 +176,43 @@ public class SearchService {
         ranked.sort(Comparator.comparingDouble(SearchHit::getScore).reversed()
                 .thenComparing(SearchHit::getDocumentId));
 
-        return paginate(ranked, request, sources);
+        SearchResponse response = paginate(ranked, request, sources);
+        attachSnippets(response.getHits(), query, mode != SearchMode.KEYWORD);
+        return response;
+    }
+
+    /**
+     * Gives each hit on the page the passage that matched: a chunk containing the
+     * query's terms, or failing that the vector search's best chunk. Only the page
+     * being returned is looked up. If MongoDB is down the hits go out without
+     * snippets.
+     */
+    private void attachSnippets(List<SearchHit> page, String query, boolean allowPrefix) {
+        if (page.isEmpty()) {
+            return;
+        }
+        String phrase = query == null ? "" : LexicalScorer.normalise(query);
+        List<String> terms = LexicalScorer.terms(phrase);
+        Map<Integer, SearchHit> byId = new LinkedHashMap<>();
+        List<String> chunkIds = new ArrayList<>();
+        for (SearchHit hit : page) {
+            byId.put(hit.getDocumentId(), hit);
+            if (hit.getChunkId() != null) {
+                chunkIds.add(hit.getChunkId());
+            }
+        }
+        Map<Integer, BodyTextMatcher.Passages> passages;
+        try {
+            passages = bodyTextMatcher.passages(byId.keySet(), terms, allowPrefix, chunkIds);
+        } catch (RuntimeException e) {
+            logger.warn("Snippets unavailable: {}", e.getMessage());
+            return;
+        }
+        passages.forEach((id, found) -> {
+            SearchHit hit = byId.get(id);
+            String semantic = hit.getChunkId() == null ? null : found.byChunkId().get(hit.getChunkId());
+            hit.setSnippet(Snippets.choose(found.matched(), semantic, phrase, terms, allowPrefix));
+        });
     }
 
     private void validate(SearchRequest request) {

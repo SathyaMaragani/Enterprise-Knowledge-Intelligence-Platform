@@ -790,6 +790,10 @@ label {
   border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(8px);
+  /* The blur makes the bar its own stacking layer; without this, positioned
+     page content (the dashboard hero) is drawn over its open menus. */
+  position: relative;
+  z-index: 30;
 }
 
 .topbar-search {
@@ -890,6 +894,74 @@ label {
   font-weight: 700;
 }
 
+.topbar__bell {
+  position: relative;
+}
+
+/* How many notifications are new since the panel was last open. */
+.topbar__badge {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.1rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+.notifications__panel {
+  width: min(22rem, calc(100vw - 2rem));
+}
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 22rem;
+  margin: 0.25rem -0.4rem 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.notification-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem 0.55rem 0.9rem;
+  border-top: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  font-size: 0.875rem;
+}
+
+.notification-list li:first-child {
+  border-top: 0;
+}
+
+.notification-list li.is-new {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.notification-list a {
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.notification-list a:hover {
+  color: var(--accent-text);
+}
+
+.notification-list .muted {
+  font-size: 0.8rem;
+}
+
 .account {
   position: relative;
 }
@@ -958,7 +1030,9 @@ label {
   border: 0;
   border-radius: 10px;
   background: none;
+  color: var(--text);
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1176,6 +1250,24 @@ label {
   margin-top: 0.15rem;
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+/* The passage that matched, quoted from the document's text. */
+.hit__snippet {
+  margin-top: 0.4rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--border-strong);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.hit__snippet mark {
+  padding: 0 0.1em;
+  border-radius: 3px;
+  background: #fde68a;
+  color: inherit;
 }
 
 .hit__meta {
@@ -2470,9 +2562,52 @@ input.text-input {
 .doc-header__actions {
   margin-left: auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  max-width: 26rem;
+}
+
+.doc-header__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* An action's error takes a line of its own under the buttons. */
+.doc-header__actions .form-error {
+  flex-basis: 100%;
+  text-align: right;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.edit-form label {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.edit-form .hint {
+  text-align: left;
+}
+
+.account-note {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.edit-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
 }
 
 .confirm {
@@ -2491,7 +2626,11 @@ input.text-input {
 
   .doc-header__actions {
     margin-left: 0;
-    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .doc-header__actions .form-error {
+    text-align: left;
   }
 }
 

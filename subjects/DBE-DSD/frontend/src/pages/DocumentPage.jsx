@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { request } from '../api/client.js';
+import { download, request } from '../api/client.js';
 import { useApi } from '../api/useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { can } from '../auth/roles.js';
@@ -13,7 +13,7 @@ import {
   humanize,
   StatusPill,
 } from '../components/DocumentBits.jsx';
-import { AlertIcon } from '../components/icons.jsx';
+import { AlertIcon, PencilIcon } from '../components/icons.jsx';
 import { relativeTime } from './dashboardData.js';
 
 /** A missing or forbidden document gets a message a user can act on. */
@@ -44,7 +44,10 @@ export default function DocumentPage() {
   const valid = /^\d+$/.test(id ?? '');
   const document = useApi(valid ? `/api/documents/${id}` : null);
   const { profile } = useAuth();
-  const notice = useLocation().state?.notice;
+  const arrivalNotice = useLocation().state?.notice;
+  const [editing, setEditing] = useState(false);
+  const [savedNotice, setSavedNotice] = useState(null);
+  const notice = savedNotice ?? arrivalNotice;
 
   const backLink = (
     <Link className="back-link" to="/repository">
@@ -63,7 +66,7 @@ export default function DocumentPage() {
     );
   }
 
-  if (document.status === 'loading' || document.status === 'idle') {
+  if (!document.data && (document.status === 'loading' || document.status === 'idle')) {
     return (
       <div className="page">
         {backLink}
@@ -112,8 +115,35 @@ export default function DocumentPage() {
             </span>
           </p>
         </div>
-        {can(profile, 'DOCUMENT_DELETE') && <DeleteDocument id={doc.id} title={doc.title} />}
+        <div className="doc-header__actions">
+          {doc.originalAvailable && <OriginalFile id={doc.id} mimeType={doc.source?.mimeType} />}
+          {doc.canEdit && !editing && (
+            <button
+              type="button"
+              className="btn btn--outline btn--small"
+              onClick={() => {
+                setSavedNotice(null);
+                setEditing(true);
+              }}
+            >
+              <PencilIcon size={15} /> Edit
+            </button>
+          )}
+          {can(profile, 'DOCUMENT_DELETE') && <DeleteDocument id={doc.id} title={doc.title} />}
+        </div>
       </header>
+
+      {editing && (
+        <EditDocument
+          doc={doc}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            setSavedNotice('Changes saved.');
+            document.reload();
+          }}
+        />
+      )}
 
       <div className="doc-layout">
         <div className="doc-layout__main">
@@ -233,7 +263,7 @@ function DeleteDocument({ id, title }) {
   }
 
   return (
-    <div className="doc-header__actions">
+    <>
       {!confirming ? (
         <button type="button" className="btn btn--danger btn--small" onClick={() => setConfirming(true)}>
           Delete
@@ -259,7 +289,149 @@ function DeleteDocument({ id, title }) {
           {error}
         </p>
       )}
-    </div>
+    </>
+  );
+}
+
+/**
+ * The file as it was uploaded. A link cannot carry the sign-in token, so the
+ * file is fetched and handed to the browser: saved under its own name, or, for
+ * a PDF, shown in a new tab. The tab is opened at the click itself, because a
+ * tab opened after the download finishes is treated as a pop-up and blocked.
+ */
+function OriginalFile({ id, mimeType }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function fetchFile(tab) {
+    setBusy(true);
+    setError(null);
+    try {
+      const { blob, filename } = await download(`/api/documents/${id}/file`);
+      const url = URL.createObjectURL(blob);
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      tab?.close();
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {mimeType === 'application/pdf' && (
+        <button
+          type="button"
+          className="btn btn--outline btn--small"
+          disabled={busy}
+          onClick={() => fetchFile(window.open('', '_blank'))}
+        >
+          Open PDF
+        </button>
+      )}
+      <button type="button" className="btn btn--outline btn--small" disabled={busy} onClick={() => fetchFile(null)}>
+        {busy ? 'Fetching…' : 'Download'}
+      </button>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** Title, description and category, saved together; the text itself is not editable. */
+function EditDocument({ doc, onSaved, onCancel }) {
+  const categories = useApi('/api/categories');
+  const [title, setTitle] = useState(doc.title ?? '');
+  const [description, setDescription] = useState(doc.description ?? '');
+  const [category, setCategory] = useState(doc.category ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!title.trim()) {
+      setError('Give the document a title.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await request(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        // An uncategorised document stays so unless a category is chosen.
+        body: { title, description, category: category || undefined },
+      });
+      onSaved();
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="glass-panel section edit-form" aria-labelledby="edit-title" onSubmit={handleSubmit} noValidate>
+      <h2 id="edit-title" className="section__title">
+        Edit details
+      </h2>
+      <label htmlFor="edit-doc-title">Title</label>
+      <input
+        id="edit-doc-title"
+        className="text-input"
+        maxLength={255}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <label htmlFor="edit-doc-description">Description</label>
+      <textarea
+        id="edit-doc-description"
+        className="text-input"
+        rows={3}
+        maxLength={2000}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
+      <label htmlFor="edit-doc-category">Category</label>
+      <select
+        id="edit-doc-category"
+        className="select select--block"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+      >
+        {!doc.category && <option value="">No category</option>}
+        {(categories.data ?? [{ id: 'current', name: doc.category }])
+          .filter((item) => item.name)
+          .map((item) => (
+            <option key={item.id} value={item.name}>
+              {item.name}
+            </option>
+          ))}
+      </select>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="edit-form__actions">
+        <button type="button" className="btn btn--outline" disabled={saving} onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn--primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </form>
   );
 }
 

@@ -247,6 +247,30 @@ public class QdrantService {
         }
     }
 
+    /**
+     * Rewrites the title and category stored with a document's chunk points, after
+     * the document was edited: search filters on the category here, not in PostgreSQL.
+     * A document with no points is left as it is.
+     */
+    public void updateDocumentPayload(Integer documentId, String title, String category) {
+        Map<String, JsonWithInt.Value> payload = new HashMap<>();
+        payload.put("title", ValueFactory.value(title));
+        if (category != null) {
+            payload.put("category", ValueFactory.value(category));
+        }
+        Points.Filter filter = Points.Filter.newBuilder()
+                .addMust(ConditionFactory.match("postgres_document_id", (long) documentId))
+                .build();
+        try {
+            qdrantClient.setPayloadAsync(collectionName, payload, filter, true, null, null).get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Qdrant payload update was interrupted", e);
+        } catch (ExecutionException | TimeoutException e) {
+            handleExecutionException("Qdrant payload update failed", e);
+        }
+    }
+
     /** Removes every chunk point belonging to a document. */
     public void deleteDocumentChunks(Integer documentId) {
         Points.Filter filter = Points.Filter.newBuilder()

@@ -7,6 +7,8 @@ import com.eip.backend.dto.qdrant.VectorSearchResponse;
 import com.eip.backend.dto.qdrant.VectorSearchResultItem;
 import com.eip.backend.entity.Document;
 import com.eip.backend.entity.mongodb.KnowledgeDocument;
+import com.eip.backend.exception.DocumentNotFoundException;
+import com.eip.backend.exception.ResourceNotFoundException;
 import com.eip.backend.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +23,29 @@ public class UnifiedDocumentService {
     private final KnowledgeDocumentService knowledgeDocumentService;
     private final QdrantService qdrantService;
     private final DocumentAccessService documentAccessService;
+    private final OriginalFileStore originalFileStore;
 
     public UnifiedDocumentService(DocumentRepository documentRepository,
                                   KnowledgeDocumentService knowledgeDocumentService,
                                   QdrantService qdrantService,
-                                  DocumentAccessService documentAccessService) {
+                                  DocumentAccessService documentAccessService,
+                                  OriginalFileStore originalFileStore) {
         this.documentRepository = documentRepository;
         this.knowledgeDocumentService = knowledgeDocumentService;
         this.qdrantService = qdrantService;
         this.documentAccessService = documentAccessService;
+        this.originalFileStore = originalFileStore;
+    }
+
+    /**
+     * The file as it was uploaded, for anyone who may read the document. Documents
+     * stored before originals were kept, and the seeded ones, have none.
+     */
+    public OriginalFileStore.Original getOriginal(Integer id) {
+        Document document = documentRepository.findById(id).orElseThrow(() -> new DocumentNotFoundException(id));
+        documentAccessService.requireRead(document);
+        return originalFileStore.find(id).orElseThrow(
+                () -> new ResourceNotFoundException("The original file of this document was not kept"));
     }
 
     public UnifiedDocumentResponse getUnifiedDocument(Integer id) {
@@ -75,6 +91,10 @@ public class UnifiedDocumentService {
         response.setReferences(mongoDoc.getReferences());
         response.setProcessing(mongoDoc.getProcessing());
         response.setVersion(mongoDoc.getVersion());
+
+        response.setCanEdit(documentAccessService.canEdit(postgresDoc));
+        response.setOriginalAvailable(mongoDoc.getSource() != null
+                && "GRIDFS".equals(mongoDoc.getSource().getStorageType()));
 
         return response;
     }

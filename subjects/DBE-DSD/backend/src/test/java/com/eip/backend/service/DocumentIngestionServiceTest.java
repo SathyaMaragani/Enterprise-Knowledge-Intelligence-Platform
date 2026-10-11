@@ -13,6 +13,7 @@ import com.eip.backend.repository.KnowledgeDocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -43,6 +44,12 @@ class DocumentIngestionServiceTest {
     private String upsertedCategory;
     private String upsertedDepartment;
     private Document lastSavedDocument;
+    private KnowledgeDocument lastSavedKnowledge;
+    private RuntimeException fileFailure;
+    private Document existing;
+    private boolean admin;
+    private boolean mayUpdate = true;
+    private final User alice = new User();
 
     private DocumentIngestionService service;
 
@@ -76,14 +83,19 @@ class DocumentIngestionServiceTest {
                 calls.add("postgres.deleteById:" + args[0]);
                 yield null;
             }
+            case "findById" -> Optional.ofNullable(existing);
             default -> throw new UnsupportedOperationException(method.getName());
         });
 
         Category finance = new Category();
         finance.setId(2);
         finance.setName("Finance");
+        Category legal = new Category();
+        legal.setId(5);
+        legal.setName("Legal");
         CategoryRepository categories = stub(CategoryRepository.class, (proxy, method, args) ->
-                "Finance".equals(args[0]) ? Optional.of(finance) : Optional.empty());
+                "Finance".equals(args[0]) ? Optional.of(finance)
+                        : "Legal".equals(args[0]) ? Optional.of(legal) : Optional.empty());
 
         DocumentVersionRepository versions = stub(DocumentVersionRepository.class, (proxy, method, args) -> {
             calls.add("versions.save");
@@ -98,8 +110,13 @@ class DocumentIngestionServiceTest {
                         }
                         KnowledgeDocument saved = (KnowledgeDocument) args[0];
                         saved.setId("mongo-1");
+                        lastSavedKnowledge = saved;
                         calls.add("mongo.save");
                         yield saved;
+                    }
+                    case "updateTitle" -> {
+                        calls.add("mongo.updateTitle:" + args[1]);
+                        yield null;
                     }
                     case "deleteByPostgresDocumentId" -> {
                         calls.add("mongo.delete:" + args[0]);
@@ -125,6 +142,30 @@ class DocumentIngestionServiceTest {
             public void deleteDocumentChunks(Integer documentId) {
                 calls.add("qdrant.delete:" + documentId);
             }
+
+            @Override
+            public void updateDocumentPayload(Integer documentId, String title, String category) {
+                if (qdrantFailure != null) {
+                    throw qdrantFailure;
+                }
+                calls.add("qdrant.payload:" + title + "/" + category);
+            }
+        };
+
+        OriginalFileStore files = new OriginalFileStore(null) {
+            @Override
+            public String store(Integer documentId, String filename, String contentType, byte[] bytes) {
+                if (fileFailure != null) {
+                    throw fileFailure;
+                }
+                calls.add("files.store:" + filename + ":" + contentType + ":" + bytes.length);
+                return "file-1";
+            }
+
+            @Override
+            public void delete(Integer documentId) {
+                calls.add("files.delete:" + documentId);
+            }
         };
 
         EmbeddingService embeddings = new EmbeddingService(null) {
@@ -139,7 +180,6 @@ class DocumentIngestionServiceTest {
             }
         };
 
-        User alice = new User();
         alice.setId(2);
         alice.setUsername("alice_mgr");
         DocumentAccessService access = new DocumentAccessService(null) {
@@ -147,9 +187,33 @@ class DocumentIngestionServiceTest {
             public User currentUser() {
                 return alice;
             }
+
+            @Override
+            public boolean isAdmin() {
+                return admin;
+            }
+
+            @Override
+            public boolean hasAuthority(String authority) {
+                return mayUpdate && "DOCUMENT_UPDATE".equals(authority);
+            }
+
+            @Override
+            public boolean canRead(Document document) {
+                return true;
+            }
         };
 
-        service = new DocumentIngestionService(documents, categories, versions, knowledge, qdrant, embeddings, access);
+        service = new DocumentIngestionService(documents, categories, versions, knowledge, qdrant, embeddings, access,
+                                               files);
+
+        existing = new Document();
+        existing.setId(ID);
+        existing.setTitle("Notes");
+        existing.setDescription("Old description");
+        existing.setCategory(finance);
+        existing.setOwner(alice);
+        existing.setStatus("INDEXED");
     }
 
     private DocumentUploadResponse upload(String text) {
@@ -171,8 +235,12 @@ class DocumentIngestionServiceTest {
         DocumentUploadResponse response = upload(words(400));
 
         assertEquals(new DocumentUploadResponse(ID, "Notes", "INDEXED", 3, true), response);
-        assertEquals(List.of("postgres.save:PROCESSING", "mongo.save", "versions.save",
-                             "qdrant.upsert:3", "postgres.save:INDEXED"), calls);
+        int bytes = words(400).getBytes(StandardCharsets.UTF_8).length;
+        assertEquals(List.of("postgres.save:PROCESSING", "files.store:notes.md:text/markdown:" + bytes, "mongo.save",
+                             "versions.save", "qdrant.upsert:3", "postgres.save:INDEXED"), calls);
+        // The content document records where the original is, which is what makes it downloadable.
+        assertEquals("GRIDFS", lastSavedKnowledge.getSource().getStorageType());
+        assertEquals("gridfs:file-1", lastSavedKnowledge.getSource().getStorageReference());
         assertEquals(List.of("doc77-chunk1", "doc77-chunk2", "doc77-chunk3"),
                      upserted.stream().map(QdrantService.ChunkVector::chunkId).toList());
         assertEquals(List.of(0, 1, 2), upserted.stream().map(QdrantService.ChunkVector::position).toList());
@@ -200,8 +268,8 @@ class DocumentIngestionServiceTest {
 
         assertEquals("UPLOADED", response.status());
         assertFalse(response.vectorsStored());
-        assertEquals(List.of("postgres.save:PROCESSING", "mongo.save", "versions.save", "postgres.save:UPLOADED"),
-                     calls);
+        assertEquals(List.of("postgres.save:PROCESSING", "files.store:notes.md:text/markdown:11", "mongo.save",
+                             "versions.save", "postgres.save:UPLOADED"), calls);
     }
 
     @Test
@@ -210,7 +278,8 @@ class DocumentIngestionServiceTest {
 
         assertThrows(IllegalStateException.class, () -> upload("a few words"));
 
-        assertEquals(List.of("postgres.save:PROCESSING", "postgres.deleteById:77"), calls);
+        assertEquals(List.of("postgres.save:PROCESSING", "files.store:notes.md:text/markdown:11",
+                             "files.delete:77", "postgres.deleteById:77"), calls);
     }
 
     @Test
@@ -219,8 +288,87 @@ class DocumentIngestionServiceTest {
 
         assertThrows(IllegalStateException.class, () -> upload("a few words"));
 
-        assertEquals(List.of("postgres.save:PROCESSING", "mongo.save", "versions.save", "qdrant.upsert:1",
-                             "qdrant.delete:77", "mongo.delete:77", "postgres.deleteById:77"), calls);
+        assertEquals(List.of("postgres.save:PROCESSING", "files.store:notes.md:text/markdown:11", "mongo.save",
+                             "versions.save", "qdrant.upsert:1", "qdrant.delete:77", "mongo.delete:77",
+                             "files.delete:77", "postgres.deleteById:77"), calls);
+    }
+
+    @Test
+    void anUploadSurvivesTheOriginalNotBeingKept() {
+        fileFailure = new IllegalStateException("GridFS is full");
+
+        DocumentUploadResponse response = upload("a few words");
+
+        assertEquals("INDEXED", response.status());
+        assertEquals("MONGODB", lastSavedKnowledge.getSource().getStorageType());
+        assertEquals("upload:notes.md", lastSavedKnowledge.getSource().getStorageReference());
+    }
+
+    // ---------------------------------------------------------------- editing
+
+    @Test
+    void anEditReachesAllThreeStoresQdrantFirst() {
+        Document saved = service.update(ID, "  Budget Notes ", "New description", "Legal");
+
+        assertEquals(List.of("qdrant.payload:Budget Notes/Legal", "mongo.updateTitle:Budget Notes",
+                             "postgres.save:INDEXED"), calls);
+        assertEquals("Budget Notes", saved.getTitle());
+        assertEquals("New description", saved.getDescription());
+        assertEquals("Legal", saved.getCategory().getName());
+    }
+
+    @Test
+    void fieldsLeftOutAreNotChangedAndABlankDescriptionIsCleared() {
+        Document saved = service.update(ID, null, "   ", null);
+
+        // Title and category are unchanged, so neither Qdrant nor MongoDB is touched.
+        assertEquals(List.of("postgres.save:INDEXED"), calls);
+        assertEquals("Notes", saved.getTitle());
+        assertNull(saved.getDescription());
+        assertEquals("Finance", saved.getCategory().getName());
+    }
+
+    @Test
+    void aDocumentWithoutVectorsSkipsQdrant() {
+        existing.setStatus("UPLOADED");
+
+        service.update(ID, "Renamed", null, null);
+
+        assertEquals(List.of("mongo.updateTitle:Renamed", "postgres.save:UPLOADED"), calls);
+    }
+
+    @Test
+    void ifQdrantIsDownNothingIsChanged() {
+        qdrantFailure = new QdrantUnavailableException("down", null);
+
+        assertThrows(QdrantUnavailableException.class, () -> service.update(ID, "Renamed", null, null));
+
+        assertTrue(calls.isEmpty());
+        assertEquals("Notes", existing.getTitle());
+    }
+
+    @Test
+    void onlyTheOwnerWithUpdateRightsOrAnAdminMayEdit() {
+        User bob = new User();
+        bob.setId(3);
+        existing.setOwner(bob);
+        assertThrows(AccessDeniedException.class, () -> service.update(ID, "Renamed", null, null));
+
+        existing.setOwner(alice);
+        mayUpdate = false;
+        assertThrows(AccessDeniedException.class, () -> service.update(ID, "Renamed", null, null));
+
+        existing.setOwner(bob);
+        admin = true;
+        assertEquals("Renamed", service.update(ID, "Renamed", null, null).getTitle());
+    }
+
+    @Test
+    void anEditIsValidatedLikeAnUpload() {
+        assertThrows(IllegalArgumentException.class, () -> service.update(ID, "   ", null, null));
+        assertThrows(IllegalArgumentException.class, () -> service.update(ID, "x".repeat(256), null, null));
+        assertThrows(IllegalArgumentException.class, () -> service.update(ID, null, null, "Unknown"));
+        assertTrue(calls.isEmpty());
     }
 
     @Test

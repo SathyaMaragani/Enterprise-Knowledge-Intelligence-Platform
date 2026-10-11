@@ -67,13 +67,13 @@ It is one integrated project built across four courses. Each course owns a part 
     </td>
     <td width="50%" valign="top">
       <img src="docs/screenshots/search-results.png" alt="Hybrid search results for working from home rules">
-      <p align="center"><b>Search by meaning</b><br><sub>"working from home rules" finds the <i>Hybrid and Remote Working Standard</i>, which shares none of those words.</sub></p>
+      <p align="center"><b>Search by meaning</b><br><sub>"working from home rules" finds the <i>Hybrid and Remote Working Standard</i>, and quotes the passage that matched.</sub></p>
     </td>
   </tr>
   <tr>
     <td valign="top">
       <img src="docs/screenshots/fuzzy-search.png" alt="Fuzzy search results for a misspelled query">
-      <p align="center"><b>Search despite typos</b><br><sub>"remte workng standrd" still finds the standard, through Damerau-Levenshtein edit distance.</sub></p>
+      <p align="center"><b>Search despite typos</b><br><sub>"remte workng standrd" still finds the standard, through Damerau-Levenshtein edit distance, with the corrected words marked in the text.</sub></p>
     </td>
     <td valign="top">
       <img src="docs/screenshots/upload-form.png" alt="Upload form with a PDF selected">
@@ -83,7 +83,7 @@ It is one integrated project built across four courses. Each course owns a part 
   <tr>
     <td valign="top">
       <img src="docs/screenshots/document-viewer.png" alt="Document viewer showing extracted text, chunks and processing details">
-      <p align="center"><b>Document viewer</b><br><sub>Extracted text, chunks, processing details and sharing for an uploaded PDF.</sub></p>
+      <p align="center"><b>Document viewer</b><br><sub>An uploaded PDF: open or download the original file, edit its details, share it, and read the extracted text and chunks.</sub></p>
     </td>
     <td valign="top">
       <img src="docs/screenshots/administration.png" alt="User administration page">
@@ -183,8 +183,8 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **233 pass** (229 in GitHub Actions on every change) |
-| Frontend | 17 Vitest files: pages, session, API client | **156 pass** |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **262 pass** (258 in GitHub Actions on every change) |
+| Frontend | 18 Vitest files: pages, session, API client | **172 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |
 | ML | Pipeline, embeddings, Java and Python parity, retrieval equivalence | Java and Python top-5 results **100% identical** |
@@ -258,6 +258,9 @@ enterprise-knowledge-intelligence/
 | Each keyword search scans every body in MongoDB, and the typo vocabulary is rebuilt from them every 5 minutes | Take candidates from the `content.raw_text` text index or Atlas Search |
 | Restricted users can get fewer semantic hits, because permissions are applied after Qdrant's top-K | Pass the readable ids to Qdrant as a payload filter |
 | No OCR for scanned PDFs | Add an OCR step to text extraction |
+| Original files share MongoDB's free 512 MB with the extracted text | Move them to object storage |
+| Notifications are derived from two timestamps, so they cannot say who shared or edited | A notifications table, with more event kinds |
+| A forgotten password is reset by an administrator | Email reset links |
 | Embedding runs inside the upload request | Move it to a background job for large files |
 | ML results are displayed, not served | Suggest a category when a document is uploaded |
 | ShellForge runs preset sessions only | Job control, FIFOs, shared memory and semaphores from the rest of the OSSP syllabus |

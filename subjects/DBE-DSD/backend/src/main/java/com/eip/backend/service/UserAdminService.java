@@ -122,6 +122,24 @@ public class UserAdminService {
         userRepository.save(user);
     }
 
+    /**
+     * A signed-in user changing their own password, proving they know the current
+     * one. Tokens already issued stay valid until they expire.
+     */
+    @Transactional
+    public void changeOwnPassword(Integer id, String currentPassword, String newPassword) {
+        User user = requireUser(id);
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("The current password is not correct");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Choose a password different from the current one");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+    }
+
     private boolean isCurrentUser(User user) {
         User current = documentAccessService.currentUser();
         return current != null && current.getId().equals(user.getId());
