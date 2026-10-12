@@ -40,7 +40,7 @@ Organisations keep their knowledge in documents: policies, procedures, runbooks,
 2. **Typing mistakes defeat search.** "remte workng standrd" finds nothing in a plain keyword search.
 3. **Not everyone may see everything.** A search that shows a restricted title, or even counts it, is already a leak.
 
-EIP answers all three. It searches **by meaning** with sentence embeddings, **by typo-tolerant keyword** with string algorithms written from scratch, and applies **one permission rule to every result before ranking**. Each kind of data lives in the database built for it, and an upload either lands in all three stores or in none.
+EIP answers all three. It searches **by meaning** with sentence embeddings, **by typo-tolerant keyword** with string algorithms written from scratch, and applies **one permission rule to every result before ranking**. On top of that search, an **Ask** page answers questions in plain words from the passages it finds, citing each one. Each kind of data lives in the database built for it, and an upload either lands in all three stores or in none.
 
 It is one integrated project built across four courses. Each course owns a part of the system, and the parts meet in one running product.
 
@@ -54,6 +54,9 @@ It is one integrated project built across four courses. Each course owns a part 
     <td valign="top"><b>PDF, Word, text and Markdown</b><br><sub>Up to 10 MB. Text is extracted, split into overlapping chunks and embedded when you upload.</sub></td>
     <td valign="top"><b>Algorithms from first principles</b><br><sub>KMP, Aho-Corasick and Damerau-Levenshtein score keyword search, and a workbench runs them live.</sub></td>
     <td valign="top"><b>Runs on free tiers</b><br><sub>Vercel, Render Free (512 MB), Neon, MongoDB Atlas and Qdrant Cloud, tuned to answer in under a second.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="3" valign="top"><b>Answers with their sources</b><br><sub>Ask a question and the hybrid search retrieves the passages; Groq or Gemini writes the answer from those passages alone and cites each one. Only documents the asker may read are ever sent to the model.</sub></td>
   </tr>
 </table>
 
@@ -101,8 +104,12 @@ It is one integrated project built across four courses. Each course owns a part 
     </td>
   </tr>
   <tr>
-    <td colspan="2" valign="top" align="center">
-      <img src="docs/screenshots/shellforge.png" alt="ShellForge page: the race demo lost 448,439 of 800,000 increments without a mutex and none with it" width="70%">
+    <td valign="top">
+      <img src="docs/screenshots/ask.png" alt="Ask page: a question about a lost laptop answered from five cited passages">
+      <p align="center"><b>Ask</b><br><sub>"How do I report a lost laptop, and how quickly?" answered from the documents, with every source cited and its passage one click away.</sub></p>
+    </td>
+    <td valign="top">
+      <img src="docs/screenshots/shellforge.png" alt="ShellForge page: the race demo lost 448,439 of 800,000 increments without a mutex and none with it">
       <p align="center"><b>ShellForge</b><br><sub>The OSSP shell in C, run on the server. Four threads lose 448,439 of 800,000 increments without a mutex, and none with it.</sub></p>
     </td>
   </tr>
@@ -183,8 +190,8 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 | Area | What is tested | Result |
 |---|---|---|
-| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **262 pass** (258 in GitHub Actions on every change) |
-| Frontend | 18 Vitest files: pages, session, API client | **178 pass** |
+| Backend | Unit tests, plus integration tests on live PostgreSQL, MongoDB and Qdrant | **282 pass** (278 in GitHub Actions on every change) |
+| Frontend | 19 Vitest files: pages, session, API client | **187 pass** |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28**; **169 req/s, 0 errors** |
 | DSA-3 | Six self-checking suites with 4,000 randomised cross-checks | **452 assertions**, 0 failures |
 | ML | Pipeline, embeddings, Java and Python parity, retrieval equivalence | Java and Python top-5 results **100% identical** |
@@ -197,6 +204,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 | Frontend | React 19, React Router 7, Vite 8, Vitest |
 | Backend | Java 21, Spring Boot 3.4, Spring Security (JWT, BCrypt), Spring Data JPA and MongoDB, Apache PDFBox 3 |
 | Search | TextHack engine (DSA-3) for keyword and fuzzy scoring; `all-MiniLM-L6-v2` on ONNX Runtime, in-process |
+| Answers | Groq (`openai/gpt-oss-120b`) or Google Gemini (`gemini-flash-lite-latest`), given only the passages the search retrieved |
 | Data | PostgreSQL 16, MongoDB 7, Qdrant 1.12 |
 | ML research | Python, scikit-learn, sentence-transformers, PyTorch |
 | Systems | C with gcc 13, Make, Valgrind, GDB |
@@ -263,6 +271,7 @@ enterprise-knowledge-intelligence/
 | A forgotten password is reset by an administrator | Email reset links |
 | Embedding runs inside the upload request | Move it to a background job for large files |
 | ML results are displayed, not served | Suggest a category when a document is uploaded |
+| Ask answers each question on its own, from at most five documents | Conversation memory, and a reranker over more passages |
 | ShellForge runs preset sessions only | Job control, FIFOs, shared memory and semaphores from the rest of the OSSP syllabus |
 
 ## Documentation and reviews

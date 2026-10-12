@@ -336,8 +336,8 @@ enterprise-knowledge-intelligence/
 
 | Subject | What is tested | Result |
 |---|---|---|
-| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **262 pass**: 258 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
-| DBE-DSD frontend | 18 Vitest files: pages, session, API client | **178 pass** in GitHub Actions |
+| DBE-DSD backend | Unit tests with stubs, plus integration tests on live PostgreSQL, MongoDB and Qdrant (security, upload rollback, text extraction, search fusion, permissions, errors) | **282 pass**: 278 in GitHub Actions on every backend change, plus 4 demo-corpus tests run locally |
+| DBE-DSD frontend | 19 Vitest files: pages, session, API client | **187 pass** in GitHub Actions |
 | Full stack | Smoke test through nginx; load test with 50 users for 30 s | **28 / 28 checks**; **169 requests/s, 0 errors** |
 | DSA-3 | Six self-checking suites, including 4,000 randomised cross-validation cases | **452 assertions**, 0 failures, 0 compiler warnings; also run by the Backend workflow in GitHub Actions |
 | ML | Pipeline, embeddings, classification/clustering consistency, Java/Python parity, retrieval equivalence | 15 + 6 + 4 checks pass; Java and Python top-5 results 100% identical |
@@ -357,8 +357,8 @@ Several tests were confirmed to catch real faults by breaking the code on purpos
 
 ```mermaid
 flowchart LR
-    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 and ShellForge suites,<br/>then 258 tests on a Compose stack]
-    GH --> CI2[GitHub Actions<br/>Frontend: 178 tests + build]
+    GH[Push to main] --> CI1[GitHub Actions<br/>Backend: DSA-3 and ShellForge suites,<br/>then 278 tests on a Compose stack]
+    GH --> CI2[GitHub Actions<br/>Frontend: 187 tests + build]
     CI1 -->|checks pass| RD[Render<br/>builds the backend image]
     GH --> VC[Vercel<br/>builds the frontend]
     RD --> LIVE[ekipsearch.vercel.app]
@@ -400,6 +400,7 @@ flowchart LR
 | 7 Oct | Search: partly typed words, two-typo tolerance, calibrated percentages |
 | 9 Oct | ShellForge Week 10 (POSIX threads, mutex, monitor thread); ShellForge page in the web app |
 | 12 Oct | Search snippets; original files kept and downloadable; document editing; own-password change; notifications; bulk upload |
+| 12 Oct | Ask page: questions answered from the retrieved passages by Groq or Gemini, with citations |
 
 ---
 
@@ -426,6 +427,7 @@ flowchart LR
 - **Embedding runs inside the upload request;** large files would be better served by a background job.
 - **The backend is a single service.** Splitting search and ingestion behind an API gateway, and adding Prometheus/Grafana monitoring, are the next steps for the DBE course's microservice and observability outcomes.
 - **ML results are displayed, not yet served.** Suggesting a category on upload is the natural next step.
+- **Ask answers each question on its own,** from at most five documents and three chunks of each. Conversation memory, and a reranker over more passages, would let it handle follow-ups and answers spread across many documents. The passages leave the server for the model's provider, which a real deployment would have to agree to.
 - **ShellForge runs preset sessions only.** Job control, FIFOs, shared memory, `mmap` demonstrations and semaphores remain from the OSSP syllabus.
 
 ---

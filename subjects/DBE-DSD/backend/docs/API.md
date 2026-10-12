@@ -574,3 +574,61 @@ Nothing is stored for this: both are read from `document_permissions.granted_at`
 and `documents.updated_at`, so revoking a grant removes its notifications, and
 the response cannot say who shared or edited. Which notifications are new is
 remembered by the client. Returns 401 without a token.
+
+## 9. Ask (answers from the documents)
+Retrieval-augmented generation: the question runs through the hybrid search of
+section 4, the best passages of the top five documents go to a language model
+as numbered sources, and the model answers from those sources alone, citing
+them. Any signed-in user may ask; without a token both endpoints return 401.
+
+Retrieval is the same permission-filtered search, so a passage from a document
+the asker cannot read is never sent to the model. The question and the passages
+found for it are sent to the provider (Groq or Google) to write the answer.
+
+A provider is available when its key is in the backend's environment:
+`GROQ_API_KEY` (default model `openai/gpt-oss-120b`, override with `GROQ_MODEL`)
+and `GEMINI_API_KEY` (default `gemini-flash-lite-latest`, override with
+`GEMINI_MODEL`). Keys are sent in request headers only and are never logged.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/ask` | `available`, and `providers`: the `id` (`groq`, `gemini`) and `model` of each one set up |
+| `POST /api/ask` | Answers one question |
+
+**Ask** accepts `{ "question": "How many days of annual leave do I get?", "provider": "groq" }`.
+`question` is required, at most 500 characters. `provider` is `groq`, `gemini`,
+or absent/`auto`: with `auto` each configured provider is tried in turn (Groq
+first), so a rate limit or outage at one falls back to the other; a named
+provider is never swapped for another.
+
+```json
+{
+  "answer": "Permanent employees accrue 25 days of paid annual leave per calendar year [1].",
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "sources": [
+    { "number": 1, "documentId": 2, "title": "Annual Leave and Time Off Policy 2026 (B)", "category": "HR",
+      "passage": "Permanent employees accrue 25 days of paid annual leave…", "cited": true },
+    { "number": 2, "documentId": 5, "title": "Annual Leave and Time Off Policy 2026 (E)", "category": "HR",
+      "passage": "…", "cited": false }
+  ]
+}
+```
+
+- `sources` are the passages the model was given, numbered as it saw them. Each
+  is up to three chunks of one document (the two sharing most words with the
+  question, and the vector search's best chunk), cut to 2,400 characters; a
+  document matched on its title alone contributes its description.
+- `cited` marks the sources the answer refers to as `[n]`.
+- The answer is plain text. A model's own citation marks and Markdown emphasis
+  are rewritten to `[n]` and plain text before it is returned.
+- When no readable document matches the question, no model is called and the
+  response is `{ "answer": null, "provider": null, "model": null, "sources": [] }`.
+- Each question stands alone: there is no conversation memory, and questions are
+  not recorded in the search history.
+
+| Code | When |
+|---|---|
+| 200 | An answer, or `answer: null` when nothing matched |
+| 400 | Blank or over-long question, or an unknown `provider` |
+| 503 | No provider is set up, the named provider is not set up, or no provider answered (rate limit, outage, timeout after 40 s) |

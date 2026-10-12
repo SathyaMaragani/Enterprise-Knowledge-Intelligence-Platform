@@ -101,7 +101,8 @@ so an idle demo will lose its vectors.
 2. **New → Blueprint**, pick the repository. Render reads `render.yaml`.
 3. Fill in the six prompted values from steps 1–3: `SPRING_DATASOURCE_URL`,
    `DB_USERNAME`, `DB_PASSWORD`, `SPRING_DATA_MONGODB_URI`, `QDRANT_HOST`,
-   `QDRANT_APIKEY`. `JWT_SECRET` is generated for you.
+   `QDRANT_APIKEY`. `JWT_SECRET` is generated for you. The prompts for
+   `GROQ_API_KEY` and `GEMINI_API_KEY` belong to the optional Ask page (step 6).
 4. Create it. The first build takes several minutes: Maven, the model download and
    the class-data-sharing training run.
 
@@ -121,7 +122,13 @@ so an idle demo will lose its vectors.
    backend at startup), and save, which redeploys.
    The account is created only while no administrator exists. After you have signed
    in, delete both variables.
-6. Note the service URL, `https://eip-backend….onrender.com`. Opening
+6. **The Ask page (optional).** In the **Environment** page add `GROQ_API_KEY`
+   (from console.groq.com/keys), `GEMINI_API_KEY` (from aistudio.google.com/apikey),
+   or both, and save, which redeploys. Both providers have a free tier. With
+   neither key the Ask page says no model is set up, and the rest of the app is
+   unaffected. `GROQ_MODEL` and `GEMINI_MODEL` override the default models
+   (`openai/gpt-oss-120b` and `gemini-flash-lite-latest`) if a provider retires one.
+7. Note the service URL, `https://eip-backend….onrender.com`. Opening
    `/api/health` there should return `{"status":"UP",…}`.
 
 ### 5. Vercel (frontend)
@@ -145,6 +152,7 @@ The Hobby plan is for personal, non-commercial use, which fits this academic pro
 | Vercel's proxy waits at most 120 s | A request that takes longer gets a 504, although the backend finishes it. While Render is waking, Vercel answers `/api/*` with a 502 within about a second; `ServerGate` treats that as "not ready yet" and retries. | A 50 KB text upload (45 chunks) took 13.4 s locally, so uploads above roughly 400 KB can show an error and still appear in the repository. |
 | 750 free instance hours a month | Enough for this one service running all month (at most 744 hours), which `KeepAwake` now does. Another free web service in the same Render workspace would share the 750 hours. | — |
 | Qdrant Cloud free cluster | Suspended after a week without use. | — |
+| Groq free tier: 8,000 tokens a minute and 1,000 requests a day for the default model (from its response headers) | A question sends at most about 3,000 tokens of passages, so a handful of questions a minute fit. Past that Groq answers 429 and, on **Automatic**, the same question goes to Gemini. | Locally an answer took 0.7–1.7 s from Groq and 1.1–1.7 s from Gemini. |
 
 If memory ever runs short on Render (the logs say "Ran out of memory"), the next
 lever is the quantized model file, `onnx/model_quantized.onnx` in the same model

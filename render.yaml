@@ -34,6 +34,12 @@ services:
         sync: false
       - key: QDRANT_APIKEY
         sync: false
+      # Optional: the Ask page's language models. With neither key set the page
+      # says so, and everything else works.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: QDRANT_PORT
         value: "6334"
       - key: QDRANT_USETLS

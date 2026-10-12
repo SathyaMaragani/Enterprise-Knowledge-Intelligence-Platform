@@ -96,6 +96,8 @@ services:
       EIP_BOOTSTRAPADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       EIP_BOOTSTRAPADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       EIP_BOOTSTRAPADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       # The model is not committed: onnx/model.onnx and tokenizer.json from
       # huggingface.co/sentence-transformers/all-MiniLM-L6-v2 (see README.md).
