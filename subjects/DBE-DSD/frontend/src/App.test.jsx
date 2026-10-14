@@ -279,6 +279,23 @@ describe('sign-in page', () => {
     expect(password.type).toBe('password');
   });
 
+  it('shows the demo account and signs in with it in one click', async () => {
+    const fetchMock = mockApi({
+      ...DASHBOARD_ROUTES,
+      'POST /api/auth/login': jsonResponse(200, { token: tokenFor('Test'), type: 'Bearer', username: 'Test' }),
+    });
+    renderApp('/login');
+
+    const note = screen.getByRole('note', { name: 'Demo account' });
+    expect(note.textContent).toContain('username Test, password Test1234');
+    fireEvent.click(within(note).getByRole('button', { name: 'Sign in with the demo account' }));
+
+    expect(await screen.findByRole('heading', { name: DASHBOARD_GREETING })).toBeTruthy();
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe('/api/auth/login');
+    expect(JSON.parse(init.body)).toEqual({ username: 'Test', password: 'Test1234' });
+  });
+
   it('explains password resets instead of linking nowhere', () => {
     renderApp('/login');
 

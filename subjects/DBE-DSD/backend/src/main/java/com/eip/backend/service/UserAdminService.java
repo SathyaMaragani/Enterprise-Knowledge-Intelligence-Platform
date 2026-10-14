@@ -11,6 +11,7 @@ import com.eip.backend.exception.ConflictException;
 import com.eip.backend.exception.ResourceNotFoundException;
 import com.eip.backend.repository.RoleRepository;
 import com.eip.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +37,13 @@ public class UserAdminService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final DocumentAccessService documentAccessService;
+    /** The shared account whose credentials are shown on the sign-in page. */
+    private final String demoUsername;
 
     public UserAdminService(UserRepository userRepository, RoleRepository roleRepository,
-                            PasswordEncoder passwordEncoder, DocumentAccessService documentAccessService) {
+                            PasswordEncoder passwordEncoder, DocumentAccessService documentAccessService,
+                            @Value("${eip.demo-username:Test}") String demoUsername) {
+        this.demoUsername = demoUsername;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -129,6 +134,11 @@ public class UserAdminService {
     @Transactional
     public void changeOwnPassword(Integer id, String currentPassword, String newPassword) {
         User user = requireUser(id);
+        // Its password is printed on the sign-in page: a visitor who changed it would
+        // lock every other visitor out. An administrator can still reset it.
+        if (user.getUsername().equalsIgnoreCase(demoUsername)) {
+            throw new IllegalArgumentException("The demo account's password cannot be changed");
+        }
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new IllegalArgumentException("The current password is not correct");
         }

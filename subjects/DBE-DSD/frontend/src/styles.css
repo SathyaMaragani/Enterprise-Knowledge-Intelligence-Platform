@@ -644,6 +644,29 @@ label {
   min-height: 2.75rem;
 }
 
+/* The public demo account on the sign-in card. */
+.login-demo {
+  margin-top: 1.25rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.login-demo p {
+  margin: 0 0 0.65rem;
+}
+
+.login-demo code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .login-card__footer {
   margin-top: 1.25rem;
   text-align: center;

@@ -78,6 +78,11 @@ clients sign the user out on a 401 that carried a token. Tokens already issued
 stay valid until they expire. A forgotten password is reset by an administrator
 (`PUT /api/admin/users/{id}/password`); there is no email reset.
 
+The shared demo account, whose credentials are shown on the sign-in page, cannot change its own
+password: the request returns 400 (`The demo account's password cannot be changed`), so one visitor
+cannot lock the others out. Its username is `eip.demo-username` (environment `EIP_DEMOUSERNAME`,
+default `Test`); an administrator can still reset it.
+
 ### Disabled accounts
 A disabled account cannot sign in, and every token it already holds is rejected
 on its next request (401), without waiting for the token to expire.

@@ -34,6 +34,10 @@ const FEATURES = [
   },
 ];
 
+// A shared account whose details are public, so visitors can look around without
+// asking for one. The backend refuses to change its password (eip.demo-username).
+export const DEMO_ACCOUNT = { username: 'Test', password: 'Test1234' };
+
 export default function LoginPage() {
   const { session, login } = useAuth();
   const location = useLocation();
@@ -49,17 +53,27 @@ export default function LoginPage() {
     return <Navigate to={from ? `${from.pathname}${from.search ?? ''}` : '/'} replace />;
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function signIn(name, secret) {
     setError(null);
     setSubmitting(true);
     try {
-      await login(username.trim(), password);
+      await login(name.trim(), secret);
       // On success the session re-renders this page into a redirect.
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    signIn(username, password);
+  }
+
+  function useDemoAccount() {
+    setUsername(DEMO_ACCOUNT.username);
+    setPassword(DEMO_ACCOUNT.password);
+    signIn(DEMO_ACCOUNT.username, DEMO_ACCOUNT.password);
   }
 
   return (
@@ -167,6 +181,16 @@ export default function LoginPage() {
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
+
+          <div className="login-demo" role="note" aria-label="Demo account">
+            <p>
+              <strong>Just looking around?</strong> Use the demo account: username{' '}
+              <code>{DEMO_ACCOUNT.username}</code>, password <code>{DEMO_ACCOUNT.password}</code>.
+            </p>
+            <button type="button" className="btn btn--outline btn--block" disabled={submitting} onClick={useDemoAccount}>
+              Sign in with the demo account
+            </button>
+          </div>
 
           <p className="login-card__footer">New to EIP? Ask your administrator for an account.</p>
         </form>

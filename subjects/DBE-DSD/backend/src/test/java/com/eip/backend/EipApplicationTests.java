@@ -2056,6 +2056,25 @@ class EipApplicationTests {
     }
 
     @Test
+    void testTheDemoAccountsPasswordCannotBeChangedByItsUsers() throws Exception {
+        try {
+            mockMvc.perform(post("/api/admin/users")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(createUserJson("Test", "EMPLOYEE")))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/password")
+                            .header("Authorization", bearer("Test")).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"currentPassword\":\"temp-pass-123\",\"newPassword\":\"brand-new-pass-1\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("The demo account's password cannot be changed"));
+            login("Test", "temp-pass-123").andExpect(status().isOk());
+        } finally {
+            removeUser("Test");
+        }
+    }
+
+    @Test
     @org.springframework.security.test.context.support.WithAnonymousUser
     void testNotificationsComeFromSharesAndLaterEdits() throws Exception {
         // Document 7 (Q2 Budget Draft) belongs to alice_mgr; bob_eng cannot read it yet.

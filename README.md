@@ -212,7 +212,7 @@ Full column-level detail is in the [data dictionary](subjects/DBE-DSD/database/p
 
 ## Getting started
 
-**Try it online:** open **[ekipsearch.vercel.app](https://ekipsearch.vercel.app)**. The free backend keeps itself awake, so it normally answers at once; just after a deploy, the first visit can take up to two minutes while it starts. There is no self sign-up: an administrator creates accounts.
+**Try it online:** open **[ekipsearch.vercel.app](https://ekipsearch.vercel.app)**. The free backend keeps itself awake, so it normally answers at once; just after a deploy, the first visit can take up to two minutes while it starts. There is no self sign-up: an administrator creates accounts. To look around, use the shared demo account shown on the sign-in page (username `Test`, password `Test1234`).
 
 **Run the whole stack locally** (needs Docker):
 
