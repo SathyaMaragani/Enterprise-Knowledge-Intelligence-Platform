@@ -2056,9 +2056,10 @@ class EipApplicationTests {
     }
 
     @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
     void testTheDemoAccountsPasswordCannotBeChangedByItsUsers() throws Exception {
         try {
-            mockMvc.perform(post("/api/admin/users")
+            mockMvc.perform(post("/api/admin/users").header("Authorization", bearer("admin_user"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(createUserJson("Test", "EMPLOYEE")))
                     .andExpect(status().isCreated());
